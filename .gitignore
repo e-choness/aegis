@@ -65,4 +65,16 @@ agentdb.db
 ### Misc files
 gemma4
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+*.egg
+
+# Docker
+.docker/
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode

@@ -1,0 +1,39 @@
+haiku:
+  tier1_anthropic: "claude-haiku-4-5-20251001"
+  tier1_azure:     "claude-haiku-4-5-20251001"
+  tier2_vllm:      "llama3.2:8b-instruct-q5_K_M"
+  tier3_ollama:    "qwen2.5:7b"
+  cost_input_per_mtok:  1.00
+  cost_output_per_mtok: 5.00
+  context_tokens:  200000
+
+sonnet:
+  tier1_anthropic: "claude-sonnet-4-6"
+  tier1_azure:     "claude-sonnet-4-6"
+  tier2_vllm:      "llama3.3:70b-instruct-q4_K_M"
+  tier3_ollama:    "qwen2.5-coder:32b"
+  cost_input_per_mtok:  3.00
+  cost_output_per_mtok: 15.00
+  context_tokens:  1000000
+
+opus:
+  tier1_anthropic: "claude-opus-4-7"
+  tier1_azure:     "claude-opus-4-6"
+  tier2_vllm:      "devstral-small:24b-q5_K_M"
+  tier3_ollama:    "devstral-small:24b-q4_K_M"
+  cost_input_per_mtok:  5.00
+  cost_output_per_mtok: 25.00
+  tokenizer_margin: 1.35
+  context_tokens:  1000000
+
+local:
+  tier2_vllm:   "llama3.3:70b-instruct-q4_K_M"
+  tier3_ollama: "llama3.2:8b-instruct-q5_K_M"
+  cost_input_per_mtok:  0.10
+  cost_output_per_mtok: 0.10
+  context_tokens: 32000
+
+embeddings:
+  tier1_openai: "text-embedding-3-small"
+  tier2_vllm:   "bge-m3"
+  tier3_ollama: "nomic-embed-text"
