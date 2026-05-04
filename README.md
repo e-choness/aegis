@@ -1,5 +1,7 @@
 # Aegis AI Gateway
 
+The Aegis platform is the centralized control plane for all enterprise AI interactions. It transforms fragmented, ad-hoc LLM integrations into a governed, secure, and cost-optimized service layer. We are not just an API wrapper; we are the AI Governance Gateway that ensures every token spent adheres to regulatory, security, and financial policies.
+
 Enterprise AI governance gateway for Canadian fintech. Routes LLM requests through a four-tier provider fallback chain while enforcing PIPEDA data residency, per-team budget caps, PII masking, and a full audit trail.
 
 **112 gateway tests · 14 Python SDK tests · 100% Docker — no host installs required**
@@ -55,12 +57,12 @@ Client → POST /api/v1/inference
 
 ## Provider Tiers
 
-| Tier | Provider | Data classes allowed | Notes |
-|------|----------|----------------------|-------|
-| 1A | Anthropic | INTERNAL, PUBLIC | Default cloud path |
-| 1B | Azure OpenAI Canada | INTERNAL, PUBLIC | Canadian region fallback |
-| 2  | vLLM (self-hosted) | ALL incl. RESTRICTED | 2× A100 80GB, 300s timeout |
-| 3  | Ollama (offline) | ALL incl. RESTRICTED | Final fallback, no network |
+| Tier | Provider            | Data classes allowed | Notes                       |
+| ---- | ------------------- | -------------------- | --------------------------- |
+| 1A   | Anthropic           | INTERNAL, PUBLIC     | Default cloud path          |
+| 1B   | Azure OpenAI Canada | INTERNAL, PUBLIC     | Canadian region fallback    |
+| 2    | vLLM (self-hosted)  | ALL incl. RESTRICTED | 2× A100 80GB, 300s timeout |
+| 3    | Ollama (offline)    | ALL incl. RESTRICTED | Final fallback, no network  |
 
 Circuit breaker: 3 failures in 60s opens circuit, resets after 60s half-open.
 
@@ -119,19 +121,19 @@ Aegis/
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | — | Tier 1A cloud provider |
-| `AZURE_OPENAI_ENDPOINT` | No | — | Tier 1B; disables Azure if unset |
-| `AZURE_OPENAI_KEY` | No | — | Tier 1B API key |
-| `AZURE_OPENAI_DEPLOYMENT` | No | — | Azure deployment name |
-| `VLLM_BASE_URL` | No | `http://vllm:8001` | Tier 2 on-prem |
-| `OLLAMA_BASE_URL` | No | `http://ollama:11434` | Tier 3 offline |
-| `VECTORDB_URL` | No | — | PostgreSQL DSN for RAG; disables RAG if unset |
-| `TIMESCALEDB_PASSWORD` | No | `aegis_dev` | Audit database |
-| `VECTORDB_PASSWORD` | No | `aegis_vec` | pgvector database |
-| `CORS_ORIGINS` | No | `""` | Comma-separated allowed origins |
-| `GRAFANA_PASSWORD` | No | `admin` | Grafana admin password |
+| Variable                    | Required | Default                 | Description                                   |
+| --------------------------- | -------- | ----------------------- | --------------------------------------------- |
+| `ANTHROPIC_API_KEY`       | Yes      | —                      | Tier 1A cloud provider                        |
+| `AZURE_OPENAI_ENDPOINT`   | No       | —                      | Tier 1B; disables Azure if unset              |
+| `AZURE_OPENAI_KEY`        | No       | —                      | Tier 1B API key                               |
+| `AZURE_OPENAI_DEPLOYMENT` | No       | —                      | Azure deployment name                         |
+| `VLLM_BASE_URL`           | No       | `http://vllm:8001`    | Tier 2 on-prem                                |
+| `OLLAMA_BASE_URL`         | No       | `http://ollama:11434` | Tier 3 offline                                |
+| `VECTORDB_URL`            | No       | —                      | PostgreSQL DSN for RAG; disables RAG if unset |
+| `TIMESCALEDB_PASSWORD`    | No       | `aegis_dev`           | Audit database                                |
+| `VECTORDB_PASSWORD`       | No       | `aegis_vec`           | pgvector database                             |
+| `CORS_ORIGINS`            | No       | `""`                  | Comma-separated allowed origins               |
+| `GRAFANA_PASSWORD`        | No       | `admin`               | Grafana admin password                        |
 
 ---
 
@@ -182,15 +184,15 @@ const result = await client.pollJob(jobId);
 
 ## Observability
 
-| Metric | Type | Labels |
-|--------|------|--------|
-| `gateway_requests_total` | Counter | team_id, model_alias, provider, tier, status |
-| `inference_cost_usd_total` | Counter | team_id, model_alias, provider, tier |
-| `pii_detections_total` | Counter | entity_type |
-| `restricted_data_cloud_violations_total` | Counter | — (must stay 0) |
-| `gateway_inference_latency_seconds` | Histogram | model_alias, provider |
-| `provider_health_up` | Gauge | provider, tier |
-| `budget_utilization_ratio` | Gauge | team_id |
+| Metric                                     | Type      | Labels                                       |
+| ------------------------------------------ | --------- | -------------------------------------------- |
+| `gateway_requests_total`                 | Counter   | team_id, model_alias, provider, tier, status |
+| `inference_cost_usd_total`               | Counter   | team_id, model_alias, provider, tier         |
+| `pii_detections_total`                   | Counter   | entity_type                                  |
+| `restricted_data_cloud_violations_total` | Counter   | — (must stay 0)                             |
+| `gateway_inference_latency_seconds`      | Histogram | model_alias, provider                        |
+| `provider_health_up`                     | Gauge     | provider, tier                               |
+| `budget_utilization_ratio`               | Gauge     | team_id                                      |
 
 Scrape endpoint: `GET /metrics` (Prometheus text format)
 
