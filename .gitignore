@@ -1,0 +1,68 @@
+# Node/npm local installs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+## jj
+.jj
+
+# Codex local configuration
+.codex/
+AGENTS.md
+
+# Claude Flow runtime data
+.claude-flow/data/
+.claude-flow/logs/
+CLAUDE.md
+.claude
+.claude-flow
+
+# MCP
+.mcp.json
+ruvector.db
+
+# ruflo agents
+.agents
+.swarm
+.agentdb
+agentdb.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.vscode
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
+### Misc files
+gemma4
+
+# End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
