@@ -33,9 +33,31 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
             f"{self._base_url}/api/embed",
             json={"model": self._model, "input": texts},
         )
-        response.raise_for_status()
+        if response.status_code == 404:
+            body = response.json()
+            err = body.get("error", "")
+            if "not found" in err:
+                logger.info("Model %s not found locally — pulling now (this may take a minute)", self._model)
+                await self._pull_model()
+                response = await self._client.post(
+                    f"{self._base_url}/api/embed",
+                    json={"model": self._model, "input": texts},
+                )
+            response.raise_for_status()
+        else:
+            response.raise_for_status()
         data = response.json()
         return data["embeddings"]
+
+    async def _pull_model(self) -> None:
+        """Pulls the model from the Ollama registry, blocking until complete."""
+        pull_resp = await self._client.post(
+            f"{self._base_url}/api/pull",
+            json={"model": self._model, "stream": False},
+            timeout=600.0,  # large models can take several minutes
+        )
+        pull_resp.raise_for_status()
+        logger.info("Model %s pulled successfully", self._model)
 
     async def health_check(self) -> bool:
         try:
