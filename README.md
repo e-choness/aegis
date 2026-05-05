@@ -4,12 +4,16 @@
 
 **Enterprise AI governance · Provider-agnostic · Docker-native · PIPEDA compliant**
 
+![aegis-banner](/images/banner-wide.png)
+
 [![Tests](https://img.shields.io/badge/tests-103%20passing-brightgreen?style=flat-square)](tests/)
 [![Docker](https://img.shields.io/badge/docker-native-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](src/gateway/main.py)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![PIPEDA](https://img.shields.io/badge/PIPEDA-compliant-red?style=flat-square)](docs/architecture.md#pipeda-invariant)
+
+
 
 [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](docs/api.md) · [SDKs](#sdks) · [Observability](#observability) · [Docs](docs/)
 
