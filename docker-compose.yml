@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
 
   gateway:
@@ -13,9 +15,10 @@ services:
       - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
       - OLLAMA_BASE_URL=http://ollama:11434
       - CORS_ORIGINS=http://localhost:3000
+      - VECTORDB_URL=postgresql://aegis:${TIMESCALEDB_PASSWORD:-aegis_dev}@timescaledb:5432/aegis
     depends_on:
       ollama:
-        condition: service_healthy
+        condition: service_started
       timescaledb:
         condition: service_healthy
     restart: unless-stopped
@@ -25,6 +28,21 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    command: ["serve"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
 
   test:
     build:
@@ -37,36 +55,6 @@ services:
     profiles:
       - test
 
-  sdk-py-test:
-    build:
-      context: ./sdk/python
-      target: test
-    image: aegis-sdk-py-test:dev
-    profiles:
-      - test
-
-  sdk-ts-test:
-    build:
-      context: ./sdk/typescript
-      target: test
-    image: aegis-sdk-ts-test:dev
-    profiles:
-      - test
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
   timescaledb:
     image: timescale/timescaledb:latest-pg16
     ports:
@@ -78,27 +66,9 @@ services:
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./scripts/init_vectordb.sql:/docker-entrypoint-initdb.d/02_vectordb.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aegis -d aegis"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
-  vectordb:
-    image: pgvector/pgvector:pg16
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_USER: aegis
-      POSTGRES_PASSWORD: ${VECTORDB_PASSWORD:-aegis_vec}
-      POSTGRES_DB: aegis_vectors
-    volumes:
-      - vectordb_data:/var/lib/postgresql/data
-      - ./scripts/init_vectordb.sql:/docker-entrypoint-initdb.d/01_vectordb.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aegis -d aegis_vectors"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -134,6 +104,5 @@ services:
 volumes:
   ollama_models:
   timescaledb_data:
-  vectordb_data:
   prometheus_data:
   grafana_data:

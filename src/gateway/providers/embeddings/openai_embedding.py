@@ -12,12 +12,7 @@ _MODEL = "text-embedding-3-small"
 
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
-    """
-    Tier 1 embedding — OpenAI text-embedding-3-small (1536-dim).
-    RESTRICTED: NEVER use this provider.
-    CONFIDENTIAL: only if vLLM is unhealthy (second fallback per spec).
-    INTERNAL/PUBLIC: preferred cloud provider.
-    """
+
 
     dimensions = 1536
 

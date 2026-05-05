@@ -35,8 +35,8 @@ def test_filter_by_team():
 
 def test_restricted_cloud_violations_invariant():
     audit = AuditLogger()
-    # Correctly routed RESTRICTED record to tier 2 — should NOT be a violation
-    audit.log(_record(data_classification="RESTRICTED", tier=2, provider="vllm"))
+    # Correctly routed RESTRICTED record to tier 3 (Ollama) — should NOT be a violation
+    audit.log(_record(data_classification="RESTRICTED", tier=3, provider="ollama"))
     assert audit.count_restricted_cloud_violations() == 0
 
 

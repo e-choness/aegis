@@ -14,9 +14,8 @@ CIRCUIT_RESET_SECONDS = 60
 class ProviderHealth:
     def __init__(self) -> None:
         self._healthy: dict[str, bool] = {
-            "anthropic": True,
-            "azure_openai": True,
-            "vllm": True,
+            "anthropic": False,
+            "azure_openai": False,
             "ollama": True,
         }
         self._failures: dict[str, int] = {k: 0 for k in self._healthy}

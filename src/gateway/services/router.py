@@ -6,6 +6,7 @@ from ..models import DataClassification, ModelConfig
 
 _REGISTRY_PATH = Path(__file__).parent.parent.parent.parent / "config" / "model_registry.yaml"
 
+
 def _load_registry() -> dict:
     with open(_REGISTRY_PATH) as f:
         return yaml.safe_load(f)
@@ -33,11 +34,12 @@ class ModelRouter:
         "multi_file_refactor":  "opus",
     }
 
+    # Fallback chain: primary → secondary → local/offline
+    # RESTRICTED data never reaches cloud (handled at route() call site)
     FALLBACK_CHAIN: list[tuple[str, str, int]] = [
-        ("anthropic",   "tier1_anthropic", 1),
-        ("azure_openai","tier1_azure",     1),
-        ("vllm",        "tier2_vllm",      2),
-        ("ollama",      "tier3_ollama",    3),
+        ("anthropic",    "tier1_anthropic", 1),
+        ("azure_openai",  "tier1_azure",     1),
+        ("ollama",        "tier3_ollama",    3),
     ]
 
     def __init__(self, health_checker=None) -> None:
@@ -51,9 +53,9 @@ class ModelRouter:
         data_classification: str = DataClassification.INTERNAL,
         budget_remaining_usd: float = float("inf"),
     ) -> ModelConfig:
-        # RULE 1 — RESTRICTED data never reaches cloud (hard invariant)
+        # RULE 1 — RESTRICTED data uses Ollama only (tier 3), never cloud
         if data_classification == DataClassification.RESTRICTED:
-            return self._build_config("local", "vllm", "tier2_vllm", 2)
+            return self._build_config("local", "ollama", "tier3_ollama", 3)
 
         alias = self.TASK_ALIAS_MAP.get(task_type, "sonnet")
 
@@ -76,6 +78,7 @@ class ModelRouter:
 
     def _is_healthy(self, provider: str) -> bool:
         if self._health_checker is None:
+            # Default: assume Anthropic is healthy, others unknown
             return provider == "anthropic"
         return self._health_checker.is_healthy(provider)
 

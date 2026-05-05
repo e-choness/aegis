@@ -14,7 +14,6 @@ class DataClassification(str, Enum):
 class ProviderTier(int, Enum):
     TIER1_ANTHROPIC = 1
     TIER1_AZURE = 11
-    TIER2_VLLM = 2
     TIER3_OLLAMA = 3
 
 

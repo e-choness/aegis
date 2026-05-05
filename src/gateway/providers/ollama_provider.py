@@ -10,15 +10,18 @@ DEFAULT_BASE_URL = "http://localhost:11434"
 
 class OllamaProvider(LLMProvider):
     """
-    Tier 3 offline provider. No network dependency beyond localhost.
-    Always available as final fallback when cloud and vLLM are down.
+    Tier 2/3 (local/offline) provider. No network dependency beyond localhost.
+    Primary provider for RESTRICTED data (never touches cloud).
+    Also serves as final fallback when all cloud providers are down.
     """
 
     def __init__(self, base_url: str = DEFAULT_BASE_URL) -> None:
         self._base_url = base_url.rstrip("/")
+        logger.info("OllamaProvider using base_url=%s", self._base_url)
         self._client = httpx.AsyncClient(base_url=self._base_url, timeout=120.0)
 
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
+        logger.info("Ollama complete: model=%s, url=%s/api/generate", request.model_id, self._base_url)
         payload: dict = {
             "model": request.model_id,
             "prompt": request.prompt,
