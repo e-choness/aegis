@@ -60,45 +60,30 @@ make up
 
 ## Architecture
 
-```
-Client SDK (Python / TypeScript)
-          │
-          ▼
-┌─────────────────────────────────────┐
-│         FastAPI Gateway              │
-│                                     │
-│  ┌─────────────┐                    │
-│  │DataClassifier│ ←── regex <1ms    │
-│  └──────┬──────┘   RESTRICTED /     │
-│         │          CONFIDENTIAL /   │
-│         ▼          INTERNAL / PUBLIC│
-│  ┌─────────────┐                    │
-│  │  PIIMasker  │ ←── Presidio +     │
-│  └──────┬──────┘     CA_SIN         │
-│         │                           │
-│         ▼                           │
-│  ┌─────────────┐                    │
-│  │ ModelRouter │ ←── task type +    │
-│  └──────┬──────┘     classification │
-│         │            + budget       │
-│         ▼                           │
-│  ┌─────────────────────────┐        │
-│  │     ProviderFactory     │        │
-│  │  Tier 1A: Anthropic     │        │
-│  │  Tier 1B: Azure OpenAI  │        │
-│  │  Tier 2/3: Ollama ──────│──── RESTRICTED only
-│  └──────┬──────────────────┘        │
-│         │                           │
-│         ▼                           │
-│  ┌──────────────────┐               │
-│  │  Output Scanner  │ ←── PII leak  │
-│  │  Unmask + Audit  │     check     │
-│  └──────────────────┘               │
-└─────────────────────────────────────┘
-          │
-          ▼
-  TimescaleDB audit log
-  Prometheus /metrics
+```mermaid
+flowchart TD
+    Client["Client SDK\nPython / TypeScript"]
+
+    subgraph GW["FastAPI Gateway"]
+        direction TB
+        DC["🔍 DataClassifier\nregex · &lt;1ms\nRESTRICTED · CONFIDENTIAL · INTERNAL · PUBLIC"]
+        PII1["🛡️ PIIMasker\nPresidio + CA_SIN\nreplace entities with placeholders"]
+        MR["🗺️ ModelRouter\ntask type + classification + budget\n→ ModelConfig"]
+        PF["⚙️ ProviderFactory"]
+        ANT["Tier 1A\nAnthropic"]
+        AZ["Tier 1B\nAzure OpenAI Canada"]
+        OLL["Tier 2/3\nOllama · local\nRESTRICTED only"]
+        OUT["🔎 Output Scanner\nPII leakage check\nUnmask + Audit"]
+    end
+
+    DB[("TimescaleDB\naudit log")]
+    PROM["📊 Prometheus\n/metrics"]
+
+    Client --> DC --> PII1 --> MR --> PF
+    PF --> ANT & AZ
+    PF -->|"RESTRICTED data"| OLL
+    ANT & AZ & OLL --> OUT
+    OUT --> DB & PROM
 ```
 
 ### Provider Tiers

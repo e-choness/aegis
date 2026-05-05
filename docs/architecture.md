@@ -37,41 +37,32 @@
 
 ## Request Lifecycle
 
-```
-POST /api/v1/inference
-         │
-         ▼ 1. Classify (regex, <1ms)
-   DataClassifier
-   → RESTRICTED | CONFIDENTIAL | INTERNAL | PUBLIC
-         │
-         ▼ 2. Mask PII (Presidio + CA_SIN)
-   PIIMasker.mask()
-   → replaces entities with typed placeholders
-   → stores entity map for later restoration
-         │
-         ▼ 3. Route (rules-based, deterministic)
-   ModelRouter.route(task_type, complexity, classification, budget)
-   → ModelConfig { provider, model_id, tier, cost_per_mtok }
-         │
-         ▼ 4. Budget pre-flight
-   BudgetService.check(team_id, estimated_cost)
-   → raises HTTP 429 if team cap exceeded
-         │
-         ▼ 5. Submit to provider
-   ProviderFactory.get(provider_name)
-   → AnthropicProvider | AzureOpenAIProvider | OllamaProvider
-         │
-         ▼ 6. Scan output + unmask
-   PIIMasker.scan(response)     ← PII leakage detection
-   PIIMasker.unmask(response)   ← restore original entities
-         │
-         ▼ 7. Audit + Metrics
-   AuditLogger.log(...)
-   Prometheus counters + histograms updated
-         │
-         ▼
-   202 Accepted → { "job_id": "..." }
-   GET /api/v1/jobs/{job_id}   ← poll until completed | failed
+```mermaid
+flowchart TD
+    A(["POST /api/v1/inference"])
+
+    B["1. DataClassifier\nregex · &lt;1ms\nRESTRICTED · CONFIDENTIAL · INTERNAL · PUBLIC"]
+
+    C["2. PIIMasker.mask()\nreplace entities with typed placeholders\nstore entity map for later restoration"]
+
+    D["3. ModelRouter.route()\ntask_type · complexity · classification · budget\n→ ModelConfig { provider, model_id, tier, cost_per_mtok }"]
+
+    E{"4. BudgetService.check()\nestimated cost vs team cap"}
+    F(["HTTP 429\nBudget exceeded"])
+
+    G["5. ProviderFactory.get()\nAnthropicProvider · AzureOpenAIProvider · OllamaProvider"]
+
+    H["6. PIIMasker.scan() + unmask()\ndetect PII leakage in response\nrestore original entities via entity map"]
+
+    I["7. AuditLogger + Prometheus\nwrite timestamped audit row\nincrement counters + histograms"]
+
+    J(["202 Accepted → { job_id }"])
+    K(["GET /api/v1/jobs/{job_id}\npoll until completed · failed"])
+
+    A --> B --> C --> D --> E
+    E -->|"under cap"| G
+    E -->|"over cap"| F
+    G --> H --> I --> J --> K
 ```
 
 ---
@@ -95,22 +86,37 @@ Classification applies to the **prompt only**. The LLM response is scanned separ
 
 `ModelRouter` maps `(task_type, complexity, data_classification, budget_remaining_usd)` to a `ModelConfig`. All rules are explicit — no ML, fully deterministic.
 
-```
-ModelRouter.route()
-│
-├── RESTRICTED? ────────────────────────────→ Ollama Tier 3  (HARD INVARIANT)
-│
-├── budget < $1 AND alias=opus? ────────────→ downgrade to Sonnet  (BUDGET DEGRADATION)
-│
-├── complexity=high AND task=security? ─────→ escalate to Opus  (COMPLEXITY ESCALATION)
-│
-├── Otherwise: TASK_ALIAS_MAP
-│     commit_summary, simple_qa, routing    → haiku
-│     pr_review, rag_response, code_explain → sonnet
-│     security_audit, architecture_review   → opus
-│
-└── FALLBACK_CHAIN (health-aware)
-      Anthropic (1A) → Azure Canada (1B) → Ollama (2/3)
+```mermaid
+flowchart TD
+    IN(["ModelRouter.route()\ntask_type · complexity · classification · budget"])
+
+    R{"RESTRICTED?"}
+    OLL3["Ollama Tier 3\nHARD INVARIANT\nreturns immediately"]
+
+    B{"budget &lt; $1\nAND alias = opus?"}
+    DOWN["Downgrade to Sonnet\nBUDGET DEGRADATION"]
+
+    C{"complexity = high\nAND task = security_audit?"}
+    ESC["Escalate to Opus\nCOMPLEXITY ESCALATION"]
+
+    MAP["TASK_ALIAS_MAP\ncommit_summary · simple_qa · routing → haiku\npr_review · rag_response · code_explain → sonnet\nsecurity_audit · architecture_review → opus"]
+
+    CHAIN["FALLBACK_CHAIN\nhealth-aware provider selection"]
+    ANT["✅ Anthropic\nTier 1A"]
+    AZ["✅ Azure OpenAI Canada\nTier 1B"]
+    OLL["✅ Ollama\nTier 2/3"]
+
+    IN --> R
+    R -->|"Yes"| OLL3
+    R -->|"No"| B
+    B -->|"Yes"| DOWN
+    B -->|"No"| C
+    C -->|"Yes"| ESC
+    C -->|"No"| MAP
+    DOWN & ESC & MAP --> CHAIN
+    CHAIN --> ANT
+    ANT -->|"circuit open"| AZ
+    AZ -->|"circuit open"| OLL
 ```
 
 **Model IDs are never hardcoded** in routing logic. `_build_config()` always looks up `config/model_registry.yaml`. Upgrading from `claude-sonnet-4-6` to a future version requires editing one YAML key.
@@ -171,12 +177,19 @@ curl http://localhost:8000/metrics | grep restricted
 
 **Mask → Send → Unmask flow:**
 
-1. Presidio `AnalyzerEngine` detects entities in the prompt
-2. Entities replaced with typed placeholders: `<PERSON_0>`, `<CREDIT_CARD_0>`, `<CA_SIN_0>`
-3. Entity map stored in job state
-4. Masked prompt sent to LLM — PII never reaches the cloud
-5. Presidio scans LLM output for PII leakage (in case model hallucinated entities)
-6. Placeholders in response restored to original values via entity map
+```mermaid
+flowchart TD
+    A(["Prompt received"])
+    B["Presidio AnalyzerEngine\ndetect entities in prompt"]
+    C["Replace with typed placeholders\n&lt;PERSON_0&gt; · &lt;CREDIT_CARD_0&gt; · &lt;CA_SIN_0&gt;\nstore entity map in job state"]
+    D(["Send masked prompt to LLM\nPII never reaches the cloud"])
+    E["LLM generates response\n(sees only placeholders)"]
+    F["PIIMasker.scan(response)\ndetect any hallucinated PII leakage"]
+    G["PIIMasker.unmask(response)\nrestore original entities via entity map"]
+    H(["Clean response delivered to client"])
+
+    A --> B --> C --> D --> E --> F --> G --> H
+```
 
 **Supported entity types:** `PERSON`, `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CA_SIN`, `IBAN_CODE`, `IP_ADDRESS`, `URL`
 
@@ -184,35 +197,30 @@ curl http://localhost:8000/metrics | grep restricted
 
 ## RAG Pipeline
 
-```
-POST /api/v1/rag/index
-        │
-        ▼
-  TextChunker  (400 words, 50-word overlap)
-  → N overlapping chunks
-        │
-        ▼
-  EmbeddingProviderFactory.get(data_classification)
-  RESTRICTED/CONFIDENTIAL → OllamaEmbeddingProvider  (768-dim, nomic-embed-text)
-  INTERNAL/PUBLIC         → Ollama (768-dim) or OpenAI (1536-dim, separate index)
-        │
-        ▼
-  INSERT INTO document_chunks_768 (pgvector, IVFFlat ANN index)
-  ON CONFLICT DO NOTHING  (idempotent per document_id + chunk_index)
+```mermaid
+flowchart TD
+    RI(["POST /api/v1/rag/index"])
+    TC["TextChunker\n400 words · 50-word overlap\n→ N overlapping chunks"]
+    EF["EmbeddingProviderFactory.get(data_classification)"]
+    OE["OllamaEmbeddingProvider\n768-dim · nomic-embed-text\nRESTRICTED / CONFIDENTIAL"]
+    OOE["Ollama 768-dim\nor OpenAI 1536-dim\nINTERNAL / PUBLIC"]
+    DB[("INSERT INTO document_chunks_768\npgvector · IVFFlat ANN index\nON CONFLICT DO NOTHING")]
+
+    RI --> TC --> EF
+    EF -->|"RESTRICTED / CONFIDENTIAL"| OE
+    EF -->|"INTERNAL / PUBLIC"| OOE
+    OE & OOE --> DB
 ```
 
-```
-POST /api/v1/rag/query
-        │
-        ▼
-  Embed query  (same provider routing as indexing)
-        │
-        ▼
-  ANN search: ORDER BY embedding <=> query_vector LIMIT top_k
-  WHERE namespace = $ns AND data_class = ANY(allowed_classes)
-        │
-        ▼
-  RAGService.build_context(chunks) → numbered source list with similarity scores
+```mermaid
+flowchart TD
+    RQ(["POST /api/v1/rag/query"])
+    EQ["Embed query\nsame provider routing as indexing"]
+    ANN["ANN search\nORDER BY embedding ⟺ query_vector LIMIT top_k\nWHERE namespace = ns AND data_class = ANY(allowed_classes)"]
+    BC["RAGService.build_context(chunks)\nnumbered source list with similarity scores"]
+    OUT(["Context returned to caller"])
+
+    RQ --> EQ --> ANN --> BC --> OUT
 ```
 
 **Classification-aware retrieval:** a `PUBLIC` query cannot see `INTERNAL` or `RESTRICTED` chunks. `_allowed_classifications()` returns the set of levels ≤ the request's classification.
@@ -257,18 +265,19 @@ Dashboards are pre-provisioned from `grafana/provisioning/`. Available at http:/
 
 `BudgetService` tracks cumulative spend per team and enforces monthly caps with pre-flight checks before any LLM call is made.
 
-```
-Request arrives
-    │
-    ▼
-BudgetService.check(team_id, estimated_cost)
-    ├── under cap? → proceed
-    └── over cap?  → HTTP 429 (before any LLM cost incurred)
+```mermaid
+flowchart TD
+    A(["Request arrives"])
+    B["BudgetService.check(team_id, estimated_cost)"]
+    C{"Under cap?"}
+    D(["HTTP 429\nBudget exceeded\nbefore any LLM cost incurred"])
+    E["Proceed to LLM call"]
+    F(["Response received"])
+    G["BudgetService.record(team_id, actual_cost_usd)"]
 
-Response received
-    │
-    ▼
-BudgetService.record(team_id, actual_cost_usd)
+    A --> B --> C
+    C -->|"Yes"| E --> F --> G
+    C -->|"No"| D
 ```
 
 The `budget_utilization_ratio` Prometheus gauge provides live visibility per team.
@@ -287,8 +296,14 @@ The `budget_utilization_ratio` Prometheus gauge provides live visibility per tea
 
 When a circuit opens, `ModelRouter._select_available_tier()` skips that provider and advances to the next in `FALLBACK_CHAIN`:
 
-```
-Anthropic (1A)  →  Azure OpenAI Canada (1B)  →  Ollama (2/3)
+```mermaid
+flowchart LR
+    ANT["Anthropic\nTier 1A"]
+    AZ["Azure OpenAI Canada\nTier 1B"]
+    OLL["Ollama\nTier 2/3\nfinal fallback — circuit never opens"]
+
+    ANT -->|"circuit open"| AZ
+    AZ -->|"circuit open"| OLL
 ```
 
 Ollama's circuit is never opened — it is always the final fallback.
@@ -299,12 +314,24 @@ Ollama's circuit is never opened — it is always the final fallback.
 
 Inference runs asynchronously. Clients receive a `job_id` immediately and poll until the job completes.
 
-```
-POST /api/v1/inference  →  202  { "job_id": "uuid" }
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant G as Gateway
 
-GET  /api/v1/jobs/{id}  →  { "status": "pending" }
-GET  /api/v1/jobs/{id}  →  { "status": "completed", "result": "..." }
-GET  /api/v1/jobs/{id}  →  { "status": "failed", "error": "..." }
+    C->>G: POST /api/v1/inference
+    G-->>C: 202 Accepted { "job_id": "uuid" }
+
+    loop Poll until done
+        C->>G: GET /api/v1/jobs/{id}
+        alt still running
+            G-->>C: { "status": "pending" }
+        else completed
+            G-->>C: { "status": "completed", "result": "..." }
+        else failed
+            G-->>C: { "status": "failed", "error": "..." }
+        end
+    end
 ```
 
 Both SDKs include `poll_job()` helpers with configurable timeout and exponential backoff.
