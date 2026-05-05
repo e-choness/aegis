@@ -1,245 +1,375 @@
 # Development Guide
 
+> Everything runs inside Docker. No host Python or Node installs required.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [First-Time Setup](#first-time-setup)
+- [Daily Workflow](#daily-workflow)
+- [Running Tests](#running-tests)
+- [Project Structure](#project-structure)
+- [Adding a Provider](#adding-a-provider)
+- [Adding an Embedding Provider](#adding-an-embedding-provider)
+- [Extending the Model Registry](#extending-the-model-registry)
+- [Adding API Endpoints](#adding-api-endpoints)
+- [Working with the SDKs](#working-with-the-sdks)
+- [Running Evals](#running-evals)
+- [Linting & Formatting](#linting--formatting)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 ## Prerequisites
 
-- Docker Desktop (all builds and tests run inside containers — no host Python or Node installs)
-- `make`
-- An Anthropic API key for integration tests (unit tests run with a dummy key)
+- **Docker Desktop** — all builds and tests run inside containers
+- **Make** — task runner (`make build`, `make test`, etc.)
+- An `ANTHROPIC_API_KEY` for cloud inference (Ollama-only mode works without one)
+
+No host Python, Node, or database installs needed.
+
+---
 
 ## First-Time Setup
 
 ```bash
-git clone <repo>
-cd Aegis
+# 1. Clone and enter the repo
+git clone <repo-url> aegis
+cd aegis
 
-# Create your local env file
+# 2. Configure environment
 cp .env.example .env
-# Set ANTHROPIC_API_KEY=sk-ant-... in .env
+# Edit .env — set ANTHROPIC_API_KEY at minimum
 
-# Build all images and run tests
+# 3. Build images and run tests
 make test
+# Expected: 103 passed in ~2s
+
+# 4. Start the full stack
+make up
+# Gateway:    http://localhost:8000
+# Swagger UI: http://localhost:8000/docs
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3001 (admin / admin)
 ```
 
-`make test` runs three suites in sequence:
-1. **Gateway** — 112 pytest tests inside `aegis-test:dev`
-2. **Python SDK** — 14 pytest tests inside `aegis-sdk-py-test:dev`
-3. **TypeScript SDK** — Jest tests inside `aegis-sdk-ts-test:dev`
+---
 
-All tests use mocked external providers — no real API calls are made.
+## Daily Workflow
+
+```bash
+# Start services (skips rebuild if images are current)
+make up
+
+# Tail gateway logs
+make logs
+
+# Run all tests
+make test
+
+# Open a shell inside the gateway container
+make shell
+
+# Stop everything
+make down
+```
+
+---
 
 ## Running Tests
 
-```bash
-make test           # all suites
-make test-py        # gateway tests only (fastest feedback loop)
-make test-sdk-py    # Python SDK tests only
-make test-ts        # TypeScript SDK tests only
-```
-
-To pass extra pytest flags:
-```bash
-docker run --rm -e ANTHROPIC_API_KEY=dummy aegis-test:dev \
-  pytest -v -k "test_restricted" --tb=long
-```
-
-## Starting the Stack
+All 103 tests run inside Docker — the test profile builds an isolated image with `pytest` and all dev dependencies:
 
 ```bash
-make up
+make test
+# Equivalent to: docker compose --profile test run --rm test
 ```
 
-This starts: `gateway`, `ollama`, `timescaledb`, `vectordb`, `prometheus`, `grafana`.
+### Run a single test file
 
-The gateway won't initialize the RAG service unless `VECTORDB_URL` is set in `.env`:
 ```bash
-VECTORDB_URL=postgresql://aegis:aegis_vec@localhost:5433/aegis_vectors
+docker compose --profile test run --rm test pytest tests/test_router.py -v
 ```
 
-## Project Structure Conventions
+### Run a single test
 
-| Location | Rule |
-|----------|------|
-| `src/` | All gateway application code |
-| `tests/` | All gateway tests |
-| `evals/` | Model evaluation framework |
-| `sdk/python/` | Python SDK (separate pyproject.toml, separate Dockerfile) |
-| `sdk/typescript/` | TypeScript SDK (separate package.json, separate Dockerfile) |
-| `config/` | YAML configuration — no hardcoded model IDs anywhere else |
-| `scripts/` | One-shot DB schema scripts |
-| `docs/` | Developer documentation |
+```bash
+docker compose --profile test run --rm test pytest tests/test_router.py::test_restricted_routing_invariant -v
+```
 
-Files stay under 500 lines. No file should reach this limit; split at the service boundary if approaching it.
+### Key test files
 
-## Adding a New LLM Provider
+| File | What it covers |
+|------|---------------|
+| `tests/test_router.py` | Routing invariants, budget degradation, PIPEDA |
+| `tests/test_classifier.py` | Data classification patterns |
+| `tests/test_pii.py` | Mask/unmask correctness |
+| `tests/test_embedding_factory.py` | Embedding provider routing, PIPEDA for embeddings |
+| `tests/test_audit.py` | Audit log writes, tier tracking |
+| `tests/test_budget.py` | Per-team cap enforcement |
+| `tests/test_rag.py` | RAG classification-aware retrieval |
+| `tests/test_inference.py` | End-to-end pipeline (mocked providers) |
 
-1. Create `src/gateway/providers/<name>_provider.py` implementing `LLMProvider` from `base.py`:
+---
+
+## Project Structure
+
+```
+src/gateway/
+├── main.py                    # FastAPI app, lifespan, middleware, router registration
+├── models.py                  # Pydantic request/response models
+├── api/v1/
+│   ├── inference.py           # POST /inference, GET /jobs/{id}
+│   ├── health.py              # GET /health
+│   └── rag.py                 # POST /rag/index, POST /rag/query
+├── providers/
+│   ├── base.py                # LLMProvider ABC
+│   ├── factory.py             # ProviderFactory.get(name) → LLMProvider
+│   ├── anthropic_provider.py
+│   ├── azure_openai_provider.py
+│   ├── ollama_provider.py
+│   └── embeddings/
+│       ├── base.py            # EmbeddingProvider ABC
+│       ├── factory.py         # EmbeddingProviderFactory.get(classification)
+│       ├── ollama_embedding.py
+│       └── openai_embedding.py
+└── services/
+    ├── classifier.py          # DataClassifier — regex patterns
+    ├── router.py              # ModelRouter — deterministic routing
+    ├── pii.py                 # PIIMasker — Presidio + CA_SIN
+    ├── inference.py           # InferenceService — pipeline orchestrator
+    ├── rag.py                 # TextChunker + RAGService
+    ├── audit.py               # AuditLogger → TimescaleDB
+    ├── budget.py              # BudgetService — per-team caps
+    └── health.py              # ProviderHealth — circuit breaker
+```
+
+---
+
+## Adding a Provider
+
+1. **Create the provider class** in `src/gateway/providers/`:
 
 ```python
-from .base import LLMProvider, CompletionRequest, CompletionResponse
+# src/gateway/providers/my_provider.py
+from .base import LLMProvider
 
-class NewProvider(LLMProvider):
-    async def complete(self, request: CompletionRequest) -> CompletionResponse: ...
-    def estimate_cost_usd(self, input_tokens, output_tokens, alias) -> float: ...
-    async def health_check(self) -> bool: ...
+class MyProvider(LLMProvider):
+    async def complete(self, prompt: str, model_id: str, max_tokens: int) -> str:
+        # call the API
+        ...
+
+    async def health_check(self) -> bool:
+        ...
 ```
 
-2. Register it in `src/gateway/providers/factory.py`:
+2. **Register it in the factory** (`src/gateway/providers/factory.py`):
 
 ```python
-if provider == "newprovider":
-    return NewProvider(base_url=os.environ.get("NEW_PROVIDER_URL", "..."))
+from .my_provider import MyProvider
+
+class ProviderFactory:
+    @staticmethod
+    def get(name: str) -> LLMProvider:
+        match name:
+            case "my_provider": return MyProvider()
+            ...
 ```
 
-3. Add it to the fallback chain in `src/gateway/services/router.py`:
+3. **Add it to the health tracker** (`src/gateway/services/health.py`):
+
+```python
+self._healthy = {
+    "anthropic": False,
+    "azure_openai": False,
+    "my_provider": False,   # add here
+    "ollama": True,
+}
+```
+
+4. **Add it to the fallback chain** (`src/gateway/services/router.py`):
 
 ```python
 FALLBACK_CHAIN = [
     ("anthropic",    "tier1_anthropic", 1),
-    ("azure_openai", "tier1_azure",     1),
-    ("newprovider",  "tier1b_new",      1),   # example: new Tier 1
-    ("vllm",         "tier2_vllm",      2),
+    ("my_provider",  "tier1_my",        1),   # add here
     ("ollama",       "tier3_ollama",    3),
 ]
 ```
 
-4. Add the model IDs and pricing to `config/model_registry.yaml`.
+5. **Add model IDs to the registry** (`config/model_registry.yaml`):
 
-5. Add the provider to `ProviderHealth.__init__` in `src/gateway/services/health.py`.
-
-6. Write tests in `tests/test_<name>_provider.py`. Use `respx` to mock HTTP calls:
-
-```python
-import respx, httpx
-
-@respx.mock
-@pytest.mark.asyncio
-async def test_complete():
-    respx.post("http://provider/v1/completions").mock(
-        return_value=httpx.Response(200, json={...})
-    )
-    ...
+```yaml
+sonnet:
+  tier1_my: "my-model-id-v1"
+  ...
 ```
 
-## Adding a New Embedding Provider
+6. **Write tests** covering health fallback and PIPEDA invariant if the provider is cloud-hosted.
 
-1. Create `src/gateway/providers/embeddings/<name>_embedding.py` implementing `EmbeddingProvider`:
+---
+
+## Adding an Embedding Provider
+
+1. **Create the class** in `src/gateway/providers/embeddings/`:
 
 ```python
 from .base import EmbeddingProvider
 
-class NewEmbeddingProvider(EmbeddingProvider):
-    async def embed(self, texts: list[str]) -> list[list[float]]: ...
-    @property
-    def dimensions(self) -> int: return 768   # or 1536
+class MyEmbeddingProvider(EmbeddingProvider):
+    dimensions = 1024  # declare the output dimension
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        ...
+
+    async def health_check(self) -> bool:
+        ...
 ```
 
-2. Add a routing case in `src/gateway/providers/embeddings/factory.py`.
+2. **Register it in** `src/gateway/providers/embeddings/factory.py` following the existing classification routing logic.
 
-3. If the provider serves data outside Canada, it **must not** be returned for `RESTRICTED` or `CONFIDENTIAL` classification. Add a test to `tests/test_embedding_factory.py` that asserts this invariant.
+3. **If the provider is cloud-hosted**, add a test in `tests/test_embedding_factory.py` asserting it is never selected for `RESTRICTED` or `CONFIDENTIAL` data.
 
-## Adding a New Task Type
+4. **Note the dimensions.** If different from 768, a new pgvector table and index will be needed (see `scripts/init_vectordb.sql`).
 
-In `src/gateway/services/router.py`, add the task to `TASK_ALIAS_MAP`:
+---
+
+## Extending the Model Registry
+
+`config/model_registry.yaml` controls all model IDs and costs. Never hardcode model IDs in Python.
+
+```yaml
+# Add a new alias
+my_alias:
+  tier1_anthropic: "claude-new-model-id"
+  tier3_ollama:    "my-local-model:7b"
+  cost_input_per_mtok:  2.00
+  cost_output_per_mtok: 10.00
+  context_tokens:  200000
+```
+
+Then map task types to the alias in `ModelRouter.TASK_ALIAS_MAP`:
 
 ```python
 TASK_ALIAS_MAP = {
+    "my_task": "my_alias",
     ...
-    "my_new_task": "sonnet",  # or haiku / opus
 }
 ```
 
-Add a test in `tests/test_router.py`:
+---
+
+## Adding API Endpoints
+
+1. Create a router file in `src/gateway/api/v1/`
+2. Define request/response Pydantic models
+3. Register the router in `src/gateway/main.py`:
 
 ```python
-def test_my_new_task_uses_sonnet():
-    config = router.route("my_new_task", "medium", "INTERNAL")
-    assert config.alias == "sonnet"
+from .api.v1.my_feature import router as my_router
+app.include_router(my_router)
 ```
 
-## Working with the Eval Framework
+4. Add tests in `tests/`
 
-The eval framework in `evals/` measures model quality on a labelled dataset before any model change is deployed.
+---
 
-**Running evals** (inject your own `review_fn`):
+## Working with the SDKs
 
-```python
-from evals.runner import run_eval
-from evals.scorer import ReviewOutput
-
-async def my_review_fn(diff: str, model_alias: str) -> ReviewOutput:
-    # call your model / gateway
-    response = await gateway_client.submit_and_poll(diff, "pr_review")
-    return ReviewOutput(flags=extract_flags(response))
-
-result = await run_eval("my-model-v2", my_review_fn)
-baseline = await run_eval("my-model-v1", baseline_fn)
-
-if not result.beats_baseline(baseline, margin=0.05):
-    raise ValueError(f"Model regressed: F1 {result.f1:.3f} vs baseline {baseline.f1:.3f}")
-```
-
-**Adding eval cases** — add to `GOLDEN_CASES` in `evals/golden_dataset.py`:
-
-```python
-EvalCase(
-    id="security-ssrf-002",
-    category="security",
-    diff="""
-+def fetch_url(url):
-+    return requests.get(url)  # user-supplied
-""",
-    expected_flags=["ssrf"],
-    expected_severity="high",
-    description="SSRF via user-supplied URL in requests.get",
-),
-```
-
-Cases must belong to one of: `security`, `performance`, `style`, `false_positive`. At least one case from each category must exist (enforced by `test_golden_dataset_has_required_categories`).
-
-**Quality gate**: a new model must beat baseline F1 by ≥5% to be approved for deployment. This threshold is set by `EvalResult.beats_baseline(baseline, margin=0.05)`.
-
-## Model Registry Updates
-
-`config/model_registry.yaml` is the only place model IDs and pricing live. When Anthropic releases a new model:
-
-1. Update the alias entry in `model_registry.yaml`
-2. Run `make test-py` — `tests/test_model_registry.py` validates that no retired model IDs remain
-
-Do not hardcode model ID strings anywhere in Python or TypeScript source.
-
-## Database Migrations
-
-**TimescaleDB** (audit log): add SQL to `scripts/init_db.sql`. It runs once on container creation via `docker-entrypoint-initdb.d`. To apply to a running container:
+### Python SDK
 
 ```bash
-docker exec -i $(docker compose ps -q timescaledb) \
-  psql -U aegis aegis < scripts/init_db.sql
+# Install in development mode (from inside the gateway container)
+pip install -e sdk/python
+
+# Run SDK tests
+pytest sdk/python/tests/
 ```
 
-**pgvector** (RAG): same pattern with `scripts/init_vectordb.sql` and the `vectordb` container.
-
-## Debugging
+### TypeScript SDK
 
 ```bash
-# Tail gateway logs
-make logs
+cd sdk/typescript
+npm install
+npm test
+npm run build
+```
 
-# Interactive shell (for manual pytest runs, DB inspection)
+---
+
+## Running Evals
+
+The `evals/` directory contains evaluation harnesses for testing model quality on task-specific benchmarks.
+
+```bash
+# Run all evals (requires gateway running)
+docker compose --profile test run --rm test python -m evals.run
+
+# Run a specific eval
+docker compose --profile test run --rm test python -m evals.run --task security_audit
+```
+
+---
+
+## Linting & Formatting
+
+```bash
+# Inside the gateway container
 make shell
 
-# Check all provider health
-curl http://localhost:8000/api/v1/health | jq
+# Format
+black src/ tests/
 
-# Check Prometheus metrics
-curl http://localhost:8000/metrics | grep gateway_requests
+# Lint
+ruff check src/ tests/
 
-# Verify PIPEDA invariant (must always be 0)
-curl http://localhost:8000/metrics | grep restricted_data_cloud_violations
+# Type check
+mypy src/
 ```
 
-## Code Style
+---
 
-- Python: no type: ignore, no bare `except`, no `print` (use `logging`)
-- No comments that describe what the code does — only comments for non-obvious WHY
-- No backwards-compatibility shims — delete unused code
-- Validate at system boundaries only (HTTP request bodies); trust internal types
+## Troubleshooting
+
+### Gateway returns 503 on RAG endpoints
+
+`VECTORDB_URL` is not set or TimescaleDB is not healthy. Check:
+
+```bash
+make logs
+# Look for: "VECTORDB_URL not set — RAG service disabled"
+# or: asyncpg connection errors
+```
+
+Ensure `VECTORDB_URL=postgresql://aegis:aegis_dev@timescaledb:5432/aegis` is in your `.env`.
+
+### Embedding calls fail with connection error
+
+`nomic-embed-text` model needs to be available in Ollama. The provider will auto-pull it on first use, but this requires Ollama to be running and reachable at `OLLAMA_BASE_URL`.
+
+```bash
+# Check Ollama is up
+curl http://localhost:11434/api/tags
+```
+
+### Tests fail with import errors
+
+The test image may be stale. Force a rebuild:
+
+```bash
+make build
+make test
+```
+
+### `restricted_data_cloud_violations_total` is non-zero
+
+This is a CRITICAL compliance violation. Immediately:
+
+1. Stop the gateway: `make down`
+2. Check `make logs` for the offending request
+3. Audit `tests/test_router.py::test_restricted_routing_invariant`
+4. Verify `ModelRouter.route()` returns Ollama for all RESTRICTED inputs
+
+Do not restart until the root cause is identified and fixed.

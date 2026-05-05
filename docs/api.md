@@ -1,191 +1,300 @@
 # API Reference
 
-Base URL: `http://localhost:8000` (development)
+Base URL: `http://localhost:8000`
 
-All inference endpoints follow the async job pattern: POST returns 202 + `job_id`, then poll GET until `status` is `completed` or `failed`.
+All inference endpoints follow an **async job pattern**: `POST` returns `202 Accepted` with a `job_id`, then poll `GET /jobs/{id}` until `status` is `completed` or `failed`.
 
----
-
-## POST /api/v1/inference
-
-Submit an inference job.
-
-**Request body**
-
-```json
-{
-  "prompt":     "string (required)",
-  "task_type":  "string (default: general)",
-  "team_id":    "string (required)",
-  "user_id":    "string (required)",
-  "complexity": "low | medium | high (default: medium)",
-  "trace_id":   "string (optional, UUID)"
-}
-```
-
-**Task types and default model alias**
-
-| task_type | Alias | Notes |
-|-----------|-------|-------|
-| `commit_summary` | haiku | |
-| `simple_qa` | haiku | |
-| `routing` | haiku | |
-| `classification` | haiku | |
-| `pr_review` | sonnet | Prepends code-review system prompt |
-| `rag_response` | sonnet | |
-| `code_explanation` | sonnet | |
-| `documentation` | sonnet | |
-| `deployment_check` | sonnet | |
-| `security_audit` | opus | Escalates to opus on `complexity=high` |
-| `architecture_review` | opus | |
-| `multi_file_refactor` | opus | |
-| _(anything else)_ | sonnet | Default fallback |
-
-**Response 202**
-
-```json
-{
-  "job_id":   "550e8400-e29b-41d4-a716-446655440000",
-  "status":   "queued",
-  "trace_id": "string or null"
-}
-```
-
-**Error responses**
-
-| Code | Condition |
-|------|-----------|
-| 400 | Missing `team_id` or `user_id` |
-| 402 | Team budget exceeded |
-| 451 | RESTRICTED data routed to cloud (compliance violation — should never occur) |
+Interactive docs (Swagger UI) available at http://localhost:8000/docs.
 
 ---
 
-## GET /api/v1/jobs/{job_id}
+## Table of Contents
 
-Poll for job status.
-
-**Response 200**
-
-```json
-{
-  "job_id":              "string",
-  "status":              "queued | running | completed | failed",
-  "content":             "string or null",
-  "model_alias":         "haiku | sonnet | opus | local",
-  "provider":            "anthropic | azure_openai | vllm | ollama",
-  "tier":                1,
-  "cost_usd":            0.0023,
-  "data_classification": "RESTRICTED | CONFIDENTIAL | INTERNAL | PUBLIC",
-  "error":               "string or null"
-}
-```
-
-**Response 404** — job_id not found.
+- [Health](#health)
+- [Inference](#inference)
+- [Jobs](#jobs)
+- [RAG — Index](#rag--index)
+- [RAG — Query](#rag--query)
+- [Metrics](#metrics)
+- [Task Types](#task-types)
+- [Data Classifications](#data-classifications)
+- [Error Codes](#error-codes)
 
 ---
 
-## GET /api/v1/health
+## Health
 
-Returns gateway health and provider status.
+### `GET /api/v1/health`
 
-**Response 200**
+Returns gateway and provider health status.
+
+**Response `200`**
 
 ```json
 {
   "status": "ok",
   "providers": {
-    "anthropic":    true,
-    "azure_openai": true,
-    "vllm":         false,
-    "ollama":       true
+    "anthropic": true,
+    "azure_openai": false,
+    "ollama": true
   },
   "restricted_cloud_violations": 0
 }
 ```
 
-`restricted_cloud_violations` must always be 0. A non-zero value is a PIPEDA compliance incident.
+| Field | Description |
+|-------|-------------|
+| `status` | `"ok"` or `"degraded"` |
+| `providers` | Per-provider circuit breaker state |
+| `restricted_cloud_violations` | Compliance counter — must always be `0` |
 
 ---
 
-## POST /api/v1/rag/index
+## Inference
 
-Index a document for RAG retrieval. Requires `VECTORDB_URL` to be set; returns 503 otherwise.
+### `POST /api/v1/inference`
+
+Submit an AI inference request. Returns immediately with a `job_id`.
 
 **Request body**
 
 ```json
 {
-  "document_id":       "string (required)",
-  "content":           "string (required)",
+  "prompt": "Review this pull request for security issues.",
+  "task_type": "security_audit",
+  "team_id": "platform",
+  "user_id": "alice",
   "data_classification": "INTERNAL",
-  "namespace":         "default"
+  "complexity": "medium",
+  "max_tokens": 1024
 }
 ```
 
-**Response 201**
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `prompt` | string | **Yes** | — | The prompt text |
+| `task_type` | string | **Yes** | — | See [Task Types](#task-types) |
+| `team_id` | string | **Yes** | — | Team for budget tracking |
+| `user_id` | string | **Yes** | — | Requesting user (audit trail) |
+| `data_classification` | string | No | Auto-detected | Override classification |
+| `complexity` | string | No | `"medium"` | `"low"` \| `"medium"` \| `"high"` |
+| `max_tokens` | integer | No | `1024` | Maximum response tokens |
+
+**Response `202 Accepted`**
 
 ```json
 {
-  "document_id":   "string",
-  "chunks_indexed": 3
+  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```
 
-Documents are chunked at word boundaries (~400 words, 50-word overlap). Each chunk is embedded using the provider selected by `data_classification`. RESTRICTED/CONFIDENTIAL documents use the 768-dim on-prem index only.
+**Errors**
+
+| Code | Reason |
+|------|--------|
+| `400` | Missing required fields or invalid task_type |
+| `429` | Team budget cap exceeded |
+| `503` | All providers unavailable |
 
 ---
 
-## POST /api/v1/rag/query
+## Jobs
 
-Retrieve relevant chunks for a query.
+### `GET /api/v1/jobs/{job_id}`
+
+Poll the status of an inference job.
+
+**Response `200`**
+
+```json
+{
+  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "status": "completed",
+  "result": "The code looks secure. No SQL injection or XSS vulnerabilities found.",
+  "model_alias": "sonnet",
+  "provider": "anthropic",
+  "tier": 1,
+  "data_class": "INTERNAL",
+  "cost_usd": 0.0023,
+  "latency_ms": 1240,
+  "created_at": "2026-05-04T22:00:00Z",
+  "completed_at": "2026-05-04T22:00:01Z"
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `status` | `"pending"` \| `"completed"` \| `"failed"` |
+| `result` | LLM response text (present when `completed`) |
+| `error` | Error message (present when `failed`) |
+| `model_alias` | Logical model tier used (`haiku`, `sonnet`, `opus`) |
+| `provider` | Actual provider (`anthropic`, `azure_openai`, `ollama`) |
+| `tier` | Provider tier (1 = cloud, 3 = local) |
+| `data_class` | Effective classification applied to this request |
+| `cost_usd` | Actual cost of this request |
+
+**Polling recommendation:** start at 500ms, back off to 2s. Both SDKs handle this automatically.
+
+---
+
+## RAG — Index
+
+### `POST /api/v1/rag/index`
+
+Index a document for retrieval-augmented generation.
 
 **Request body**
 
 ```json
 {
-  "question":          "string (required)",
-  "namespace":         "default",
+  "document_id": "policy-handbook-v3",
+  "content": "Full document text here...",
   "data_classification": "INTERNAL",
-  "top_k":             5
+  "namespace": "hr-policies"
 }
 ```
 
-**Response 200**
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `document_id` | string | **Yes** | — | Unique identifier for the document |
+| `content` | string | **Yes** | — | Full document text to index |
+| `data_classification` | string | No | `"INTERNAL"` | Controls which embedding provider is used |
+| `namespace` | string | No | `"default"` | Logical namespace for retrieval scoping |
+
+**Response `201 Created`**
 
 ```json
 {
-  "context":     "Formatted string with [Source N] headers",
-  "chunks":      [
+  "document_id": "policy-handbook-v3",
+  "chunks_indexed": 4
+}
+```
+
+**Notes:**
+- Documents are split into 400-word chunks with 50-word overlap
+- Indexing is idempotent (`ON CONFLICT DO NOTHING` per document_id + chunk_index)
+- `RESTRICTED`/`CONFIDENTIAL` documents always use local Ollama embeddings (768-dim)
+- The embedding model (`nomic-embed-text`) is auto-pulled on first use
+
+---
+
+## RAG — Query
+
+### `POST /api/v1/rag/query`
+
+Retrieve relevant chunks for a question.
+
+**Request body**
+
+```json
+{
+  "question": "What is the remote work reimbursement limit?",
+  "namespace": "hr-policies",
+  "data_classification": "INTERNAL",
+  "top_k": 5
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `question` | string | **Yes** | — | Natural language question |
+| `namespace` | string | No | `"default"` | Namespace to search within |
+| `data_classification` | string | No | `"INTERNAL"` | Controls retrieval access level |
+| `top_k` | integer | No | `5` | Number of chunks to return |
+
+**Response `200`**
+
+```json
+{
+  "context": "[Source 1] (similarity=0.87)\nEmployees working remotely may expense...\n\n---\n\n[Source 2] (similarity=0.74)\nThe monthly cap for home office equipment...",
+  "chunks": [
     {
-      "chunk_index": 0,
-      "content":     "string",
-      "data_class":  "INTERNAL",
-      "similarity":  0.91
+      "chunk_index": 2,
+      "content": "Employees working remotely may expense...",
+      "data_class": "INTERNAL",
+      "similarity": 0.8712
     }
   ],
-  "chunk_count": 1
+  "chunk_count": 2
 }
 ```
 
-Retrieval respects the classification hierarchy: a query at `INTERNAL` cannot retrieve chunks classified as `CONFIDENTIAL` or `RESTRICTED`.
+| Field | Description |
+|-------|-------------|
+| `context` | Pre-formatted string for direct inclusion in an LLM prompt |
+| `chunks` | Raw chunk list with similarity scores |
+| `chunk_count` | Number of chunks returned |
+
+**Access control:** a query at classification level N cannot retrieve chunks at level N+1 or higher. `PUBLIC` cannot see `INTERNAL` chunks.
+
+**Errors**
+
+| Code | Reason |
+|------|--------|
+| `503` | RAG service not configured (`VECTORDB_URL` not set) |
 
 ---
 
-## GET /metrics
+## Metrics
 
-Prometheus text-format metrics. Not included in the OpenAPI schema.
+### `GET /metrics`
 
----
+Prometheus text format scrape endpoint.
 
-## Error Response Shape
+```
+# HELP gateway_requests_total Total inference requests
+# TYPE gateway_requests_total counter
+gateway_requests_total{team_id="platform",model_alias="sonnet",provider="anthropic",tier="1",status="completed"} 42
 
-All 4xx/5xx responses from the gateway follow FastAPI's default error format:
-
-```json
-{
-  "detail": "human-readable error message"
-}
+# HELP restricted_data_cloud_violations_total PIPEDA violations (must stay 0)
+# TYPE restricted_data_cloud_violations_total counter
+restricted_data_cloud_violations_total 0
 ```
 
-The `x-trace-id` response header is set on all inference responses for distributed tracing. Both SDKs surface this as `trace_id` on error objects.
+---
+
+## Task Types
+
+| Task Type | Default Model | Use Case |
+|-----------|--------------|---------|
+| `commit_summary` | Haiku | Summarize a git commit |
+| `simple_qa` | Haiku | Simple question answering |
+| `routing` | Haiku | Intent classification |
+| `classification` | Haiku | Text classification |
+| `pr_review` | Sonnet | Pull request code review |
+| `rag_response` | Sonnet | Answer using retrieved context |
+| `code_explanation` | Sonnet | Explain a code snippet |
+| `documentation` | Sonnet | Generate documentation |
+| `deployment_check` | Sonnet | Validate deployment config |
+| `security_audit` | Opus | Security vulnerability analysis |
+| `architecture_review` | Opus | High-level design review |
+| `multi_file_refactor` | Opus | Complex multi-file changes |
+
+Unknown task types default to `sonnet`.
+
+---
+
+## Data Classifications
+
+| Value | Description | Cloud Allowed |
+|-------|-------------|---------------|
+| `PUBLIC` | No sensitive patterns | Yes |
+| `INTERNAL` | Default for unclassified data | Yes |
+| `CONFIDENTIAL` | API keys, tokens, internal credentials | Yes |
+| `RESTRICTED` | SIN, credit cards, account numbers | **Never** |
+
+If `data_classification` is omitted from the request, it is auto-detected from the prompt content using regex patterns in `DataClassifier`.
+
+---
+
+## Error Codes
+
+| HTTP Status | Meaning |
+|-------------|---------|
+| `202` | Request accepted, poll `GET /jobs/{id}` for result |
+| `201` | Document indexed successfully |
+| `400` | Bad request — invalid fields or missing required params |
+| `404` | Job ID not found |
+| `429` | Team budget cap exceeded — retry after budget resets |
+| `503` | Service unavailable — RAG not configured, or all providers down |
+| `500` | Unexpected internal error — check `make logs` |

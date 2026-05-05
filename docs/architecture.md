@@ -1,174 +1,341 @@
 # Architecture
 
-## Simplified Single-Container Design (Solo Builder)
+> Deep-dive on Aegis design decisions, data flow, and compliance invariants.
 
-Aegis is inspired by OpenClaude's config-driven approach: provider-agnostic, container-native, and zero host dependencies. Everything runs in Docker.
+---
 
-### Key Differences from Multi-Tier Enterprise
+## Table of Contents
 
-- **No GPU required** — removed vLLM Tier 2 (which needed A100s)
-- **Ollama is the universal local tier** — serves RESTRICTED data, offline mode, and cost-free inference
-- **Three-tier fallback** — Anthropic → Azure OpenAI Canada → Ollama
-- **Simplified ops** — one Docker Compose, no Kubernetes, no GPU cluster
+- [Design Goals](#design-goals)
+- [Request Lifecycle](#request-lifecycle)
+- [Data Classification](#data-classification)
+- [Provider Tiers & Routing](#provider-tiers--routing)
+- [PIPEDA Invariant](#pipeda-invariant)
+- [PII Protection](#pii-protection)
+- [RAG Pipeline](#rag-pipeline)
+- [Observability](#observability)
+- [Budget Enforcement](#budget-enforcement)
+- [Circuit Breaker](#circuit-breaker)
+- [Async Job Model](#async-job-model)
+- [Config-Driven Model Registry](#config-driven-model-registry)
+- [Scaling Path](#scaling-path)
 
-## System Overview
+---
+
+## Design Goals
+
+| Goal | Implementation |
+|------|---------------|
+| Provider-agnostic | `LLMProvider` ABC + `ProviderFactory` — swap providers via config, zero code changes |
+| Zero cloud for RESTRICTED data | Hard routing invariant in `ModelRouter.route()`, tested, Prometheus-monitored |
+| Sub-2ms governance overhead | Regex-only classification, rules-based routing — no ML in the hot path |
+| Config-driven model selection | `config/model_registry.yaml` is the single source of truth for model IDs and costs |
+| Auditable by design | Every inference writes a timestamped audit record to TimescaleDB |
+| Solo-buildable | Docker Compose, CPU-only, no GPU required |
+
+---
+
+## Request Lifecycle
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Client (SDK / CLI)                                                  │
-└───────────────────┬─────────────────────────────────────────────────┘
-                    │ POST /api/v1/inference
-                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  FastAPI Gateway (src/gateway/main.py)                               │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  InferenceService._run() — asyncio.create_task             │   │
-│  │                                                             │   │
-│  │  1. DataClassifier.classify()        <1ms regex             │   │
-│  │  2. PIIMasker.mask()                 Presidio               │   │
-│  │  3. ModelRouter.route()              rules-based            │   │
-│  │  4. BudgetService.check()            pre-flight             │   │
-│  │  5. ProviderFactory.get().complete() → LLM call             │   │
-│  │  6. scan_output()                    leakage check          │   │
-│  │  7. unmask()                         restore entities       │   │
-│  │  8. BudgetService.record_spend()     cost accounting        │   │
-│  │  9. AuditLogger.log()                TimescaleDB            │   │
-│  │  10. Prometheus counters                                     │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└───────────────────────┬───────────┬────────────────────────────────┘
-                        │           │
-      ┌─────────────────▼─────────┐ ┌─▼────────────────────┐
-      │  Anthropic (Tier 1A)       │ │  Azure OpenAI (Tier1B)│
-      │  claude-sonnet-4-6, etc.   │ │  Canada region        │
-      └─────────────────┬─────────┘ └─────────┬────────────┘
-                        │                       │
-            ┌───────────▼───────────┐  ┌───────▼──────┐
-            │  Ollama (Tier 2/3)     │  │  TimescaleDB  │
-            │  qwen2.5, sonnet, opus │  │  (audit log)  │
-            │  ALL data classes      │  └───────────────┘
-            └────────────────────────┘
+POST /api/v1/inference
+         │
+         ▼ 1. Classify (regex, <1ms)
+   DataClassifier
+   → RESTRICTED | CONFIDENTIAL | INTERNAL | PUBLIC
+         │
+         ▼ 2. Mask PII (Presidio + CA_SIN)
+   PIIMasker.mask()
+   → replaces entities with typed placeholders
+   → stores entity map for later restoration
+         │
+         ▼ 3. Route (rules-based, deterministic)
+   ModelRouter.route(task_type, complexity, classification, budget)
+   → ModelConfig { provider, model_id, tier, cost_per_mtok }
+         │
+         ▼ 4. Budget pre-flight
+   BudgetService.check(team_id, estimated_cost)
+   → raises HTTP 429 if team cap exceeded
+         │
+         ▼ 5. Submit to provider
+   ProviderFactory.get(provider_name)
+   → AnthropicProvider | AzureOpenAIProvider | OllamaProvider
+         │
+         ▼ 6. Scan output + unmask
+   PIIMasker.scan(response)     ← PII leakage detection
+   PIIMasker.unmask(response)   ← restore original entities
+         │
+         ▼ 7. Audit + Metrics
+   AuditLogger.log(...)
+   Prometheus counters + histograms updated
+         │
+         ▼
+   202 Accepted → { "job_id": "..." }
+   GET /api/v1/jobs/{job_id}   ← poll until completed | failed
 ```
+
+---
 
 ## Data Classification
 
-`DataClassifier.classify()` uses regex only — <1ms, deterministic, auditable.
+`DataClassifier` uses compiled regex patterns. No ML in this path — zero latency variance, zero false negatives for known patterns.
 
-| Level | Triggers | Example |
+| Level | Patterns | Examples |
 |-------|----------|---------|
-| RESTRICTED | Canadian SIN, credit card, account_number keyword | `123-456-789` |
-| CONFIDENTIAL | Internal email, api_key keyword, Bearer token | `Bearer eyJ...` |
-| INTERNAL | Everything else | Business text |
-| PUBLIC | Caller-specified | Public docs |
+| `RESTRICTED` | Canadian SIN, credit cards, account numbers | `123-456-789`, `4111 1111 1111 1111` |
+| `CONFIDENTIAL` | Internal email, API keys, bearer tokens, password assignments | `api_key=...`, `Bearer eyJ...` |
+| `INTERNAL` | Default — no RESTRICTED or CONFIDENTIAL match | Most business prompts |
+| `PUBLIC` | Explicitly set via `data_classification` request field | Documentation queries |
 
-## PIPEDA Hard Invariant
+Classification applies to the **prompt only**. The LLM response is scanned separately for PII leakage.
 
-**RESTRICTED data never reaches cloud providers.** This is enforced in `src/gateway/services/router.py`:
+---
+
+## Provider Tiers & Routing
+
+`ModelRouter` maps `(task_type, complexity, data_classification, budget_remaining_usd)` to a `ModelConfig`. All rules are explicit — no ML, fully deterministic.
+
+```
+ModelRouter.route()
+│
+├── RESTRICTED? ────────────────────────────→ Ollama Tier 3  (HARD INVARIANT)
+│
+├── budget < $1 AND alias=opus? ────────────→ downgrade to Sonnet  (BUDGET DEGRADATION)
+│
+├── complexity=high AND task=security? ─────→ escalate to Opus  (COMPLEXITY ESCALATION)
+│
+├── Otherwise: TASK_ALIAS_MAP
+│     commit_summary, simple_qa, routing    → haiku
+│     pr_review, rag_response, code_explain → sonnet
+│     security_audit, architecture_review   → opus
+│
+└── FALLBACK_CHAIN (health-aware)
+      Anthropic (1A) → Azure Canada (1B) → Ollama (2/3)
+```
+
+**Model IDs are never hardcoded** in routing logic. `_build_config()` always looks up `config/model_registry.yaml`. Upgrading from `claude-sonnet-4-6` to a future version requires editing one YAML key.
+
+---
+
+## PIPEDA Invariant
+
+RESTRICTED data must never be sent to a cloud provider. This is enforced at four independent layers.
+
+### Layer 1 — Routing Code
 
 ```python
+# src/gateway/services/router.py
 if data_classification == DataClassification.RESTRICTED:
     return self._build_config("local", "ollama", "tier3_ollama", 3)
+    # Returns immediately. No further routing logic runs.
 ```
 
-The compliance view in TimescaleDB must always return 0 rows:
-```sql
-SELECT COUNT(*) FROM inference_audit_log 
-WHERE data_class = 'RESTRICTED' AND tier = 1;  -- Must be 0
-```
-
-The `restricted_data_cloud_violations_total` Prometheus counter is monitored for this.
-
-## Provider Selection
-
-### Fallback Chain
-
-```
-Anthropic (1A) → Azure OpenAI Canada (1B) → Ollama (2/3)
-```
-
-- Anthropic: Primary, highest quality
-- Azure OpenAI Canada: PIPEDA-safe Canadian fallback  
-- Ollama: Local/offline, serves RESTRICTED data, always available
-
-### Routing Rules (priority order)
-
-1. **RESTRICTED** → force Ollama, regardless of task or budget
-2. **Task type** → `commit_summary`→haiku, `pr_review`→sonnet, `security_audit`→opus
-3. **Complexity** → `security_audit` + high → always opus
-4. **Budget** → opus with <$1.00 remaining → degrade to sonnet
-
-Circuit breaker: 3 failures in 60s → mark unhealthy, try next in chain.
-
-## Model Registry
-
-`config/model_registry.yaml` is the SINGLE source of truth. Never hardcode model IDs.
-
-```yaml
-sonnet:
-  tier1_anthropic: "claude-sonnet-4-6"
-  tier1_azure:     "claude-sonnet-4-6"
-  tier3_ollama:    "qwen2.5-coder:32b"
-  cost_input_per_mtok:  3.00
-  cost_output_per_mtok: 15.00
-```
-
-**Opus 4.7 tokenizer note**: New tokenizer generates ~35% more tokens. Cost estimates use 1.35× safety margin.
-
-## PII Masking
-
-`PIIMasker` uses Microsoft Presidio + custom Canadian SIN recognizer. Masks right-to-left to preserve offsets, then restores in the LLM response.
-
-## Provider-Agnostic Design
-
-Like OpenClaude, all provider access goes through abstract interfaces:
+### Layer 2 — Compliance Counter
 
 ```python
-from intelligence.providers.factory import ProviderFactory
-from intelligence.providers.embeddings.factory import EmbeddingProviderFactory
-
-# LLM calls
-provider = ProviderFactory.get("anthropic")
-response = await provider.complete(request)
-
-# Embeddings (classification-driven routing)
-embedder = EmbeddingProviderFactory.get(classification, health_checker)
-vectors = await embedder.embed(chunks)
+# src/gateway/services/inference.py
+if result.data_class == "RESTRICTED" and result.tier == 1:
+    restricted_violations_total.inc()  # Prometheus CRITICAL alert fires
 ```
 
-**Benefits:**
-- Swap providers without code changes
-- Mock easily for testing
-- Compliance enforced as code invariant
+### Layer 3 — Database View
 
-## Databases
+```sql
+-- scripts/init_db.sql
+CREATE VIEW restricted_cloud_violations AS
+  SELECT * FROM audit_log WHERE class = 'RESTRICTED' AND tier = 1;
+-- Query must always return 0 rows
+```
 
-| Database | Port | Purpose |
-|----------|------|---------|
-| TimescaleDB | 5432 | Inference audit log (7-year retention) |
-| pgvector | 5433 | RAG document vectors (768-dim canonical) |
+### Layer 4 — Automated Tests
 
-⚠️ **768-dim vs 1536-dim**: Can't mix in one index. Sensitive data → 768-dim (Ollama/BGE). Public data → 1536-dim (OpenAI) in separate index.
+```
+test_restricted_routing_invariant
+test_restricted_never_routes_to_openai
+test_embedding_restricted_never_openai
+```
+
+CI fails if any invariant breaks.
+
+```bash
+# Verify live
+curl http://localhost:8000/metrics | grep restricted
+# restricted_data_cloud_violations_total 0  ✅
+```
+
+---
+
+## PII Protection
+
+`PIIMasker` wraps Microsoft Presidio with a custom recognizer for Canadian SIN numbers.
+
+**Mask → Send → Unmask flow:**
+
+1. Presidio `AnalyzerEngine` detects entities in the prompt
+2. Entities replaced with typed placeholders: `<PERSON_0>`, `<CREDIT_CARD_0>`, `<CA_SIN_0>`
+3. Entity map stored in job state
+4. Masked prompt sent to LLM — PII never reaches the cloud
+5. Presidio scans LLM output for PII leakage (in case model hallucinated entities)
+6. Placeholders in response restored to original values via entity map
+
+**Supported entity types:** `PERSON`, `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CA_SIN`, `IBAN_CODE`, `IP_ADDRESS`, `URL`
+
+---
+
+## RAG Pipeline
+
+```
+POST /api/v1/rag/index
+        │
+        ▼
+  TextChunker  (400 words, 50-word overlap)
+  → N overlapping chunks
+        │
+        ▼
+  EmbeddingProviderFactory.get(data_classification)
+  RESTRICTED/CONFIDENTIAL → OllamaEmbeddingProvider  (768-dim, nomic-embed-text)
+  INTERNAL/PUBLIC         → Ollama (768-dim) or OpenAI (1536-dim, separate index)
+        │
+        ▼
+  INSERT INTO document_chunks_768 (pgvector, IVFFlat ANN index)
+  ON CONFLICT DO NOTHING  (idempotent per document_id + chunk_index)
+```
+
+```
+POST /api/v1/rag/query
+        │
+        ▼
+  Embed query  (same provider routing as indexing)
+        │
+        ▼
+  ANN search: ORDER BY embedding <=> query_vector LIMIT top_k
+  WHERE namespace = $ns AND data_class = ANY(allowed_classes)
+        │
+        ▼
+  RAGService.build_context(chunks) → numbered source list with similarity scores
+```
+
+**Classification-aware retrieval:** a `PUBLIC` query cannot see `INTERNAL` or `RESTRICTED` chunks. `_allowed_classifications()` returns the set of levels ≤ the request's classification.
+
+**Auto-pull:** `OllamaEmbeddingProvider` detects a "model not found" 404 and pulls `nomic-embed-text` automatically on first use (~274MB, one-time).
+
+---
 
 ## Observability
 
-- **Prometheus** (`/metrics`): Per-team costs, PII detections, circuit breaker state
-- **Grafana** (port 3001): Cost dashboards, health, latency
-- **Audit log**: TimescaleDB → queryable by team/model/provider
+### Prometheus Metrics
 
-Critical alerts:
-- `restricted_data_cloud_violations_total > 0` — COMPLIANCE BREACH
-- `provider_health_up{provider="anthropic"} == 0` — Primary down
-- `budget_utilization_ratio > 0.90` — Budget near cap
+All metrics exposed at `GET /metrics` (Prometheus text format).
 
-## Testing
+| Metric | Type | Key Labels |
+|--------|------|-----------|
+| `gateway_requests_total` | Counter | `team_id`, `model_alias`, `provider`, `tier`, `status` |
+| `inference_cost_usd_total` | Counter | `team_id`, `model_alias`, `provider`, `tier` |
+| `pii_detections_total` | Counter | `entity_type` |
+| `restricted_data_cloud_violations_total` | Counter | _(must stay 0)_ |
+| `gateway_inference_latency_seconds` | Histogram | `model_alias`, `provider` |
+| `provider_health_up` | Gauge | `provider`, `tier` |
+| `budget_utilization_ratio` | Gauge | `team_id` |
 
-```bash
-make test      # All tests in Docker (no host installs)
-make test-py   # Gateway tests
+### Audit Log (TimescaleDB)
+
+Every request appends a row to the `audit_log` hypertable (partitioned by `created_at`).
+
+```sql
+SELECT team_id, model_alias, provider, tier, data_class, cost_usd, latency_ms, created_at
+FROM audit_log
+WHERE created_at > NOW() - INTERVAL '1 hour';
 ```
 
-Tests verify:
-- RESTRICTED data never reaches cloud
-- Ollama fallback works when cloud is down
-- Cost estimates include Opus tokenizer margin
-- PII masking/unmasking correctness
-- Circuit breaker behavior
+### Grafana
+
+Dashboards are pre-provisioned from `grafana/provisioning/`. Available at http://localhost:3001 after `make up`.
+
+---
+
+## Budget Enforcement
+
+`BudgetService` tracks cumulative spend per team and enforces monthly caps with pre-flight checks before any LLM call is made.
+
+```
+Request arrives
+    │
+    ▼
+BudgetService.check(team_id, estimated_cost)
+    ├── under cap? → proceed
+    └── over cap?  → HTTP 429 (before any LLM cost incurred)
+
+Response received
+    │
+    ▼
+BudgetService.record(team_id, actual_cost_usd)
+```
+
+The `budget_utilization_ratio` Prometheus gauge provides live visibility per team.
+
+---
+
+## Circuit Breaker
+
+`ProviderHealth` tracks failures per provider.
+
+| Setting | Value |
+|---------|-------|
+| Failure threshold | 3 consecutive failures |
+| Circuit open duration | 60 seconds |
+| Reset | Half-open (single probe after timeout) |
+
+When a circuit opens, `ModelRouter._select_available_tier()` skips that provider and advances to the next in `FALLBACK_CHAIN`:
+
+```
+Anthropic (1A)  →  Azure OpenAI Canada (1B)  →  Ollama (2/3)
+```
+
+Ollama's circuit is never opened — it is always the final fallback.
+
+---
+
+## Async Job Model
+
+Inference runs asynchronously. Clients receive a `job_id` immediately and poll until the job completes.
+
+```
+POST /api/v1/inference  →  202  { "job_id": "uuid" }
+
+GET  /api/v1/jobs/{id}  →  { "status": "pending" }
+GET  /api/v1/jobs/{id}  →  { "status": "completed", "result": "..." }
+GET  /api/v1/jobs/{id}  →  { "status": "failed", "error": "..." }
+```
+
+Both SDKs include `poll_job()` helpers with configurable timeout and exponential backoff.
+
+---
+
+## Config-Driven Model Registry
+
+`config/model_registry.yaml` is the single source of truth for all model IDs and per-token costs. No model identifier appears in routing or provider logic.
+
+```yaml
+# config/model_registry.yaml
+sonnet:
+  tier1_anthropic: "claude-sonnet-4-6"
+  tier1_azure:     "claude-sonnet-4-6"
+  tier3_ollama:    "qwen2.5:0.5b"
+  cost_input_per_mtok:  3.00
+  cost_output_per_mtok: 15.00
+  context_tokens:  1000000
+```
+
+**To upgrade a model:** change one YAML value, run `make build`. Zero code changes required anywhere else.
+
+---
+
+## Scaling Path
+
+| Stage | Description | Code Changes |
+|-------|-------------|-------------|
+| **Demo** | Single Compose node, CPU, ~150 req/s | — |
+| **Production** | Add vLLM GPU tier to Compose; restore `tier2_vllm` registry entries | 0 |
+| **Enterprise** | K8s replicas, TimescaleDB read replicas, global LB | 0 |
+
+Aegis is infrastructure-agnostic by design. All scaling is in the infrastructure layer.
