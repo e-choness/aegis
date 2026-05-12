@@ -1,5 +1,5 @@
 import pytest
-import src.gateway.telemetry  # registers all metrics on import
+import src.aegis.telemetry  # registers all metrics on import
 from prometheus_client import REGISTRY
 
 

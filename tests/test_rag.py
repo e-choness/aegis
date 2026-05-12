@@ -2,7 +2,7 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.gateway.services.rag import TextChunker, RAGService, _allowed_classifications
+from src.aegis.services.rag import TextChunker, RAGService, _allowed_classifications
 
 
 # ── TextChunker ───────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async def test_index_document_returns_chunk_count():
     fake_embedding = [0.1] * 768
 
     with patch(
-        "src.gateway.services.rag.EmbeddingProviderFactory.get"
+        "src.aegis.services.rag.EmbeddingProviderFactory.get"
     ) as mock_factory:
         mock_embed_provider = AsyncMock()
         mock_embed_provider.embed = AsyncMock(return_value=[fake_embedding] * 3)
@@ -154,7 +154,7 @@ async def test_retrieve_returns_chunks():
     fake_embedding = [0.2] * 768
 
     with patch(
-        "src.gateway.services.rag.EmbeddingProviderFactory.get"
+        "src.aegis.services.rag.EmbeddingProviderFactory.get"
     ) as mock_factory:
         mock_embed_provider = AsyncMock()
         mock_embed_provider.embed = AsyncMock(return_value=[fake_embedding])

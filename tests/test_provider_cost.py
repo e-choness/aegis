@@ -1,5 +1,5 @@
 import pytest
-from src.gateway.providers.anthropic_provider import AnthropicProvider, OPUS_TOKENIZER_MARGIN
+from src.aegis.providers.anthropic_provider import AnthropicProvider, OPUS_TOKENIZER_MARGIN
 
 
 def _provider():

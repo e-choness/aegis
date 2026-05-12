@@ -2,9 +2,9 @@
 from __future__ import annotations
 import pytest
 from unittest.mock import Mock
-from src.gateway.providers.embeddings.factory import EmbeddingProviderFactory
-from src.gateway.providers.embeddings.ollama_embedding import OllamaEmbeddingProvider
-from src.gateway.providers.embeddings.openai_embedding import OpenAIEmbeddingProvider
+from src.aegis.providers.embeddings.factory import EmbeddingProviderFactory
+from src.aegis.providers.embeddings.ollama_embedding import OllamaEmbeddingProvider
+from src.aegis.providers.embeddings.openai_embedding import OpenAIEmbeddingProvider
 
 
 class _AllHealthy:

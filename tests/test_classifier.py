@@ -1,6 +1,6 @@
 import pytest
-from src.gateway.services.classifier import DataClassifier
-from src.gateway.models import DataClassification
+from src.aegis.services.classifier import DataClassifier
+from src.aegis.models import DataClassification
 
 
 @pytest.fixture

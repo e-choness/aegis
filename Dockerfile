@@ -29,4 +29,4 @@ CMD ["pytest", "-v", "--tb=short"]
 FROM app AS runtime
 ENV PYTHONPATH=/app
 EXPOSE 8000
-CMD ["uvicorn", "src.gateway.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.aegis.main:app", "--host", "0.0.0.0", "--port", "8000"]

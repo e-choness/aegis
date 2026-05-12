@@ -1,5 +1,5 @@
 import pytest
-from src.gateway.providers.azure_openai_provider import AzureOpenAIProvider, OPUS_TOKENIZER_MARGIN
+from src.aegis.providers.azure_openai_provider import AzureOpenAIProvider, OPUS_TOKENIZER_MARGIN
 
 
 def _provider():
@@ -41,6 +41,6 @@ def test_requires_endpoint_and_key(monkeypatch):
 def test_factory_raises_on_missing_env(monkeypatch):
     monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
     monkeypatch.delenv("AZURE_OPENAI_KEY", raising=False)
-    from src.gateway.providers.factory import ProviderFactory
+    from src.aegis.providers.factory import ProviderFactory
     with pytest.raises(ValueError):
         ProviderFactory.get("azure_openai")

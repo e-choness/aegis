@@ -1,5 +1,5 @@
 import pytest
-from src.gateway.services.pii import PIIMasker
+from src.aegis.services.pii import PIIMasker
 
 
 @pytest.fixture(scope="module")
