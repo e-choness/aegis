@@ -66,6 +66,7 @@ agentdb.db
 gemma4
 .postman/
 .openclaude/
+postman/
 
 ### OpenClaude
 .openclaude-profile.json
