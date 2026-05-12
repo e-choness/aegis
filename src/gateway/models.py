@@ -40,6 +40,7 @@ class InferenceRequest(BaseModel):
     team_id: str
     user_id: str
     complexity: str = "medium"
+    model: Optional[str] = None  # Model alias (haiku/sonnet/opus) or override
     trace_id: Optional[str] = None
 
 

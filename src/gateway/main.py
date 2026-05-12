@@ -136,9 +136,15 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("TIER_2_ENABLED not set or false — Tier 2 disabled")
 
-    # Initialize InferenceService
+    # Initialize InferenceService with Tier 2 support
     app.state.inference_service = InferenceService(
-        health=health, budget=budget, audit=audit, pii_masker=pii
+        health=health,
+        budget=budget,
+        audit=audit,
+        pii_masker=pii,
+        external_llm_provider=external_llm_provider,
+        model_lifecycle=model_lifecycle,
+        model_aliases=model_aliases,
     )
 
     vectordb_url = os.environ.get("VECTORDB_URL")

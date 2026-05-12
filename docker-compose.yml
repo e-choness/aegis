@@ -16,6 +16,9 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
       - CORS_ORIGINS=http://localhost:3000
       - VECTORDB_URL=postgresql://aegis:${TIMESCALEDB_PASSWORD:-aegis_dev}@timescaledb:5432/aegis
+      - TIER_2_ENABLED=${TIER_2_ENABLED:-true}
+      - TIER_2_AUTH_TYPE=${TIER_2_AUTH_TYPE:-api_key}
+      - TIER_2_API_KEY=${TIER_2_API_KEY:-sk-tier2-dev-key}
     depends_on:
       ollama:
         condition: service_started
@@ -43,6 +46,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 300s
+
+  lm-studio:
+    image: ghcr.io/lmstudio-ai/lmstudio:latest
+    profiles:
+      - tier2
+    ports:
+      - "8001:8000"
+    volumes:
+      - lm_studio_models:/home/user/.cache/lm-studio
+    environment:
+      - LMS_PLUGIN_OPENAI_API_LISTEN=0.0.0.0:8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   test:
     build:
@@ -106,3 +127,4 @@ volumes:
   timescaledb_data:
   prometheus_data:
   grafana_data:
+  lm_studio_models:

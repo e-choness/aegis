@@ -28,9 +28,7 @@ tier_2:
   provider: external_llm
   enabled_env: TIER_2_ENABLED
   endpoints:
-    - url: http://lm-studio-1.local:8000
-      weight: 1
-    - url: http://lm-studio-2.local:8000
+    - url: http://lm-studio:8000
       weight: 1
   auth:
     type_env: TIER_2_AUTH_TYPE

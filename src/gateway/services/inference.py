@@ -3,7 +3,7 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Dict
 
 from ..models import AuditRecord, InferenceRequest, JobResult
 from ..providers.base import CompletionRequest
@@ -22,6 +22,7 @@ from .classifier import DataClassifier
 from .health import ProviderHealth
 from .pii import PIIMasker
 from .router import ModelRouter
+from .model_lifecycle import ModelLifecycleManager
 
 logger = logging.getLogger("aegis.inference")
 
@@ -36,6 +37,7 @@ class InferenceService:
     """
     Orchestrates the full gateway pipeline (ADR-005 async-first).
     Steps match the numbered flow in the Solution Architect doc.
+    Supports Tier 2 external LLM provider routing for RESTRICTED data.
     """
 
     def __init__(
@@ -44,6 +46,9 @@ class InferenceService:
         budget: Optional[BudgetService] = None,
         audit: Optional[AuditLogger] = None,
         pii_masker: Optional[PIIMasker] = None,
+        external_llm_provider=None,
+        model_lifecycle: Optional[ModelLifecycleManager] = None,
+        model_aliases: Optional[Dict[str, str]] = None,
     ) -> None:
         self._health = health or ProviderHealth()
         self._budget = budget or BudgetService()
@@ -52,6 +57,9 @@ class InferenceService:
         self._router = ModelRouter(health_checker=self._health)
         self._pii_masker = pii_masker or PIIMasker()
         self._jobs: dict[str, JobResult] = {}
+        self._external_llm = external_llm_provider
+        self._model_lifecycle = model_lifecycle
+        self._model_aliases = model_aliases or {}
 
     def enqueue(self, request: InferenceRequest) -> str:
         job_id = str(uuid.uuid4())
@@ -62,6 +70,98 @@ class InferenceService:
 
     def get_job(self, job_id: str) -> Optional[JobResult]:
         return self._jobs.get(job_id)
+
+    def _resolve_model_alias(self, model_alias: Optional[str]) -> Optional[str]:
+        """Resolve model alias (haiku/sonnet/opus) to actual Tier 2 model ID."""
+        if not model_alias:
+            return None
+        return self._model_aliases.get(model_alias.lower())
+
+    async def _call_tier2(
+        self, job_id: str, trace_id: str, request: InferenceRequest,
+        model_alias: str, tier2_model_id: str
+    ) -> None:
+        """Call Tier 2 external LLM provider for RESTRICTED data."""
+        if not self._external_llm:
+            self._jobs[job_id] = JobResult(
+                job_id=job_id,
+                status="failed",
+                error="Tier 2 not available for RESTRICTED data",
+            )
+            return
+
+        start = time.monotonic()
+        try:
+            logger.info("Routing RESTRICTED data to Tier 2 (model=%s)", tier2_model_id)
+
+            # Call Tier 2 provider
+            response = await self._external_llm.complete(CompletionRequest(
+                model_id=tier2_model_id,
+                prompt=request.prompt,
+            ))
+            self._health.record_success("external_llm")
+
+            # Cost accounting (Tier 2 is zero cost)
+            cost_usd = 0.0
+
+            # Metrics
+            latency_ms = int((time.monotonic() - start) * 1000)
+            requests_total.labels(
+                team_id=request.team_id,
+                model_alias=model_alias,
+                provider="external_llm",
+                tier="2",
+                status="completed",
+            ).inc()
+            inference_latency_seconds.labels(
+                model_alias=model_alias,
+                provider="external_llm",
+            ).observe(latency_ms / 1000)
+
+            # Audit
+            self._audit.log(AuditRecord(
+                trace_id=trace_id,
+                user_id=request.user_id,
+                team_id=request.team_id,
+                model_alias=model_alias,
+                model_id=tier2_model_id,
+                provider="external_llm",
+                tier=2,
+                data_classification="RESTRICTED",
+                cost_usd=cost_usd,
+                input_tokens=response.input_tokens,
+                output_tokens=response.output_tokens,
+                cache_hit=False,
+                pii_detected=False,
+                latency_ms=latency_ms,
+            ))
+
+            self._jobs[job_id] = JobResult(
+                job_id=job_id,
+                status="completed",
+                content=response.content,
+                model_alias=model_alias,
+                provider="external_llm",
+                tier=2,
+                cost_usd=cost_usd,
+                data_classification="RESTRICTED",
+            )
+
+        except Exception as exc:
+            self._health.record_failure("external_llm")
+            requests_total.labels(
+                team_id=request.team_id,
+                model_alias=model_alias,
+                provider="external_llm",
+                tier="2",
+                status="error",
+            ).inc()
+            logger.error("Tier 2 call failed for %s: %s", job_id, exc)
+            self._jobs[job_id] = JobResult(
+                job_id=job_id,
+                status="failed",
+                error=str(exc),
+            )
 
     async def _run(self, job_id: str, trace_id: str, request: InferenceRequest) -> None:
         self._jobs[job_id] = JobResult(job_id=job_id, status="running")
@@ -80,7 +180,28 @@ class InferenceService:
             for entity_type in {v.split("_")[0] for v in mask_map} if mask_map else set():
                 pii_detections_total.labels(entity_type=entity_type).inc()
 
-            # Step 5 — Route + budget pre-flight
+            # Step 4a — Handle RESTRICTED data → Tier 2 only
+            if classification == "RESTRICTED":
+                # Resolve model alias if provided, otherwise default
+                requested_alias = (request.model or "").lower() if request.model else None
+                tier2_model_id = self._resolve_model_alias(requested_alias)
+
+                if not tier2_model_id:
+                    # Default to opus for RESTRICTED
+                    tier2_model_id = self._resolve_model_alias("opus")
+
+                if tier2_model_id:
+                    model_alias = requested_alias or "opus"
+                    logger.info(
+                        "RESTRICTED data detected — routing to Tier 2 (model=%s, alias=%s)",
+                        tier2_model_id, model_alias
+                    )
+                    await self._call_tier2(job_id, trace_id, request, model_alias, tier2_model_id)
+                    return
+                else:
+                    raise ValueError("No Tier 2 model available for RESTRICTED data")
+
+            # Step 5 — Route non-RESTRICTED data (Tier 1 first, Tier 2 fallback)
             model_config = self._router.route(
                 request.task_type, request.complexity, classification,
                 self._budget.get_remaining(request.team_id),
