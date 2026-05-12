@@ -1,7 +1,8 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from enum import Enum
+from typing import AsyncGenerator, Optional
 
 
 @dataclass
@@ -23,6 +24,14 @@ class CompletionResponse:
     model_id: str = ""
 
 
+class ModelStatus(str, Enum):
+    """Model availability status."""
+    READY = "READY"
+    WARMING = "WARMING"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
 class LLMProvider(ABC):
     """Abstract base for all LLM providers. Application code never imports concrete classes."""
 
@@ -37,3 +46,11 @@ class LLMProvider(ABC):
     @abstractmethod
     async def health_check(self) -> bool:
         ...
+
+    async def pull_model(self, model_id: str) -> AsyncGenerator[str, None]:
+        """Pull/download a model. Stub for cloud providers (no-op), overridden by local providers."""
+        yield "model already available"
+
+    async def get_model_status(self, model_id: str) -> ModelStatus:
+        """Check if model is available. Default to READY for cloud providers."""
+        return ModelStatus.READY

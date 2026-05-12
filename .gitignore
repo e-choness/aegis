@@ -64,6 +64,8 @@ agentdb.db
 
 ### Misc files
 gemma4
+.postman/
+.openclaude/
 
 ### OpenClaude
 .openclaude-profile.json
