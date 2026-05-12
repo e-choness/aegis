@@ -13,8 +13,8 @@ async def health(request: Request):
     Returns detailed tier and endpoint information.
     """
     try:
-        svc = request.app.state.inference_service
-        violations = svc._audit.count_restricted_cloud_violations()
+        svc = getattr(request.app.state, "inference_service", None)
+        violations = svc._audit.count_restricted_cloud_violations() if svc else 0
 
         # Get model lifecycle status if available
         model_lifecycle = getattr(request.app.state, "model_lifecycle", None)
@@ -58,7 +58,7 @@ async def health(request: Request):
                     "endpoints": tier_2_endpoints,
                 },
             },
-            "providers": svc._health.status(),
+            "providers": svc._health.status() if svc else {},
             "restricted_cloud_violations": violations,
             "uptime_seconds": 3600,
         }

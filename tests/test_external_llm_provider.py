@@ -5,11 +5,11 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 
-from aegis.providers.external_llm_provider import ExternalLLMProvider
-from aegis.providers.base import CompletionRequest, CompletionResponse
-from aegis.services.model_cache import ModelCache, ModelInfo
-from aegis.services.tier2_failover import Tier2Failover, EndpointConfig
-from aegis.services.auth_manager import AuthManager, AuthConfig
+from src.aegis.providers.external_llm_provider import ExternalLLMProvider
+from src.aegis.providers.base import CompletionRequest, CompletionResponse
+from src.aegis.services.model_cache import ModelCache, ModelInfo
+from src.aegis.services.tier2_failover import Tier2Failover, EndpointConfig
+from src.aegis.services.auth_manager import AuthManager, AuthConfig
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestExternalLLMProviderCompletion:
             mock_select.return_value = "http://localhost:8000"
 
             # Mock the HTTP request
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_response = MagicMock()
                 mock_response.status_code = 200
                 mock_response.json = MagicMock(return_value={
@@ -88,7 +88,7 @@ class TestExternalLLMProviderCompletion:
         with patch.object(failover, 'select_endpoint', new_callable=AsyncMock) as mock_select:
             mock_select.return_value = "http://localhost:8000"
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_response = MagicMock()
                 mock_response.status_code = 200
                 mock_response.json = MagicMock(return_value={
@@ -142,7 +142,7 @@ class TestExternalLLMProviderCompletion:
         with patch.object(failover, 'select_endpoint', new_callable=AsyncMock) as mock_select:
             mock_select.return_value = "http://localhost:8000"
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_client = MagicMock()
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
                 mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -168,7 +168,7 @@ class TestExternalLLMProviderCompletion:
             # First call fails, second succeeds
             mock_select.side_effect = ["http://localhost:8000", "http://localhost:8001"]
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 # First response is 500, second is 200
                 mock_response_500 = MagicMock()
                 mock_response_500.status_code = 500
@@ -211,7 +211,7 @@ class TestExternalLLMProviderDiscovery:
         with patch.object(failover, 'select_endpoint', new_callable=AsyncMock) as mock_select:
             mock_select.return_value = "http://localhost:8000"
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_response = MagicMock()
                 mock_response.status_code = 200
                 mock_response.json = MagicMock(return_value={
@@ -250,7 +250,7 @@ class TestExternalLLMProviderHealth:
         with patch.object(failover, 'select_endpoint', new_callable=AsyncMock) as mock_select:
             mock_select.return_value = "http://localhost:8000"
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_response = MagicMock()
                 mock_response.status_code = 200
 
@@ -272,7 +272,7 @@ class TestExternalLLMProviderHealth:
         with patch.object(failover, 'select_endpoint', new_callable=AsyncMock) as mock_select:
             mock_select.return_value = "http://localhost:8000"
 
-            with patch('aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
+            with patch('src.aegis.providers.external_llm_provider.httpx.AsyncClient') as mock_client_class:
                 mock_response = MagicMock()
                 mock_response.status_code = 500
 

@@ -7,7 +7,10 @@ router = APIRouter(prefix="/api/v1")
 
 
 def _svc(request: Request) -> InferenceService:
-    return request.app.state.inference_service
+    svc = getattr(request.app.state, "inference_service", None)
+    if svc is None:
+        raise HTTPException(503, "Inference service not initialized")
+    return svc
 
 
 @router.post("/inference", response_model=InferenceResponse, status_code=202)

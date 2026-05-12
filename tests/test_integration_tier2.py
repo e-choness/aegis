@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
-from aegis.main import app
+from src.aegis.main import app
 
 
 @pytest.fixture

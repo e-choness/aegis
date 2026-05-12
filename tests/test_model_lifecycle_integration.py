@@ -4,9 +4,9 @@ from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from aegis.services.model_lifecycle import ModelLifecycleManager, StatusSummary
-from aegis.services.model_cache import ModelCache, ModelInfo
-from aegis.services.tier2_failover import Tier2Failover, EndpointConfig
+from src.aegis.services.model_lifecycle import ModelLifecycleManager, StatusSummary
+from src.aegis.services.model_cache import ModelCache, ModelInfo
+from src.aegis.services.tier2_failover import Tier2Failover, EndpointConfig
 
 
 class TestModelLifecycleManager:

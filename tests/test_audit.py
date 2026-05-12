@@ -1,6 +1,6 @@
 import pytest
-from src.gateway.services.audit import AuditLogger
-from src.gateway.models import AuditRecord
+from src.aegis.services.audit import AuditLogger
+from src.aegis.models import AuditRecord
 
 
 def _record(**kwargs) -> AuditRecord:

@@ -1,7 +1,7 @@
 import pytest
-from src.gateway.services.router import ModelRouter
-from src.gateway.services.health import AlwaysHealthyChecker
-from src.gateway.models import DataClassification
+from src.aegis.services.router import ModelRouter
+from src.aegis.services.health import AlwaysHealthyChecker
+from src.aegis.models import DataClassification
 
 
 @pytest.fixture
