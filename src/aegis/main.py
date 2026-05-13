@@ -16,6 +16,7 @@ from .api.v1.rag import router as rag_router
 from .api.v1.langserve import router as langserve_router
 from .api.v1.tools import router as tools_router
 from .api.v1.conversations import router as conversations_router
+from .api.v1.langserve import router as langserve_router
 from .services.audit import AuditLogger
 from .services.auth_manager import AuthConfig, AuthManager
 from .services.budget import BudgetService
@@ -34,6 +35,7 @@ from .services.workflow_engine import WorkflowEngine
 from .services.workflow_queue import WorkflowQueue
 from .tools import register_builtin_tools
 from .providers.external_llm_provider import ExternalLLMProvider
+from .services.runnable_factory import RunnableFactory
 
 logging.basicConfig(
     level=logging.INFO,
@@ -193,6 +195,11 @@ async def lifespan(app: FastAPI):
     app.state.langgraph_gateway = langgraph_gateway
     app.state.workflow_engine = workflow_engine
 
+    # Phase 3 — LangServe API surface
+    runnable_factory = RunnableFactory()
+    app.state.runnable_factory = runnable_factory
+    logger.info("Runnable factory initialized with built-in Runnables")
+
     vectordb_url = os.environ.get("VECTORDB_URL")
     if vectordb_url:
         import asyncpg
@@ -215,8 +222,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Aegis AI Gateway",
-    version="0.3.0",
-    description="Enterprise AI governance gateway — Phase 1",
+    version="0.3.0-phase3",
+    description="Enterprise AI governance gateway — Phase 3 LangServe API Surface",
     lifespan=lifespan,
 )
 
@@ -239,6 +246,7 @@ app.include_router(rag_router)
 app.include_router(langserve_router)
 app.include_router(tools_router)
 app.include_router(conversations_router)
+app.include_router(langserve_router)
 
 
 @app.get("/metrics", include_in_schema=False)
