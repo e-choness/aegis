@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import re
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -14,6 +15,8 @@ DEFAULT_TEAM_PERMISSIONS = {
     "use_web_tools",
     "use_data_tools",
 }
+
+_TEAM_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$")
 
 
 @dataclass(frozen=True)
@@ -61,16 +64,44 @@ class TeamContextManager:
         permissions: Optional[set[str]] = None,
         budget_remaining_usd: float = float("inf"),
     ) -> None:
+        validate_team_id(team_id)
+        existing = self._teams.get(team_id)
+        existing_members = set(existing.members) if existing else set()
+        existing_permissions = set(existing.permissions) if existing else set(DEFAULT_TEAM_PERMISSIONS)
         self._teams[team_id] = TeamRecord(
             team_id=team_id,
-            members=members or set(),
-            permissions=permissions or set(DEFAULT_TEAM_PERMISSIONS),
+            members=set(members) if members is not None else existing_members,
+            permissions=set(permissions) if permissions is not None else existing_permissions,
             budget_remaining_usd=budget_remaining_usd,
         )
+
+    def get_team(self, team_id: str) -> Optional[TeamRecord]:
+        return self._teams.get(team_id)
+
+    def list_teams(self) -> list[TeamRecord]:
+        return sorted(self._teams.values(), key=lambda record: record.team_id)
+
+    def add_member(self, team_id: str, user_id: str) -> None:
+        validate_team_id(team_id)
+        if not user_id:
+            raise ValueError("user_id is required")
+        record = self._teams.get(team_id)
+        if record is None:
+            self.register_team(team_id, members={user_id})
+            return
+        record.members.add(user_id)
+
+    def set_permissions(self, team_id: str, permissions: set[str]) -> None:
+        record = self._teams.get(team_id)
+        if record is None:
+            self.register_team(team_id, permissions=permissions)
+            return
+        record.permissions = set(permissions)
 
     def build_context(self, team_id: str, user_id: str) -> TeamContext:
         if not team_id or not user_id:
             raise ValueError("team_id and user_id are required")
+        validate_team_id(team_id)
 
         record = self._teams.get(team_id)
         if record is None:
@@ -126,6 +157,16 @@ class TeamContextMiddleware(BaseHTTPMiddleware):
         self._manager = manager
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        authorization = request.headers.get("authorization", "")
+        if authorization.lower().startswith("bearer "):
+            api_key_manager = getattr(request.app.state, "api_key_manager", None)
+            if api_key_manager is not None:
+                token = authorization.split(" ", 1)[1].strip()
+                context = api_key_manager.authenticate(token)
+                if context is not None:
+                    request.state.team_context = context
+                    return await call_next(request)
+
         team_id = request.headers.get("x-team-id")
         user_id = request.headers.get("x-user-id")
         if team_id and user_id:
@@ -134,3 +175,8 @@ class TeamContextMiddleware(BaseHTTPMiddleware):
             except (PermissionError, ValueError):
                 request.state.team_context = None
         return await call_next(request)
+
+
+def validate_team_id(team_id: str) -> None:
+    if not _TEAM_ID_PATTERN.fullmatch(team_id):
+        raise ValueError("team_id must be 2-64 characters of letters, numbers, underscores, or hyphens")
