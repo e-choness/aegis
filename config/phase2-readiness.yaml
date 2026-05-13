@@ -1,0 +1,38 @@
+readiness_criteria:
+  code_quality:
+    - criterion: "Workflow, tool, and team-context services have paired tests"
+      verification: "docker compose --profile test run --rm test"
+    - criterion: "Phase 2 modules expose typed public APIs"
+      verification: "pytest import and API contract tests"
+    - criterion: "No hardcoded secrets in workflow or tool config"
+      verification: "config files contain no credentials"
+
+  functionality:
+    - criterion: "Workflows execute end-to-end through LangGraph gateway"
+      verification: "tests/test_workflow_engine.py"
+    - criterion: "Tool calls validate schema, permissions, budget, and safety"
+      verification: "tests/test_tools.py"
+    - criterion: "Team isolation blocks cross-team status and conversation access"
+      verification: "tests/test_api_workflows.py"
+    - criterion: "Conversation history and checkpoints are stored for each run"
+      verification: "tests/test_workflow_engine.py"
+
+  docker:
+    - criterion: "No host package installation required"
+      verification: "Dockerfile test target installs dependencies in image"
+    - criterion: "All tests run in Docker"
+      verification: "docker compose --profile test run --rm test"
+
+  security:
+    - criterion: "Code execution blocks imports, eval, exec, open, and subprocess calls"
+      verification: "tests/test_tools.py"
+    - criterion: "Web URLs reject localhost, private, link-local, and reserved IPs"
+      verification: "tests/test_tools.py"
+    - criterion: "SQL tool only accepts read-only team-scoped SELECT statements"
+      verification: "tests/test_tools.py"
+
+success_metrics:
+  workflow_execution_success_rate: ">= 99% for deterministic built-in workflows"
+  team_isolation_test_pass_rate: "100%"
+  tool_validation_accuracy: ">= 99%"
+  test_execution: "Docker-only"

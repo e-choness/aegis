@@ -42,3 +42,41 @@ budget_utilization_ratio = Gauge(
     "Team budget utilization 0.0–1.0",
     ["team_id"],
 )
+
+workflow_execution_count = Counter(
+    "workflow_execution_count",
+    "Workflow executions processed by the Phase 2 orchestrator",
+    ["workflow_id", "team_id", "status"],
+)
+
+workflow_execution_duration_seconds = Histogram(
+    "workflow_execution_duration_seconds",
+    "End-to-end workflow execution latency",
+    ["workflow_id"],
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0],
+)
+
+workflow_cost_usd_total = Counter(
+    "workflow_cost_usd_total",
+    "Cumulative workflow cost in USD",
+    ["team_id", "workflow_id"],
+)
+
+tool_call_count = Counter(
+    "tool_call_count",
+    "Agentic tool calls executed by workflows",
+    ["tool_name", "team_id", "success"],
+)
+
+tool_call_duration_seconds = Histogram(
+    "tool_call_duration_seconds",
+    "Agentic tool execution latency",
+    ["tool_name"],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0],
+)
+
+tool_validation_failures = Counter(
+    "tool_validation_failures",
+    "Rejected agentic tool calls",
+    ["tool_name", "failure_reason"],
+)

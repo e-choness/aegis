@@ -15,6 +15,9 @@ Interactive docs (Swagger UI) available at http://localhost:8000/docs.
 - [Jobs](#jobs)
 - [RAG — Index](#rag--index)
 - [RAG — Query](#rag--query)
+- [Workflows](#workflows)
+- [Tools](#tools)
+- [Conversations](#conversations)
 - [Metrics](#metrics)
 - [Task Types](#task-types)
 - [Data Classifications](#data-classifications)
@@ -234,6 +237,97 @@ Retrieve relevant chunks for a question.
 | `503` | RAG service not configured (`VECTORDB_URL` not set) |
 
 ---
+
+## Workflows
+
+Phase 2 workflow endpoints require tenant headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-Team-ID` | Calling team namespace |
+| `X-User-ID` | Calling user id |
+
+### `GET /api/v1/workflows/list`
+
+Lists configured workflow definitions from `config/workflows.yaml`.
+
+### `POST /api/v1/workflows/{workflow_id}/execute`
+
+Executes or queues an agentic workflow.
+
+```json
+{
+  "input_data": {"query": "What is RAG?", "max_results": 2},
+  "tools": ["web_search"],
+  "async_mode": false,
+  "queue": false,
+  "priority": 5
+}
+```
+
+Returns `202 Accepted` with either `workflow_instance_id` or `queue_id`.
+
+### `GET /api/v1/workflows/instances/{workflow_instance_id}`
+
+Returns workflow status, output, cost, tool-call count, and conversation id. Cross-team reads return `404`.
+
+### `GET /api/v1/workflows/instances/{workflow_instance_id}/history`
+
+Returns the persisted user and assistant messages for a workflow instance.
+
+### `POST /api/v1/workflows/instances/{workflow_instance_id}/resume`
+
+Adds user input and resumes the workflow from its latest state.
+
+### `DELETE /api/v1/workflows/instances/{workflow_instance_id}`
+
+Cancels a workflow instance.
+
+## Tools
+
+### `GET /api/v1/tools/list`
+
+Lists tools available to the calling team.
+
+### `GET /api/v1/tools/{tool_name}`
+
+Returns a tool definition and JSON schemas.
+
+### `POST /api/v1/tools/{tool_name}/validate`
+
+Validates arguments without executing the tool.
+
+```json
+{
+  "args": {"query": "aegis", "max_results": 1}
+}
+```
+
+### `POST /api/v1/tools/{tool_name}/execute`
+
+Debug-only direct execution. Requires `admin` permission in the team context.
+
+## Conversations
+
+### `GET /api/v1/conversations`
+
+Lists team-scoped workflow conversations.
+
+### `GET /api/v1/conversations/{conversation_id}`
+
+Returns conversation metadata, state, and message count.
+
+### `GET /api/v1/conversations/{conversation_id}/messages`
+
+Returns conversation messages.
+
+### `POST /api/v1/conversations/{conversation_id}/export?format=json|markdown`
+
+Exports the conversation.
+
+### `DELETE /api/v1/conversations/{conversation_id}`
+
+Archives the conversation for the calling team.
 
 ## Metrics
 
