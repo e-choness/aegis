@@ -6,7 +6,7 @@
 
 ![aegis-banner](/images/banner-wide.png)
 
-[![Tests](https://img.shields.io/badge/tests-103%20passing-brightgreen?style=flat-square)](tests/)
+[![Tests](https://img.shields.io/badge/tests-239%20passing-brightgreen?style=flat-square)](tests/)
 [![Docker](https://img.shields.io/badge/docker-native-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](src/aegis/main.py)
@@ -281,7 +281,7 @@ Grafana dashboards are pre-provisioned at startup. Open http://localhost:3001.
 
 ```bash
 make build    # Build all Docker images
-make test     # Run 103 tests inside Docker (no host install)
+make test     # Run 239 tests inside Docker (no host install)
 make up       # Start gateway + TimescaleDB + Prometheus + Grafana
 make down     # Stop all containers
 make logs     # Tail gateway logs
@@ -325,7 +325,7 @@ Aegis/
 ├── sdk/
 │   ├── python/                  # aegis-sdk Python package
 │   └── typescript/              # @aegis/ai-platform-client npm package
-├── tests/                       # 103 pytest tests
+├── tests/                       # 239 pytest tests
 ├── evals/                       # Model evaluation framework
 ├── prometheus/                  # Scrape config
 ├── grafana/                     # Dashboard provisioning

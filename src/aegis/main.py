@@ -13,15 +13,26 @@ from .api.v1.health import router as health_router
 from .api.v1.inference import router as inference_router
 from .api.v1.admin import router as admin_router
 from .api.v1.rag import router as rag_router
+from .api.v1.workflows import router as workflows_router
+from .api.v1.tools import router as tools_router
+from .api.v1.conversations import router as conversations_router
 from .services.audit import AuditLogger
 from .services.auth_manager import AuthConfig, AuthManager
 from .services.budget import BudgetService
+from .services.conversation_storage import ConversationStorage
 from .services.health import ProviderHealth
 from .services.inference import InferenceService
+from .services.langgraph_gateway import LangGraphGateway, WorkflowDefinition
 from .services.model_cache import ModelCache
 from .services.model_lifecycle import ModelLifecycleManager
 from .services.pii import PIIMasker
+from .services.team_context import TeamContextManager, TeamContextMiddleware
 from .services.tier2_failover import EndpointConfig, Tier2Failover
+from .services.tool_registry import ToolRegistry
+from .services.workflow_checkpoint import WorkflowCheckpointStore
+from .services.workflow_engine import WorkflowEngine
+from .services.workflow_queue import WorkflowQueue
+from .tools import register_builtin_tools
 from .providers.external_llm_provider import ExternalLLMProvider
 
 logging.basicConfig(
@@ -32,6 +43,8 @@ logging.basicConfig(
 logger = logging.getLogger("aegis.main")
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "providers.yaml"
+WORKFLOWS_CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "workflows.yaml"
+TEAM_CONTEXT_MANAGER = TeamContextManager()
 
 
 def _load_providers_config() -> dict:
@@ -39,8 +52,17 @@ def _load_providers_config() -> dict:
     if not CONFIG_PATH.exists():
         logger.warning("config/providers.yaml not found, skipping Tier 2 initialization")
         return {}
-    with open(CONFIG_PATH) as f:
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
+
+
+def _load_workflows_config() -> list[WorkflowDefinition]:
+    if not WORKFLOWS_CONFIG_PATH.exists():
+        logger.warning("config/workflows.yaml not found, Phase 2 workflows disabled")
+        return []
+    with open(WORKFLOWS_CONFIG_PATH, encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or {}
+    return [WorkflowDefinition.from_config(item) for item in raw.values()]
 
 
 @asynccontextmanager
@@ -147,6 +169,30 @@ async def lifespan(app: FastAPI):
         model_aliases=model_aliases,
     )
 
+    # Phase 2 — LangGraph orchestration, tools, team context, and state.
+    team_context_manager = TEAM_CONTEXT_MANAGER
+    tool_registry = ToolRegistry(team_context_manager=team_context_manager)
+    register_builtin_tools(tool_registry)
+
+    langgraph_gateway = LangGraphGateway(tool_registry=tool_registry)
+    for workflow in _load_workflows_config():
+        await langgraph_gateway.register_workflow(workflow)
+
+    conversation_storage = ConversationStorage()
+    checkpoint_store = WorkflowCheckpointStore()
+    workflow_queue = WorkflowQueue()
+    workflow_engine = WorkflowEngine(
+        langgraph_gateway=langgraph_gateway,
+        conversation_storage=conversation_storage,
+        checkpoint_store=checkpoint_store,
+        workflow_queue=workflow_queue,
+        team_context_manager=team_context_manager,
+    )
+    app.state.team_context_manager = team_context_manager
+    app.state.tool_registry = tool_registry
+    app.state.langgraph_gateway = langgraph_gateway
+    app.state.workflow_engine = workflow_engine
+
     vectordb_url = os.environ.get("VECTORDB_URL")
     if vectordb_url:
         import asyncpg
@@ -157,8 +203,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("VECTORDB_URL not set — RAG service disabled")
 
-    logger.info("Aegis AI Gateway started (Phase 1)")
+    logger.info(
+        "Aegis AI Gateway started (Phase 2, workflows=%d, langgraph_available=%s)",
+        len(langgraph_gateway.get_registered_workflows()),
+        langgraph_gateway.langgraph_available,
+    )
     yield
+    await workflow_engine.shutdown()
     logger.info("Aegis AI Gateway shutting down")
 
 
@@ -170,9 +221,14 @@ app = FastAPI(
 )
 
 app.add_middleware(
+    TeamContextMiddleware,
+    manager=TEAM_CONTEXT_MANAGER,
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "").split(","),
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -180,6 +236,9 @@ app.include_router(inference_router)
 app.include_router(health_router)
 app.include_router(admin_router)
 app.include_router(rag_router)
+app.include_router(workflows_router)
+app.include_router(tools_router)
+app.include_router(conversations_router)
 
 
 @app.get("/metrics", include_in_schema=False)

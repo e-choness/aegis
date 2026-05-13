@@ -1,0 +1,75 @@
+public_assistant:
+  id: public_assistant
+  name: Public Information Assistant
+  description: Answer questions with safe public search context.
+  tier_requirement: 1
+  data_classification: PUBLIC
+  max_steps: 5
+  timeout_seconds: 30
+  allowed_tools:
+    - web_search
+  requires_approval: false
+  requires_human_in_loop: false
+  cost_estimate_usd: 0.02
+  input_schema:
+    type: object
+    required:
+      - query
+    properties:
+      query:
+        type: string
+        minLength: 1
+      max_results:
+        type: integer
+        minimum: 1
+        maximum: 5
+
+data_lookup:
+  id: data_lookup
+  name: Team Data Lookup
+  description: Query team-scoped structured and vector data.
+  tier_requirement: 2
+  data_classification: INTERNAL
+  max_steps: 5
+  timeout_seconds: 30
+  allowed_tools:
+    - database_query
+    - vector_search
+  requires_approval: false
+  requires_human_in_loop: false
+  cost_estimate_usd: 0.01
+  input_schema:
+    type: object
+    properties:
+      query:
+        type: string
+        minLength: 1
+      sql:
+        type: string
+
+restricted_code_analyst:
+  id: restricted_code_analyst
+  name: Secure Code Analysis Workflow
+  description: Analyze code snippets in a constrained execution sandbox.
+  tier_requirement: 3
+  data_classification: RESTRICTED
+  max_steps: 3
+  timeout_seconds: 45
+  allowed_tools:
+    - code_execute
+  requires_approval: true
+  requires_human_in_loop: true
+  cost_estimate_usd: 0.05
+  input_schema:
+    type: object
+    required:
+      - code
+      - language
+    properties:
+      code:
+        type: string
+        minLength: 1
+      language:
+        type: string
+        enum:
+          - python

@@ -45,7 +45,7 @@ cp .env.example .env
 
 # 3. Build images and run tests
 make test
-# Expected: 103 passed in ~2s
+# Expected: 239 passed
 
 # 4. Start the full stack
 make up
@@ -80,7 +80,7 @@ make down
 
 ## Running Tests
 
-All 103 tests run inside Docker — the test profile builds an isolated image with `pytest` and all dev dependencies:
+All 239 tests run inside Docker — the test profile builds an isolated image with `pytest` and all dev dependencies:
 
 ```bash
 make test
@@ -111,6 +111,9 @@ docker compose --profile test run --rm test pytest tests/test_router.py::test_re
 | `tests/test_budget.py` | Per-team cap enforcement |
 | `tests/test_rag.py` | RAG classification-aware retrieval |
 | `tests/test_inference.py` | End-to-end pipeline (mocked providers) |
+| `tests/test_workflow_engine.py` | Phase 2 workflow orchestration, history, checkpoints, queue |
+| `tests/test_tools.py` | Phase 2 tool validation and safety boundaries |
+| `tests/test_api_workflows.py` | Phase 2 workflows, tools, conversations API |
 
 ---
 
