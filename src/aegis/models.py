@@ -1,6 +1,5 @@
-from __future__ import annotations
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -77,3 +76,42 @@ class AuditRecord(BaseModel):
     cache_hit: bool = False
     pii_detected: bool = False
     latency_ms: int = 0
+
+
+class WorkflowUsage(BaseModel):
+    """Token usage and cost metrics for workflow execution."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    tool_calls_count: int = 0
+    model_calls_count: int = 0
+    latency_ms: int = 0
+
+
+class WorkflowInvokeRequest(BaseModel):
+    """LangServe-compatible workflow invocation request."""
+    input: Optional[dict[str, Any]] = None
+    config: Optional[dict[str, Any]] = None
+
+
+class WorkflowInvokeResponse(BaseModel):
+    """LangServe-compatible workflow invocation response."""
+    execution_id: str = ""
+    workflow_id: str = ""
+    status: str = "completed"
+    output: Optional[dict[str, Any]] = None
+    error: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+    usage: WorkflowUsage = Field(default_factory=WorkflowUsage)
+
+
+class WorkflowBatchRequest(BaseModel):
+    """Batch execution request for multiple inputs."""
+    inputs: list[dict[str, Any]]
+    config: Optional[dict[str, Any]] = None
+    max_concurrency: int = Field(default=4, ge=1, le=16)
+
+
+class WorkflowBatchResponse(BaseModel):
+    """Batch execution response with results."""
+    executions: list[WorkflowInvokeResponse]

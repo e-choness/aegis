@@ -13,7 +13,7 @@ from .api.v1.health import router as health_router
 from .api.v1.inference import router as inference_router
 from .api.v1.admin import router as admin_router
 from .api.v1.rag import router as rag_router
-from .api.v1.workflows import router as workflows_router
+from .api.v1.langserve import router as langserve_router
 from .api.v1.tools import router as tools_router
 from .api.v1.conversations import router as conversations_router
 from .services.audit import AuditLogger
@@ -236,7 +236,7 @@ app.include_router(inference_router)
 app.include_router(health_router)
 app.include_router(admin_router)
 app.include_router(rag_router)
-app.include_router(workflows_router)
+app.include_router(langserve_router)
 app.include_router(tools_router)
 app.include_router(conversations_router)
 

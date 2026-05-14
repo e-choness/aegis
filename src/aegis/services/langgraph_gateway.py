@@ -226,7 +226,7 @@ class LangGraphGateway:
         graph.add_edge("select_tools", "execute_tools")
         graph.add_edge("execute_tools", "compose_response")
         graph.add_edge("compose_response", END)
-        compiled = graph.compile()
+        compiled = await asyncio.to_thread(graph.compile)
         return await compiled.ainvoke(initial_state)
 
     async def _run_linear(
