@@ -84,7 +84,9 @@ build/
 .docker/
 
 ### Build plans
-aegis-build-plan/
-aegis-build-plan-new/
+BUILD_PLAN.md
+CLAUDE.md
+PROJECT_SPEC.md
+repo-seed/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
