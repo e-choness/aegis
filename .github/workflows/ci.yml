@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start compose services
+        run: docker compose up -d
+
+      - name: Install workspace dependencies
+        run: docker compose run --rm dev uv sync
+
+      - name: Lint (ruff)
+        run: docker compose run --rm dev uv run ruff check .
+
+      - name: Type-check (pyright)
+        run: docker compose run --rm dev uv run pyright
+
+      - name: Run tests
+        run: docker compose run --rm dev uv run pytest -q
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v

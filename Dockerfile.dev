@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    build-essential \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 20 via NodeSource (for the TypeScript SDK in step 15)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv — official binary from the release image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Bake in spaCy en_core_web_sm for the PII pack (step 10).
+# Installed at system level so this Docker layer is cached.
+# The uv venv will reference it via the model path when [pii] is installed.
+RUN pip install --no-cache-dir spacy click \
+    && python -m spacy download en_core_web_sm
+
+WORKDIR /workspace
+
+CMD ["bash"]

@@ -1,0 +1,28 @@
+# Aegis v2 — uv workspace root
+# This is a virtual workspace root (no installable package).
+# All publishable packages live under packages/.
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "pyright>=1.1",
+    "pre-commit>=4",
+]
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+asyncio_mode = "auto"
+# Show short test summary for failures only
+addopts = "-rN --import-mode=importlib"
+
+# ── ruff (shared config — ruff.toml takes precedence for lint rules) ──────────
+# ruff settings live in ruff.toml at the root.
+
+# ── pyright ───────────────────────────────────────────────────────────────────
+# pyright settings live in pyrightconfig.json at the root.

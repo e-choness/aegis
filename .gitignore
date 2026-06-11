@@ -79,6 +79,10 @@ __pycache__/
 dist/
 build/
 *.egg
+.venv/
+.uv-cache/
+.tmp/
+.ruff_cache/
 
 # Docker
 .docker/
