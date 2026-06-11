@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from ..telemetry import (
     workflow_cost_usd_total,
@@ -193,32 +196,51 @@ class WorkflowEngine:
         status.updated_at = started_at
 
         conversation_id = status.conversation_id
-        if conversation_id is None:
-            conversation_id = await self._conversation_storage.create_conversation(
+        try:
+            if conversation_id is None:
+                conversation_id = await self._conversation_storage.create_conversation(
+                    team_id=team_context.team_id,
+                    user_id=team_context.user_id,
+                    workflow_id=status.workflow_id,
+                    metadata={"workflow_instance_id": workflow_instance_id},
+                )
+                status.conversation_id = conversation_id
+                await self._conversation_storage.add_text_message(conversation_id, "user", status.input_data)
+
+            await self._checkpoint_store.create_checkpoint(
+                workflow_instance_id,
+                "started",
+                {"input_data": status.input_data, "conversation_id": conversation_id},
+            )
+
+            status.current_step = "langgraph"
+            status.updated_at = datetime.now(timezone.utc)
+            result = await self._langgraph_gateway.invoke_workflow(
+                team_context=team_context,
+                workflow_id=status.workflow_id,
+                input_data=status.input_data,
+                tools=tools,
+                workflow_instance_id=workflow_instance_id,
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:
+            # Catch any errors during workflow execution and mark as failed
+            error_msg = str(exc)
+            logger.error(f"Workflow {status.workflow_id} failed: {error_msg}", exc_info=True)
+            result = WorkflowResult(
+                workflow_instance_id=workflow_instance_id,
                 team_id=team_context.team_id,
                 user_id=team_context.user_id,
                 workflow_id=status.workflow_id,
-                metadata={"workflow_instance_id": workflow_instance_id},
+                status="failed",
+                output_data={},
+                tool_calls=[],
+                reasoning_steps=["workflow_failed"],
+                cost_usd=0.0,
+                latency_ms=int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
+                conversation_id=conversation_id,
+                error=error_msg,
             )
-            status.conversation_id = conversation_id
-            await self._conversation_storage.add_text_message(conversation_id, "user", status.input_data)
-
-        await self._checkpoint_store.create_checkpoint(
-            workflow_instance_id,
-            "started",
-            {"input_data": status.input_data, "conversation_id": conversation_id},
-        )
-
-        status.current_step = "langgraph"
-        status.updated_at = datetime.now(timezone.utc)
-        result = await self._langgraph_gateway.invoke_workflow(
-            team_context=team_context,
-            workflow_id=status.workflow_id,
-            input_data=status.input_data,
-            tools=tools,
-            workflow_instance_id=workflow_instance_id,
-            conversation_id=conversation_id,
-        )
 
         status.status = result.status
         status.current_step = "completed" if result.status == "completed" else "failed"
@@ -232,33 +254,34 @@ class WorkflowEngine:
         )
         status.updated_at = datetime.now(timezone.utc)
 
-        await self._conversation_storage.add_text_message(
-            conversation_id,
-            "assistant",
-            result.output_data or {"error": result.error},
-            metadata={
-                "tool_calls": result.tool_calls,
-                "reasoning_steps": result.reasoning_steps,
-                "cost_usd": result.cost_usd,
-            },
-        )
-        await self._conversation_storage.update_conversation_state(
-            conversation_id,
-            {
-                "workflow_instance_id": workflow_instance_id,
-                "status": status.status,
-                "output_data": status.output_data,
-            },
-        )
-        await self._checkpoint_store.create_checkpoint(
-            workflow_instance_id,
-            status.current_step,
-            {
-                "output_data": status.output_data,
-                "tool_calls": result.tool_calls,
-                "reasoning_steps": result.reasoning_steps,
-            },
-        )
+        if conversation_id:
+            await self._conversation_storage.add_text_message(
+                conversation_id,
+                "assistant",
+                result.output_data or {"error": result.error},
+                metadata={
+                    "tool_calls": result.tool_calls,
+                    "reasoning_steps": result.reasoning_steps,
+                    "cost_usd": result.cost_usd,
+                },
+            )
+            await self._conversation_storage.update_conversation_state(
+                conversation_id,
+                {
+                    "workflow_instance_id": workflow_instance_id,
+                    "status": status.status,
+                    "output_data": status.output_data,
+                },
+            )
+            await self._checkpoint_store.create_checkpoint(
+                workflow_instance_id,
+                status.current_step,
+                {
+                    "output_data": status.output_data,
+                    "tool_calls": result.tool_calls,
+                    "reasoning_steps": result.reasoning_steps,
+                },
+            )
 
         workflow_execution_count.labels(
             workflow_id=status.workflow_id,
