@@ -1,0 +1,31 @@
+AI Governance with Aegis
+
+Governance in Aegis means that no AI request or response passes through
+without being evaluated by the configured guard chain.
+
+Guards are applied in order. The first block verdict short-circuits the
+stage — subsequent guards are not evaluated. Sanitize verdicts compose:
+each guard can replace text, and the replacements stack. A require_approval
+verdict pauses the run and persists it via LangGraph checkpointing until a
+reviewer approves or denies it.
+
+PII Masking
+-----------
+The PII pack uses Microsoft Presidio to detect entities (names, emails,
+phone numbers, credit card numbers, etc.) in user messages before they
+reach the LLM. Detected entities are replaced with typed placeholders like
+<PERSON_1>, <EMAIL_ADDRESS_2>. The original values are stored in a mask_map
+that is never serialized into model-visible messages. After the LLM responds,
+an unmask node restores the original values in the response.
+
+Prompt Injection Detection
+--------------------------
+The LLM Guard adapter integrates scanner-based injection detection. Retrieved
+RAG chunks and MCP tool results also pass through injection detection before
+being fed to the model.
+
+Residency Enforcement
+---------------------
+Residency guards ensure that data never leaves a declared geographic region.
+Route configurations declare expected regions; the guard compares provider
+metadata and blocks mismatches. Unknown regions fail closed.

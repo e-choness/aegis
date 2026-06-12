@@ -79,12 +79,19 @@ __pycache__/
 dist/
 build/
 *.egg
+.venv/
+.uv-cache/
+.tmp/
+.ruff_cache/
 
 # Docker
 .docker/
 
 ### Build plans
-aegis-build-plan/
-aegis-build-plan-new/
+BUILD_PLAN.md
+CLAUDE.md
+PROJECT_SPEC.md
+repo-seed/
+.import_linter_cache/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode

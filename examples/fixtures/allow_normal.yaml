@@ -1,0 +1,9 @@
+description: Normal requests pass through
+input: "What is the capital of France?"
+guards:
+  - type: regex
+    name: injection
+    patterns:
+      - "ignore.*previous.*instructions"
+    reason: "Potential prompt injection detected"
+expected: allow

@@ -1,128 +1,53 @@
 services:
-
-  gateway:
+  dev:
     build:
       context: .
-      target: runtime
-    image: aegis-gateway:dev
-    ports:
-      - "8000:8000"
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
-      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - CORS_ORIGINS=http://localhost:3000
-      - VECTORDB_URL=postgresql://aegis:${TIMESCALEDB_PASSWORD:-aegis_dev}@timescaledb:5432/aegis
-      - TIER_2_ENABLED=${TIER_2_ENABLED:-true}
-      - TIER_2_AUTH_TYPE=${TIER_2_AUTH_TYPE:-api_key}
-      - TIER_2_API_KEY=${TIER_2_API_KEY:-sk-tier2-dev-key}
-    depends_on:
-      ollama:
-        condition: service_started
-      timescaledb:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
+      dockerfile: Dockerfile.dev
     volumes:
-      - ollama_models:/root/.ollama
-    command: ["serve"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 300s
-
-  lm-studio:
-    image: ghcr.io/lmstudio-ai/lmstudio:latest
-    profiles:
-      - tier2
-    ports:
-      - "8001:8000"
-    volumes:
-      - lm_studio_models:/home/user/.cache/lm-studio
+      - .:/workspace
+    working_dir: /workspace
     environment:
-      - LMS_PLUGIN_OPENAI_API_LISTEN=0.0.0.0:8000
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
+      UV_CACHE_DIR: /workspace/.uv-cache
+    stdin_open: true
+    tty: true
 
-  test:
-    build:
-      context: .
-      target: test
-    image: aegis-test:dev
+  postgres:
+    image: pgvector/pgvector:pg16
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-dummy-key-for-unit-tests}
-      - OLLAMA_BASE_URL=http://ollama:11434
-    profiles:
-      - test
-
-  timescaledb:
-    image: timescale/timescaledb:latest-pg16
+      POSTGRES_DB: aegis
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: aegis
-      POSTGRES_PASSWORD: ${TIMESCALEDB_PASSWORD:-aegis_dev}
-      POSTGRES_DB: aegis
     volumes:
-      - timescaledb_data:/var/lib/postgresql/data
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ./scripts/init_vectordb.sql:/docker-entrypoint-initdb.d/02_vectordb.sql:ro
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aegis -d aegis"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+      retries: 10
 
+  # ── Observability profile ─────────────────────────────────────────────────
+  # Activate with:  docker compose --profile observability up
   prometheus:
     image: prom/prometheus:latest
+    profiles: [observability]
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=30d"
-    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
+    profiles: [observability]
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on:
-      - prometheus
-    restart: unless-stopped
 
 volumes:
-  ollama_models:
-  timescaledb_data:
-  prometheus_data:
+  postgres_data:
   grafana_data:
-  lm_studio_models:

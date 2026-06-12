@@ -1,0 +1,7 @@
+{
+  "required_keys": ["id", "object", "created", "model", "choices", "usage"],
+  "object": "chat.completion",
+  "choices_required_keys": ["index", "message", "finish_reason"],
+  "message_required_keys": ["role", "content"],
+  "usage_required_keys": ["prompt_tokens", "completion_tokens", "total_tokens"]
+}
