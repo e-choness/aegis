@@ -1,10 +1,13 @@
-"""aegis runs — list, inspect, and action paused runs (PROJECT_SPEC D14)."""
+"""aegis runs — list, inspect, and action pipeline runs (PROJECT_SPEC D14, D10)."""
 
 from __future__ import annotations
 
 import os
 
+import httpx
 import typer
+
+from aegis_sdk import AegisClient
 
 app = typer.Typer(
     name="runs",
@@ -19,33 +22,30 @@ def _base_url() -> str:
     return os.environ.get("AEGIS_SERVER_URL", _DEFAULT_URL).rstrip("/")
 
 
-def _headers() -> dict[str, str]:
-    token = os.environ.get("AEGIS_API_KEY", "")
-    if token:
-        return {"Authorization": f"Bearer {token}"}
-    return {}
+def _api_key() -> str:
+    return os.environ.get("AEGIS_API_KEY", "")
+
+
+def _make_client() -> AegisClient:
+    return AegisClient(base_url=_base_url(), api_key=_api_key())
 
 
 @app.command("list")
 def list_runs(
-    pending: bool = typer.Option(False, "--pending", help="Show only paused runs."),
+    pending: bool = typer.Option(False, "--pending", help="Show only paused/pending runs."),
 ) -> None:
-    """List all runs (or only pending ones with --pending)."""
-    import httpx
-
-    url = f"{_base_url()}/v1/runs"
-    params: dict[str, str] = {}
-    if pending:
-        params["status"] = "paused"
+    """List all runs (or only pending/paused ones with --pending)."""
     try:
-        resp = httpx.get(url, headers=_headers(), params=params)
+        with _make_client() as client:
+            runs = client.list_runs()
     except httpx.ConnectError:
         typer.echo(f"Cannot connect to {_base_url()}", err=True)
         raise typer.Exit(1) from None
-    if resp.status_code != 200:
-        typer.echo(f"Error {resp.status_code}: {resp.text}", err=True)
-        raise typer.Exit(1)
-    runs = resp.json()
+    except httpx.HTTPStatusError as exc:
+        typer.echo(f"Error {exc.response.status_code}: {exc.response.text}", err=True)
+        raise typer.Exit(1) from None
+    if pending:
+        runs = [r for r in runs if r.get("status") in ("paused", "pending")]
     if not runs:
         typer.echo("No runs found.")
         return
@@ -57,48 +57,41 @@ def list_runs(
 @app.command("show")
 def show_run(run_id: str = typer.Argument(..., help="Run ID to show.")) -> None:
     """Show details for a specific run."""
-    import httpx
-
-    url = f"{_base_url()}/v1/runs/{run_id}"
     try:
-        resp = httpx.get(url, headers=_headers())
+        with _make_client() as client:
+            data = client.get_run(run_id)
     except httpx.ConnectError:
         typer.echo(f"Cannot connect to {_base_url()}", err=True)
         raise typer.Exit(1) from None
-    if resp.status_code == 404:
-        typer.echo(f"Run '{run_id}' not found.", err=True)
-        raise typer.Exit(1)
-    if resp.status_code != 200:
-        typer.echo(f"Error {resp.status_code}: {resp.text}", err=True)
-        raise typer.Exit(1)
-    data = resp.json()
-    typer.echo(f"run_id:      {data['run_id']}")
-    typer.echo(f"status:      {data['status']}")
-    typer.echo(f"route:       {data['route']}")
-    typer.echo(f"principal:   {data['principal_id']}")
-    approvers = data.get("approvers") or []
-    typer.echo(f"approvers:   {', '.join(approvers) if approvers else '(any)'}")
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            typer.echo(f"Run '{run_id}' not found.", err=True)
+            raise typer.Exit(1) from None
+        typer.echo(f"Error {exc.response.status_code}: {exc.response.text}", err=True)
+        raise typer.Exit(1) from None
+    typer.echo(f"run_id:      {data.run_id}")
+    typer.echo(f"status:      {data.status}")
+    typer.echo(f"route:       {data.route}")
+    typer.echo(f"principal:   {data.principal_id}")
+    typer.echo(f"approvers:   {', '.join(data.approvers) if data.approvers else '(any)'}")
 
 
 def _resume(run_id: str, decision: str) -> None:
-    import httpx
-
-    url = f"{_base_url()}/v1/runs/{run_id}/resume"
     try:
-        resp = httpx.post(url, headers=_headers(), json={"decision": decision})
+        with _make_client() as client:
+            data = client.resume_run(run_id, decision)
     except httpx.ConnectError:
         typer.echo(f"Cannot connect to {_base_url()}", err=True)
         raise typer.Exit(1) from None
-    if resp.status_code == 403:
-        detail = resp.json().get("detail") or {}
-        code = detail.get("code", "AEG-AUTH-003") if isinstance(detail, dict) else "AEG-AUTH-003"
-        typer.echo(f"{code}: not authorised to {decision} this run.", err=True)
-        raise typer.Exit(1)
-    if resp.status_code != 200:
-        typer.echo(f"Error {resp.status_code}: {resp.text}", err=True)
-        raise typer.Exit(1)
-    data = resp.json()
-    typer.echo(f"Run {run_id} {decision}: status={data['status']}")
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 403:
+            detail = exc.response.json().get("detail") or {}
+            code = detail.get("code", "AEG-AUTH-003") if isinstance(detail, dict) else "AEG-AUTH-003"
+            typer.echo(f"{code}: not authorised to {decision} this run.", err=True)
+            raise typer.Exit(1) from None
+        typer.echo(f"Error {exc.response.status_code}: {exc.response.text}", err=True)
+        raise typer.Exit(1) from None
+    typer.echo(f"Run {run_id} {decision}: status={data.status}")
 
 
 @app.command("approve")

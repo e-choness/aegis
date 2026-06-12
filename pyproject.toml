@@ -3,7 +3,7 @@
 # All publishable packages live under packages/.
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "sdk/python"]
 
 [tool.uv]
 dev-dependencies = [
@@ -19,6 +19,7 @@ dev-dependencies = [
     "aegis-pack-classification",
     "aegis-pack-residency",
     "aegis-pack-budgets",
+    "aegis-sdk",
 ]
 
 [tool.uv.sources]
@@ -28,10 +29,11 @@ aegis-core = { workspace = true }
 aegis-pack-classification = { workspace = true }
 aegis-pack-residency = { workspace = true }
 aegis-pack-budgets = { workspace = true }
+aegis-sdk = { workspace = true }
 
 # ── pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
-testpaths = ["packages"]
+testpaths = ["packages", "sdk/python"]
 asyncio_mode = "auto"
 # Show short test summary for failures only
 addopts = "-rN --import-mode=importlib"

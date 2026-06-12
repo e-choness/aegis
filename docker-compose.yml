@@ -49,6 +49,19 @@ services:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
 
+  # ── Codegen profile ───────────────────────────────────────────────────────
+  # Activate with:  docker compose --profile codegen run --rm codegen generate ...
+  # Example (Go):
+  #   docker compose run --rm codegen generate \
+  #     -i /workspace/openapi.json -g go -o /workspace/.tmp/go-client
+  codegen:
+    image: openapitools/openapi-generator-cli:latest
+    profiles: [codegen]
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    entrypoint: ["docker-entrypoint.sh"]
+
 volumes:
   postgres_data:
   grafana_data:
