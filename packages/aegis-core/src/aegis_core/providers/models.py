@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
 class Message:
-    role: str  # "system" | "user" | "assistant"
+    role: str  # "system" | "user" | "assistant" | "tool"
     content: str
+
+
+@dataclass
+class ToolCall:
+    """A tool call requested by the model."""
+
+    id: str
+    name: str
+    arguments: dict[str, Any]
 
 
 @dataclass
@@ -20,6 +30,7 @@ class CompletionRequest:
     temperature: float = 0.7
     max_tokens: int | None = None
     stream: bool = False
+    tools: list[dict[str, Any]] = field(default_factory=list)
     extra: dict[str, object] = field(default_factory=dict)
 
 
@@ -41,6 +52,7 @@ class CompletionResult:
     model: str
     usage: UsageInfo
     finish_reason: str = "stop"
+    tool_calls: list[ToolCall] = field(default_factory=list)
 
 
 @dataclass

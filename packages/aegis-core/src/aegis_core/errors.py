@@ -163,3 +163,38 @@ class AegisPolicyMissingPackError(AegisPolicyError):
     what = "Guardrail pack not installed"
     why = "The guardrail's pack module is not importable in the current environment."
     fix = "Install the pack or add it to your project dependencies."
+
+
+# ---------------------------------------------------------------------------
+# MCP errors (AEG-MCP-*)
+# ---------------------------------------------------------------------------
+
+
+class AegisMcpError(AegisError):
+    """MCP-layer errors (AEG-MCP-*)."""
+
+    code = "AEG-MCP-001"
+    what = "MCP connection error"
+    why = "An error occurred while connecting to or communicating with an MCP server."
+    fix = "Check the MCP server URL, ensure the server is running, and verify network connectivity."
+
+
+class AegisMcpToolBlockedError(AegisMcpError):
+    code = "AEG-MCP-002"
+    what = "Tool call blocked by guard"
+    why = "A tool-call guard rejected the tool arguments before the tool was invoked."
+    fix = "Review the tool call arguments and ensure they do not violate configured policies."
+
+
+class AegisMcpResultBlockedError(AegisMcpError):
+    code = "AEG-MCP-003"
+    what = "Tool result blocked by injection guard"
+    why = "The tool result contained content detected as a prompt-injection attempt."
+    fix = "Review the MCP server's output and ensure tool results do not contain injection patterns."
+
+
+class AegisMcpToolNotFoundError(AegisMcpError):
+    code = "AEG-MCP-004"
+    what = "MCP tool not found"
+    why = "The requested tool name was not found in the connected MCP server."
+    fix = "Verify the tool name against the server's tools/list, or check the MCP server configuration."

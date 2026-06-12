@@ -18,6 +18,7 @@ from aegis_core.providers.models import (
     Message,
     ProviderInfo,
     ResidencyInfo,
+    ToolCall,
     UsageInfo,
 )
 from aegis_core.providers.protocol import ModelProvider
@@ -41,11 +42,17 @@ class FakeProvider:
         complete_response: str = "hello from fake",
         stream_chunks: list[str] | None = None,
         embed_response: list[float] | None = None,
+        tool_calls_sequence: list[list[ToolCall]] | None = None,
     ) -> None:
         self.name = name
         self.complete_response = complete_response
         self.stream_chunks: list[str] = stream_chunks if stream_chunks is not None else ["hello", " from", " fake"]
         self.embed_response: list[float] = embed_response if embed_response is not None else [0.1, 0.2, 0.3]
+        # Each element is the list of ToolCalls returned on call N.
+        # When an entry is non-empty, finish_reason is "tool_calls".
+        # When exhausted or empty, returns text response.
+        self._tool_calls_sequence: list[list[ToolCall]] = tool_calls_sequence or []
+        self._call_index: int = 0
 
         # Capture calls for assertion in tests.
         self.complete_calls: list[CompletionRequest] = []
@@ -54,6 +61,19 @@ class FakeProvider:
 
     async def complete(self, req: CompletionRequest) -> CompletionResult:
         self.complete_calls.append(req)
+        if self._call_index < len(self._tool_calls_sequence):
+            tc = self._tool_calls_sequence[self._call_index]
+            self._call_index += 1
+            if tc:
+                return CompletionResult(
+                    text="",
+                    model=req.model or "fake-model",
+                    usage=UsageInfo(prompt_tokens=5, completion_tokens=5, total_tokens=10),
+                    finish_reason="tool_calls",
+                    tool_calls=tc,
+                )
+        else:
+            self._call_index += 1
         return CompletionResult(
             text=self.complete_response,
             model=req.model or "fake-model",
