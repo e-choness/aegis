@@ -16,12 +16,18 @@ dev-dependencies = [
     "aegis-pack-pii[pii]",
     "aegis-pack-llm-guard",
     "aegis-core[rag]",
+    "aegis-pack-classification",
+    "aegis-pack-residency",
+    "aegis-pack-budgets",
 ]
 
 [tool.uv.sources]
 aegis-pack-pii = { workspace = true }
 aegis-pack-llm-guard = { workspace = true }
 aegis-core = { workspace = true }
+aegis-pack-classification = { workspace = true }
+aegis-pack-residency = { workspace = true }
+aegis-pack-budgets = { workspace = true }
 
 # ── pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

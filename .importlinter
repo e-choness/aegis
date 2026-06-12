@@ -5,6 +5,9 @@ root_packages =
     aegis_cli
     aegis_pack_pii
     aegis_pack_llm_guard
+    aegis_pack_classification
+    aegis_pack_residency
+    aegis_pack_budgets
 
 [importlinter:contract:packs-public-api-only]
 name = Policy packs import only public aegis_core APIs
@@ -12,6 +15,9 @@ type = forbidden
 source_modules =
     aegis_pack_pii
     aegis_pack_llm_guard
+    aegis_pack_classification
+    aegis_pack_residency
+    aegis_pack_budgets
 forbidden_modules =
     aegis_server
     aegis_cli
