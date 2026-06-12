@@ -1,0 +1,39 @@
+# aegis.yaml — example Aegis gateway configuration
+# Run `aegis config validate examples/aegis.yaml` to check this file.
+
+providers:
+  anthropic_main:
+    type: anthropic
+    api_key: secret://env/ANTHROPIC_API_KEY#value
+    residency:
+      region: us
+
+  local:
+    type: openai_compatible
+    base_url: http://localhost:11434/v1
+    model: qwen2.5
+
+guardrails:
+  pii:
+    pack: aegis.pii
+    mode: mask
+  injection:
+    pack: aegis.llm_guard
+    scanners: [PromptInjection]
+    threshold: 0.8
+
+pipeline:
+  ingress: [pii, injection]
+  tool_result: [injection]
+  egress: [pii]
+
+routes:
+  default:
+    provider: anthropic_main
+    model: claude-sonnet-4-5
+  drafts:
+    provider: local
+    model: qwen2.5
+
+auth:
+  type: none

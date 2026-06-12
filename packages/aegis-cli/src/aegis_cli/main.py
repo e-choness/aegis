@@ -5,12 +5,15 @@ from __future__ import annotations
 import typer
 
 from aegis_cli import __version__
+from aegis_cli.commands.config import app as config_app
 
 app = typer.Typer(
     name="aegis",
     help="Aegis AI gateway — plugin-first, governed, observable.",
     no_args_is_help=True,
 )
+
+app.add_typer(config_app, name="config")
 
 
 def _version_callback(value: bool) -> None:
