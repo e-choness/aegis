@@ -7,6 +7,7 @@ import typer
 from aegis_cli import __version__
 from aegis_cli.commands.config import app as config_app
 from aegis_cli.commands.plugin import app as plugin_app
+from aegis_cli.commands.provider import app as provider_app
 
 app = typer.Typer(
     name="aegis",
@@ -16,6 +17,7 @@ app = typer.Typer(
 
 app.add_typer(config_app, name="config")
 app.add_typer(plugin_app, name="plugin")
+app.add_typer(provider_app, name="provider")
 
 
 def _version_callback(value: bool) -> None:

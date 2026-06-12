@@ -90,3 +90,45 @@ class AegisPluginNotFoundError(AegisPluginError):
     what = "Plugin not found"
     why = "No plugin with the given name was found in the specified group."
     fix = "Run `aegis plugin list` to see available plugins and check the name/group."
+
+
+# ---------------------------------------------------------------------------
+# Provider errors (AEG-PRV-*)
+# ---------------------------------------------------------------------------
+
+
+class AegisProviderError(AegisError):
+    """Provider-layer errors (AEG-PRV-*)."""
+
+    code = "AEG-PRV-001"
+    what = "Provider error"
+    why = "The model provider returned an unexpected error."
+    fix = "Check provider configuration, credentials, and the model name."
+
+
+class AegisProviderAuthError(AegisProviderError):
+    code = "AEG-PRV-002"
+    what = "Provider authentication failed"
+    why = "The API key or credentials were rejected by the provider."
+    fix = "Verify the API key is correct and has not expired. Update via `aegis provider add`."
+
+
+class AegisProviderRateLimitError(AegisProviderError):
+    code = "AEG-PRV-003"
+    what = "Provider rate limit exceeded"
+    why = "The provider rejected the request due to rate limiting."
+    fix = "Reduce request frequency, upgrade your plan, or configure a fallback route."
+
+
+class AegisProviderTimeoutError(AegisProviderError):
+    code = "AEG-PRV-004"
+    what = "Provider request timed out"
+    why = "The provider did not respond within the configured timeout."
+    fix = "Check network connectivity, increase the timeout, or use a different provider."
+
+
+class AegisProviderNotFoundError(AegisProviderError):
+    code = "AEG-PRV-005"
+    what = "Provider profile not found"
+    why = "No provider profile with the given name exists in the profile store."
+    fix = "Run `aegis provider list` to see available profiles, or add one with `aegis provider add`."
