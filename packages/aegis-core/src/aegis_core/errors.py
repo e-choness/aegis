@@ -132,3 +132,34 @@ class AegisProviderNotFoundError(AegisProviderError):
     what = "Provider profile not found"
     why = "No provider profile with the given name exists in the profile store."
     fix = "Run `aegis provider list` to see available profiles, or add one with `aegis provider add`."
+
+
+# ---------------------------------------------------------------------------
+# Policy errors (AEG-POL-*)
+# ---------------------------------------------------------------------------
+
+
+class AegisPolicyError(AegisError):
+    """Policy lint/test errors (AEG-POL-*)."""
+
+    code = "AEG-POL-001"
+    what = "Policy error"
+    why = "The Aegis policy configuration is invalid."
+    fix = "Check the policy configuration file and correct any issues."
+
+
+class AegisPolicyBrokenRefError(AegisPolicyError):
+    code = "AEG-POL-001"
+    what = "Broken guardrail reference in pipeline"
+    why = "The pipeline section references a guardrail name not declared in the guardrails section."
+    fix = (
+        "Add the guardrail to the guardrails section, "
+        "or remove the reference from the pipeline."
+    )
+
+
+class AegisPolicyMissingPackError(AegisPolicyError):
+    code = "AEG-POL-002"
+    what = "Guardrail pack not installed"
+    why = "The guardrail's pack module is not importable in the current environment."
+    fix = "Install the pack or add it to your project dependencies."

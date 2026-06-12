@@ -90,6 +90,17 @@ def _delta_to_partial(node_name: str, stage: str, delta: RunStateDelta) -> dict[
 # Node wrapper
 # ---------------------------------------------------------------------------
 
+def _make_short_circuit_router(next_node: str) -> Callable[[_PipelineStateDict], str]:
+    """Return a conditional-edge router that goes to END when blocked or paused."""
+
+    def _router(state: _PipelineStateDict) -> str:
+        if state.get("status") in ("blocked", "paused"):
+            return END
+        return next_node
+
+    return _router
+
+
 def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
     """Wrap a PipelineNode in a LangGraph-compatible async function."""
 
@@ -242,11 +253,14 @@ class PipelineAssembler:
             graph.add_node(node.name, _wrap_node(node, stage))
             node_names.append(node.name)
 
-        # Chain: START → node_0 → node_1 → … → END
-        prev: str = START
-        for name in node_names:
-            graph.add_edge(prev, name)
-            prev = name
-        graph.add_edge(prev, END)
+        # Chain: START → node_0 → (conditional) → node_1 → … → END
+        # After each non-final node, short-circuit to END if blocked or paused.
+        graph.add_edge(START, node_names[0])
+        for i in range(len(node_names) - 1):
+            graph.add_conditional_edges(
+                node_names[i],
+                _make_short_circuit_router(node_names[i + 1]),
+            )
+        graph.add_edge(node_names[-1], END)
 
         return CompiledPipeline(graph.compile(), route=route, node_names=node_names)
