@@ -9,7 +9,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
+
+
+def _now_iso() -> str:
+    return datetime.now(tz=UTC).isoformat()
 
 
 @dataclass
@@ -19,8 +24,9 @@ class RunRecord:
     run_id: str
     route: str
     principal_id: str
-    status: str  # running | completed | blocked | paused | denied
+    status: str  # running | completed | blocked | paused | denied | pending
     approvers: list[str] = field(default_factory=list)
+    created_at: str = field(default_factory=_now_iso)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -29,6 +35,7 @@ class RunRecord:
             "principal_id": self.principal_id,
             "status": self.status,
             "approvers": self.approvers,
+            "created_at": self.created_at,
         }
 
 
@@ -40,6 +47,12 @@ class RunStore(Protocol):
     async def get(self, run_id: str) -> RunRecord | None: ...
     async def update_status(self, run_id: str, status: str) -> None: ...
     async def list_pending(self) -> list[RunRecord]: ...
+    async def list_runs(
+        self,
+        principal: str | None = None,
+        route: str | None = None,
+        since: str | None = None,
+    ) -> list[RunRecord]: ...
 
 
 class InMemoryRunStore:
@@ -62,35 +75,59 @@ class InMemoryRunStore:
     async def list_pending(self) -> list[RunRecord]:
         return [r for r in self._records.values() if r.status == "paused"]
 
+    async def list_runs(
+        self,
+        principal: str | None = None,
+        route: str | None = None,
+        since: str | None = None,
+    ) -> list[RunRecord]:
+        records = list(self._records.values())
+        if principal is not None:
+            records = [r for r in records if r.principal_id == principal]
+        if route is not None:
+            records = [r for r in records if r.route == route]
+        if since is not None:
+            records = [r for r in records if r.created_at >= since]
+        return records
+
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS runs (
-    run_id      TEXT PRIMARY KEY,
-    route       TEXT NOT NULL,
+    run_id       TEXT PRIMARY KEY,
+    route        TEXT NOT NULL,
     principal_id TEXT NOT NULL,
-    status      TEXT NOT NULL,
-    approvers   TEXT NOT NULL DEFAULT '[]'
+    status       TEXT NOT NULL,
+    approvers    TEXT NOT NULL DEFAULT '[]',
+    created_at   TEXT NOT NULL DEFAULT ''
 )
 """
 
 _INSERT_SQL = (
-    "INSERT OR REPLACE INTO runs (run_id, route, principal_id, status, approvers)"
-    " VALUES (?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO runs (run_id, route, principal_id, status, approvers, created_at)"
+    " VALUES (?, ?, ?, ?, ?, ?)"
 )
-_SELECT_SQL = "SELECT run_id, route, principal_id, status, approvers FROM runs WHERE run_id = ?"
+_SELECT_SQL = (
+    "SELECT run_id, route, principal_id, status, approvers, created_at"
+    " FROM runs WHERE run_id = ?"
+)
 _UPDATE_SQL = "UPDATE runs SET status = ? WHERE run_id = ?"
 _PENDING_SQL = (
-    "SELECT run_id, route, principal_id, status, approvers FROM runs WHERE status = 'paused'"
+    "SELECT run_id, route, principal_id, status, approvers, created_at"
+    " FROM runs WHERE status = 'paused'"
+)
+_LIST_SQL = (
+    "SELECT run_id, route, principal_id, status, approvers, created_at FROM runs"
 )
 
 
-def _row_to_record(row: tuple[str, str, str, str, str]) -> RunRecord:
+def _row_to_record(row: tuple[str, str, str, str, str, str]) -> RunRecord:
     return RunRecord(
         run_id=row[0],
         route=row[1],
         principal_id=row[2],
         status=row[3],
         approvers=json.loads(row[4]),
+        created_at=row[5],
     )
 
 
@@ -118,7 +155,14 @@ class SqliteRunStore:
         async with aiosqlite.connect(self._path) as db:
             await db.execute(
                 _INSERT_SQL,
-                (record.run_id, record.route, record.principal_id, record.status, json.dumps(record.approvers)),
+                (
+                    record.run_id,
+                    record.route,
+                    record.principal_id,
+                    record.status,
+                    json.dumps(record.approvers),
+                    record.created_at,
+                ),
             )
             await db.commit()
 
@@ -145,5 +189,34 @@ class SqliteRunStore:
 
         async with aiosqlite.connect(self._path) as db:
             async with db.execute(_PENDING_SQL) as cursor:
+                rows = await cursor.fetchall()
+                return [_row_to_record(r) for r in rows]  # type: ignore[arg-type]
+
+    async def list_runs(
+        self,
+        principal: str | None = None,
+        route: str | None = None,
+        since: str | None = None,
+    ) -> list[RunRecord]:
+        await self._ensure_table()
+        import aiosqlite
+
+        sql = _LIST_SQL
+        params: list[str] = []
+        clauses: list[str] = []
+        if principal is not None:
+            clauses.append("principal_id = ?")
+            params.append(principal)
+        if route is not None:
+            clauses.append("route = ?")
+            params.append(route)
+        if since is not None:
+            clauses.append("created_at >= ?")
+            params.append(since)
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+
+        async with aiosqlite.connect(self._path) as db:
+            async with db.execute(sql, params) as cursor:
                 rows = await cursor.fetchall()
                 return [_row_to_record(r) for r in rows]  # type: ignore[arg-type]
