@@ -11,6 +11,7 @@ from aegis_cli.commands.keys import app as keys_app
 from aegis_cli.commands.plugin import app as plugin_app
 from aegis_cli.commands.policy import app as policy_app
 from aegis_cli.commands.provider import app as provider_app
+from aegis_cli.commands.runs import app as runs_app
 from aegis_cli.commands.serve import dev, serve
 
 app = typer.Typer(
@@ -27,6 +28,7 @@ app.add_typer(keys_app, name="keys")
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(policy_app, name="policy")
 app.add_typer(provider_app, name="provider")
+app.add_typer(runs_app, name="runs")
 
 
 def _version_callback(value: bool) -> None:

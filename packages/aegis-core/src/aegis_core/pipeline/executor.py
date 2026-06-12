@@ -18,9 +18,10 @@ class PipelineExecutor:
     recompiled on config reload").
     """
 
-    def __init__(self) -> None:
+    def __init__(self, checkpointer: Any | None = None) -> None:
         self._pipelines: dict[str, CompiledPipeline] = {}
         self._assembler = PipelineAssembler()
+        self._checkpointer = checkpointer
 
     def register(
         self,
@@ -42,6 +43,7 @@ class PipelineExecutor:
             route=route,
             provider=provider,
             custom_graph=custom_graph,
+            checkpointer=self._checkpointer,
         )
         self._pipelines[route] = pipeline
         return pipeline
@@ -59,6 +61,10 @@ class PipelineExecutor:
     async def run(self, route: str, state: RunState) -> RunState:
         """Execute the pipeline for *route* against *state*."""
         return await self.get(route).run(state)
+
+    async def resume(self, run_id: str, route: str, decision: dict[str, object]) -> RunState:
+        """Resume a paused run via its route's compiled pipeline."""
+        return await self.get(route).resume(run_id, decision)
 
     def routes(self) -> list[str]:
         """Return all registered route names."""

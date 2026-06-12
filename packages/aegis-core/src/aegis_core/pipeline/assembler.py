@@ -11,6 +11,7 @@ from enum import StrEnum
 from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, interrupt
 
 from aegis_core.pipeline.nodes import ExecuteNode
 from aegis_core.pipeline.protocol import PipelineNode
@@ -131,10 +132,10 @@ def _delta_to_partial(node_name: str, stage: str, delta: RunStateDelta) -> dict[
 # ---------------------------------------------------------------------------
 
 def _make_short_circuit_router(next_node: str) -> Callable[[_PipelineStateDict], str]:
-    """Return a conditional-edge router that goes to END when blocked or paused."""
+    """Return a conditional-edge router that goes to END when blocked, paused, or denied."""
 
     def _router(state: _PipelineStateDict) -> str:
-        if state.get("status") in ("blocked", "paused"):
+        if state.get("status") in ("blocked", "paused", "denied"):
             return END
         return next_node
 
@@ -161,6 +162,33 @@ def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
         }
         partial = _delta_to_partial(node.name, stage, delta)
         partial["events"] = [start_evt, *partial.get("events", []), end_evt]
+
+        if delta.status == "paused":
+            # interrupt() raises GraphInterrupt on first call (state saved by checkpointer).
+            # On resume, it returns the decision dict passed via Command(resume=...).
+            decision: object = interrupt(
+                {"requires_approval": True, "run_id": state["run_id"]}
+            )
+            # ── Reached only after resume ──────────────────────────────────
+            if isinstance(decision, dict) and decision.get("decision") == "denied":
+                partial["status"] = "denied"
+                partial["events"] = [
+                    *partial.get("events", []),
+                    {
+                        "stage": stage,
+                        "node": node.name,
+                        "event_type": "verdict",
+                        "data": {
+                            "verdict": "denied",
+                            "guard": node.name,
+                            "reason": "run denied by reviewer",
+                        },
+                    },
+                ]
+            else:
+                # Approved — clear paused status so the pipeline continues.
+                partial["status"] = "running"
+
         return partial
 
     _fn.__name__ = node.name
@@ -191,6 +219,7 @@ class CompiledPipeline:
         stream_capability: StreamCapability = StreamCapability.BUFFERED,
         provider: ModelProvider | None = None,
         incremental_egress_guards: list[Any] | None = None,
+        checkpointer: Any | None = None,
     ) -> None:
         self._app = app
         self.route = route
@@ -198,29 +227,38 @@ class CompiledPipeline:
         self.stream_capability = stream_capability
         self._provider = provider
         self._incremental_egress_guards: list[Any] = incremental_egress_guards or []
+        self._checkpointer = checkpointer
 
-    async def run(self, state: RunState) -> RunState:
-        """Execute the compiled graph and return the final RunState."""
-        initial: _PipelineStateDict = {
-            "run_id": state.run_id,
-            "route": state.route,
-            "messages": [{"role": m.role, "content": m.content} for m in state.messages],
-            "principal": state.principal,
-            "labels": state.labels,
-            "mask_map": state.mask_map,
-            "events": [],
-            "prompt_tokens": state.usage.prompt_tokens,
-            "completion_tokens": state.usage.completion_tokens,
-            "total_tokens": state.usage.total_tokens,
-            "cost": state.usage.cost,
-            "response": state.response,
-            "status": state.status,
-        }
-        final = await self._app.ainvoke(initial)
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _build_config(self, run_id: str) -> dict[str, Any] | None:
+        """Return a LangGraph config dict with thread_id, or None if no checkpointer."""
+        if self._checkpointer is None:
+            return None
+        return {"configurable": {"thread_id": run_id}}
+
+    @staticmethod
+    def _final_to_run_state(final: dict[str, Any], run_id: str) -> RunState:
+        """Convert a LangGraph final-state dict to a RunState."""
+        interrupt_value: dict[str, object] | None = None
+        status = final.get("status") or "completed"
+
+        interrupts = final.get("__interrupt__")
+        if interrupts:
+            status = "paused"
+            first = interrupts[0]
+            raw = first.value if hasattr(first, "value") else {}
+            interrupt_value = dict(raw) if isinstance(raw, dict) else {"value": raw}
+
         return RunState(
-            run_id=final["run_id"],
-            route=final["route"],
-            messages=[Message(role=m["role"], content=m["content"]) for m in final["messages"]],
+            run_id=final.get("run_id", run_id),
+            route=final.get("route", ""),
+            messages=[
+                Message(role=m["role"], content=m["content"])
+                for m in final.get("messages") or []
+            ],
             principal=final.get("principal"),
             labels=final.get("labels") or {},
             mask_map=final.get("mask_map") or {},
@@ -240,8 +278,62 @@ class CompiledPipeline:
                 cost=float(final.get("cost") or 0.0),
             ),
             response=final.get("response"),
-            status=final.get("status") or "completed",
+            status=status,
+            interrupt_value=interrupt_value,
         )
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    async def run(self, state: RunState) -> RunState:
+        """Execute the compiled graph and return the final RunState."""
+        initial: _PipelineStateDict = {
+            "run_id": state.run_id,
+            "route": state.route,
+            "messages": [{"role": m.role, "content": m.content} for m in state.messages],
+            "principal": state.principal,
+            "labels": state.labels,
+            "mask_map": state.mask_map,
+            "events": [],
+            "prompt_tokens": state.usage.prompt_tokens,
+            "completion_tokens": state.usage.completion_tokens,
+            "total_tokens": state.usage.total_tokens,
+            "cost": state.usage.cost,
+            "response": state.response,
+            "status": state.status,
+        }
+        cfg = self._build_config(state.run_id)
+        final: dict[str, Any] = (
+            await self._app.ainvoke(initial, config=cfg)
+            if cfg is not None
+            else await self._app.ainvoke(initial)
+        )
+        return self._final_to_run_state(final, state.run_id)
+
+    async def resume(self, run_id: str, decision: dict[str, object]) -> RunState:
+        """Resume a paused run with an approve/deny decision.
+
+        Args:
+            run_id: The run ID (must match the *thread_id* used in :meth:`run`).
+            decision: Dict with at least ``{"decision": "approved" | "denied"}``.
+
+        Returns:
+            The final :class:`~aegis_core.pipeline.state.RunState` after resuming.
+
+        Raises:
+            RuntimeError: If the pipeline was compiled without a checkpointer.
+        """
+        if self._checkpointer is None:
+            raise RuntimeError(
+                "Cannot resume a run without a checkpointer. "
+                "Compile the pipeline with a checkpointer via PipelineExecutor(checkpointer=...)."
+            )
+        cfg = self._build_config(run_id)
+        final: dict[str, Any] = await self._app.ainvoke(
+            Command(resume=decision), config=cfg
+        )
+        return self._final_to_run_state(final, run_id)
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +354,7 @@ class PipelineAssembler:
         route: str = "default",
         provider: ModelProvider | None = None,
         custom_graph: Any | None = None,
+        checkpointer: Any | None = None,
     ) -> CompiledPipeline:
         """Compile and return a :class:`CompiledPipeline`.
 
@@ -331,11 +424,17 @@ class PipelineAssembler:
             else []
         )
 
+        compiled_app = (
+            graph.compile(checkpointer=checkpointer)
+            if checkpointer is not None
+            else graph.compile()
+        )
         return CompiledPipeline(
-            graph.compile(),
+            compiled_app,
             route=route,
             node_names=node_names,
             stream_capability=stream_cap,
             provider=provider,
             incremental_egress_guards=inc_guards,
+            checkpointer=checkpointer,
         )

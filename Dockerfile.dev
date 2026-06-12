@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
     gnupg \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Node.js 20 via NodeSource (for the TypeScript SDK in step 15)

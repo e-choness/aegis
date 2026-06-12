@@ -43,7 +43,9 @@ class RunState:
     events: list[RunEvent] = field(default_factory=list)
     usage: UsageInfo = field(default_factory=UsageInfo)
     response: str | None = None
-    status: str = "running"  # running | completed | blocked | paused
+    status: str = "running"  # running | completed | blocked | paused | denied
+    #: Populated when status=="paused"; carries the interrupt prompt/metadata.
+    interrupt_value: dict[str, object] | None = None
 
 
 @dataclass
