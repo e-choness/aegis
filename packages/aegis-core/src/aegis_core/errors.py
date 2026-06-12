@@ -64,3 +64,29 @@ class AegisSecretBackendError(AegisConfigError):
     what = "Secret backend not registered"
     why = "The secret backend scheme referenced in the config is not available."
     fix = "Register a SecretProvider for this scheme or use 'env' (always available)."
+
+
+class AegisPluginError(AegisError):
+    """Plugin registry errors (AEG-CFG-02*)."""
+
+    code = "AEG-CFG-020"
+    what = "Plugin registry error"
+    why = "An error occurred while discovering or loading plugins."
+    fix = "Check that all installed aegis plugins are compatible and correctly packaged."
+
+
+class AegisPluginDuplicateError(AegisPluginError):
+    code = "AEG-CFG-021"
+    what = "Duplicate plugin name detected"
+    why = "Two installed packages declare the same plugin name in the same entry-point group."
+    fix = (
+        "Uninstall or rename one of the conflicting plugins. "
+        "Each plugin name must be unique within its group."
+    )
+
+
+class AegisPluginNotFoundError(AegisPluginError):
+    code = "AEG-CFG-022"
+    what = "Plugin not found"
+    why = "No plugin with the given name was found in the specified group."
+    fix = "Run `aegis plugin list` to see available plugins and check the name/group."

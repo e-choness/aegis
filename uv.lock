@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 members = [
     "aegis-cli",
     "aegis-core",
+    "aegis-fixture-plugin",
     "aegis-server",
 ]
 
@@ -55,6 +56,11 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]
+
+[[package]]
+name = "aegis-fixture-plugin"
+version = "0.1.0"
+source = { editable = "packages/aegis-fixture-plugin" }
 
 [[package]]
 name = "aegis-server"
