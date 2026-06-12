@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable
+from enum import StrEnum
 from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -16,6 +17,45 @@ from aegis_core.pipeline.protocol import PipelineNode
 from aegis_core.pipeline.state import RunEvent, RunState, RunStateDelta
 from aegis_core.providers.models import Message, UsageInfo
 from aegis_core.providers.protocol import ModelProvider
+
+# ---------------------------------------------------------------------------
+# Streaming capability
+# ---------------------------------------------------------------------------
+
+class StreamCapability(StrEnum):
+    """Compile-time streaming capability for a route (PROJECT_SPEC D12).
+
+    ``TRUE_STREAMING`` — all egress guards are incremental; the server can
+    forward chunks to the client as they arrive.
+
+    ``BUFFERED`` — at least one egress guard is non-incremental; the server
+    must complete the full response before egress scanning, then replay it as
+    OpenAI SSE frames.
+    """
+
+    TRUE_STREAMING = "true_streaming"
+    BUFFERED = "buffered"
+
+
+def _compute_stream_capability(egress_nodes: list[PipelineNode]) -> StreamCapability:
+    """Return TRUE_STREAMING only when every egress node reports incremental capability."""
+    for node in egress_nodes:
+        cap = getattr(node, "stream_capability", "true_streaming")
+        if cap == "buffered":
+            return StreamCapability.BUFFERED
+    return StreamCapability.TRUE_STREAMING
+
+
+def _collect_incremental_guards(egress_nodes: list[PipelineNode]) -> list[Any]:
+    """Flatten all IncrementalGuardrail instances out of egress GuardNodes."""
+    from aegis_core.guardrails.incremental import IncrementalGuardrail
+
+    guards: list[Any] = []
+    for node in egress_nodes:
+        node_guards = getattr(node, "guards", None)
+        if node_guards is not None:
+            guards.extend(g for g in node_guards if isinstance(g, IncrementalGuardrail))
+    return guards
 
 # ---------------------------------------------------------------------------
 # LangGraph state schema
@@ -136,12 +176,28 @@ class CompiledPipeline:
 
     Produced by :class:`PipelineAssembler`. Instances are cached per route
     and reused across requests.
+
+    Attributes:
+        stream_capability: Compile-time negotiated streaming mode
+            (:class:`StreamCapability`).  Used by the server to decide
+            whether to true-stream or buffer before emitting SSE.
     """
 
-    def __init__(self, app: Any, route: str, node_names: list[str]) -> None:
+    def __init__(
+        self,
+        app: Any,
+        route: str,
+        node_names: list[str],
+        stream_capability: StreamCapability = StreamCapability.BUFFERED,
+        provider: ModelProvider | None = None,
+        incremental_egress_guards: list[Any] | None = None,
+    ) -> None:
         self._app = app
         self.route = route
         self.node_names = node_names
+        self.stream_capability = stream_capability
+        self._provider = provider
+        self._incremental_egress_guards: list[Any] = incremental_egress_guards or []
 
     async def run(self, state: RunState) -> RunState:
         """Execute the compiled graph and return the final RunState."""
@@ -223,7 +279,12 @@ class PipelineAssembler:
             A :class:`CompiledPipeline` wrapping the compiled graph.
         """
         if custom_graph is not None:
-            return CompiledPipeline(custom_graph, route=route, node_names=[])
+            return CompiledPipeline(
+                custom_graph,
+                route=route,
+                node_names=[],
+                stream_capability=StreamCapability.BUFFERED,
+            )
 
         ingress_nodes = ingress or []
         egress_nodes = egress or []
@@ -263,4 +324,18 @@ class PipelineAssembler:
             )
         graph.add_edge(node_names[-1], END)
 
-        return CompiledPipeline(graph.compile(), route=route, node_names=node_names)
+        stream_cap = _compute_stream_capability(egress_nodes)
+        inc_guards = (
+            _collect_incremental_guards(egress_nodes)
+            if stream_cap == StreamCapability.TRUE_STREAMING
+            else []
+        )
+
+        return CompiledPipeline(
+            graph.compile(),
+            route=route,
+            node_names=node_names,
+            stream_capability=stream_cap,
+            provider=provider,
+            incremental_egress_guards=inc_guards,
+        )

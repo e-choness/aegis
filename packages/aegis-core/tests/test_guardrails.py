@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar, Literal
+
 from aegis_core.guardrails import GuardNode, RegexGuard
 from aegis_core.guardrails.protocol import Guardrail
 from aegis_core.pipeline.assembler import PipelineAssembler
@@ -108,6 +110,7 @@ class TestRegexGuard:
 
 class _AllowGuard:
     name = "allow_guard"
+    streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
     async def scan(self, state: RunState) -> Verdict:
         return Verdict.allow()
@@ -129,6 +132,7 @@ class TestGuardNode:
     async def test_block_short_circuits(self) -> None:
         class _TrackingGuard:
             name = "tracking"
+            streaming: ClassVar[Literal["none", "incremental"]] = "none"
             called = False
 
             async def scan(self, state: RunState) -> Verdict:
@@ -155,6 +159,7 @@ class TestGuardNode:
     async def test_sanitize_updates_messages(self) -> None:
         class _SanitizeGuard:
             name = "sanitizer"
+            streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
             async def scan(self, state: RunState) -> Verdict:
                 return Verdict.sanitize("[REDACTED]")
@@ -169,12 +174,14 @@ class TestGuardNode:
 
         class _SanitizeGuard:
             name = "sanitizer"
+            streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
             async def scan(self, state: RunState) -> Verdict:
                 return Verdict.sanitize("[REDACTED]")
 
         class _InspectGuard:
             name = "inspect"
+            streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
             async def scan(self, state: RunState) -> Verdict:
                 seen.append(state.messages[0].content)
@@ -187,6 +194,7 @@ class TestGuardNode:
     async def test_require_approval_pauses(self) -> None:
         class _ApprovalGuard:
             name = "approval"
+            streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
             async def scan(self, state: RunState) -> Verdict:
                 return Verdict.require_approval("please review")

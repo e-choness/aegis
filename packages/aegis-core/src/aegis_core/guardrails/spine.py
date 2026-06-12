@@ -26,6 +26,21 @@ class GuardNode:
         self.name = name
         self._guards = guards
 
+    @property
+    def guards(self) -> list[Guardrail]:
+        """Public read-only view of the guards list."""
+        return list(self._guards)
+
+    @property
+    def stream_capability(self) -> str:
+        """Return ``"true_streaming"`` if all guards are incremental, else ``"buffered"``."""
+        from aegis_core.guardrails.incremental import IncrementalGuardrail
+
+        for guard in self._guards:
+            if not isinstance(guard, IncrementalGuardrail):
+                return "buffered"
+        return "true_streaming"
+
     async def run(self, state: RunState) -> RunStateDelta:
         current_messages = list(state.messages)
         events: list[RunEvent] = []

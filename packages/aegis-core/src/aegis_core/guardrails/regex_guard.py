@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import ClassVar, Literal
 
 from aegis_core.pipeline.state import RunState
 from aegis_core.pipeline.verdict import Verdict
@@ -17,6 +18,8 @@ class RegexGuard:
         reason: Human-readable reason included in the block :class:`~aegis_core.pipeline.verdict.Verdict`.
         name: Guard identifier used in :class:`~aegis_core.pipeline.state.RunEvent` audit trails.
     """
+
+    streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
     def __init__(
         self,

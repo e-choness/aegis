@@ -111,6 +111,37 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
                     f"routes.{route_name}.pipeline.{stage}",
                 )
 
+    # AEG-POL-003: egress guards that are non-incremental force a streaming downgrade.
+    # Check both global pipeline.egress and per-route pipeline.egress.
+    def _check_streaming_downgrade(egress_refs: list, location: str) -> None:
+        for ref in egress_refs:
+            base = str(ref).split(".")[0]
+            guard_cfg = guardrails_section.get(base) or {}
+            guard_streaming = guard_cfg.get("streaming", "none") if isinstance(guard_cfg, dict) else "none"
+            if guard_streaming != "incremental":
+                issues.append(LintIssue(
+                    code="AEG-POL-003",
+                    message=(
+                        f"Egress guard {ref!r} has streaming={guard_streaming!r}; "
+                        f"this route will buffer responses instead of true-streaming."
+                    ),
+                    location=location,
+                ))
+
+    _check_streaming_downgrade(
+        pipeline_section.get("egress") or [] if isinstance(pipeline_section, dict) else [],
+        "pipeline.egress",
+    )
+    for route_name, route_cfg in routes_section.items():
+        if not isinstance(route_cfg, dict):
+            continue
+        route_pipeline = route_cfg.get("pipeline") or {}
+        if isinstance(route_pipeline, dict):
+            _check_streaming_downgrade(
+                route_pipeline.get("egress") or [],
+                f"routes.{route_name}.pipeline.egress",
+            )
+
     return issues
 
 
