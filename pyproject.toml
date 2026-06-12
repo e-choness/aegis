@@ -15,11 +15,13 @@ dev-dependencies = [
     "import-linter>=2.0",
     "aegis-pack-pii[pii]",
     "aegis-pack-llm-guard",
+    "aegis-core[rag]",
 ]
 
 [tool.uv.sources]
 aegis-pack-pii = { workspace = true }
 aegis-pack-llm-guard = { workspace = true }
+aegis-core = { workspace = true }
 
 # ── pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

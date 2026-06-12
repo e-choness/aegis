@@ -198,3 +198,36 @@ class AegisMcpToolNotFoundError(AegisMcpError):
     what = "MCP tool not found"
     why = "The requested tool name was not found in the connected MCP server."
     fix = "Verify the tool name against the server's tools/list, or check the MCP server configuration."
+
+
+# ---------------------------------------------------------------------------
+# RAG errors (AEG-RAG-*)
+# ---------------------------------------------------------------------------
+
+
+class AegisRagError(AegisError):
+    code = "AEG-RAG-001"
+    what = "RAG backend connection error"
+    why = "The vector store or embedding provider could not be reached."
+    fix = "Check the vector store connection string, network access, and that the service is running."
+
+
+class AegisRagNamespaceError(AegisRagError):
+    code = "AEG-RAG-002"
+    what = "RAG namespace not found"
+    why = "The requested namespace does not exist in the vector store."
+    fix = "Create the namespace by indexing at least one document, or check the namespace name."
+
+
+class AegisRagInjectionError(AegisRagError):
+    code = "AEG-RAG-003"
+    what = "RAG retrieved content blocked by injection guard"
+    why = "A retrieved document contained content detected as a prompt-injection attempt."
+    fix = "Review the indexed documents and remove or sanitize content that triggers injection guards."
+
+
+class AegisRagIndexError(AegisRagError):
+    code = "AEG-RAG-004"
+    what = "RAG indexing failed"
+    why = "Documents could not be indexed into the vector store."
+    fix = "Check that the vector store is writable and the embedding provider is reachable."

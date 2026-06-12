@@ -1,0 +1,28 @@
+Aegis v2 Overview
+
+Aegis is an open-source, plugin-first AI gateway framework written in Python.
+It sits between applications and LLM providers, applying governance rules to
+every request and response.
+
+Key concepts:
+
+1. Pipeline — Every call flows through a three-stage spine: ingress guards,
+   execute (the LLM call), and egress guards. Guards can allow, block,
+   sanitize, or pause a request for human review.
+
+2. Routes — Each named route compiles a LangGraph StateGraph at startup.
+   Routes can have different providers, guard configurations, and policies.
+
+3. Policy packs — Reusable guard bundles (PII masking, injection detection,
+   classification, residency enforcement, budget caps) distributed as
+   separate Python packages with the aegis.guardrails entry point.
+
+4. MCP — Aegis can act as both an MCP client (tool calls governed by argument
+   and result guards) and an MCP server (exposing routes as MCP tools).
+
+5. RAG — Retrieval-Augmented Generation integrates via the VectorStoreProvider
+   and EmbeddingProvider protocols. Retrieved chunks flow through the same
+   tool-result guard chain used for MCP tool outputs.
+
+Aegis is designed for teams that need auditable, compliant AI deployments
+without vendor lock-in.
