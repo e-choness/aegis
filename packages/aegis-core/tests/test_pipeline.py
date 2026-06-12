@@ -310,7 +310,7 @@ class TestCustomGraphEscapeHatch:
             response: str | None
             status: str
 
-        async def _noop(s: _S) -> dict:
+        async def _noop(state: _S) -> dict:
             return {"response": "custom", "status": "completed", "events": []}
 
         g = StateGraph(_S)
@@ -344,7 +344,7 @@ class TestCustomGraphEscapeHatch:
             response: str | None
             status: str
 
-        async def _handler(s: _S) -> dict:
+        async def _handler(state: _S) -> dict:
             return {"response": "from-custom-graph", "status": "completed", "events": []}
 
         g = StateGraph(_S)

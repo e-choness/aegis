@@ -7,8 +7,10 @@ import typer
 from aegis_cli import __version__
 from aegis_cli.commands.chat import chat
 from aegis_cli.commands.config import app as config_app
+from aegis_cli.commands.keys import app as keys_app
 from aegis_cli.commands.plugin import app as plugin_app
 from aegis_cli.commands.provider import app as provider_app
+from aegis_cli.commands.serve import dev, serve
 
 app = typer.Typer(
     name="aegis",
@@ -17,7 +19,10 @@ app = typer.Typer(
 )
 
 app.command("chat")(chat)
+app.command("serve")(serve)
+app.command("dev")(dev)
 app.add_typer(config_app, name="config")
+app.add_typer(keys_app, name="keys")
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(provider_app, name="provider")
 
