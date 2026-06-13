@@ -93,5 +93,6 @@ CLAUDE.md
 PROJECT_SPEC.md
 repo-seed/
 .import_linter_cache/
+site/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode

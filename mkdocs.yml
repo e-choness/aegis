@@ -4,6 +4,8 @@ site_url: https://aegis-ai.github.io/aegis/
 repo_url: https://github.com/aegis-ai/aegis
 repo_name: aegis-ai/aegis
 docs_dir: docs
+hooks:
+  - docs/hooks.py
 theme:
   name: material
   features:
@@ -35,6 +37,7 @@ plugins:
           options:
             show_source: true
             docstring_style: google
+  - swagger-ui-tag
 
 markdown_extensions:
   - admonition
@@ -54,3 +57,31 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Tutorials:
+    - Five-minute gateway: tutorials/five-minute-gateway.md
+    - Write your first guardrail: tutorials/first-guardrail.md
+    - Govern an MCP tool: tutorials/govern-mcp-tool.md
+  - How-to guides:
+    - PII masking: how-to/pii-masking.md
+    - Classification: how-to/classification.md
+    - Residency: how-to/residency.md
+    - Budgets: how-to/budgets.md
+    - Secret backends: how-to/secret-backends.md
+    - Streaming modes: how-to/streaming-modes.md
+    - HITL approvals: how-to/hitl-approvals.md
+    - Deployment: how-to/deployment.md
+    - Migrating from v1: how-to/migrating-from-v1.md
+  - Reference:
+    - Configuration: reference/configuration.md
+    - CLI: reference/cli.md
+    - REST API: reference/rest-api.md
+    - Error codes: reference/errors.md
+    - Metrics & spans: reference/metrics.md
+  - Explanation:
+    - Architecture: explanation/architecture.md
+    - Pipeline & verdicts: explanation/pipeline-and-verdicts.md
+    - Streaming negotiation: explanation/streaming-negotiation.md
+    - Residency model: explanation/residency-model.md
+    - Identity levels: explanation/identity-levels.md
+    - Dependency doctrine: explanation/dependency-doctrine.md
+    - Design decisions: explanation/decisions.md
