@@ -1,13 +1,15 @@
-"""CLI commands: `aegis plugin list` and `aegis plugin info`."""
+"""CLI commands: `aegis plugin list`, `aegis plugin info`, `aegis plugin scaffold`."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from aegis_cli.commands.scaffold import _VALID_KINDS, scaffold_plugin
 from aegis_core.errors import AegisPluginError, AegisPluginNotFoundError
 from aegis_core.registry import PLUGIN_GROUPS, PluginRegistry
 
@@ -101,3 +103,29 @@ def info(
     _console.print(f"[bold]Package:[/bold]     {found.dist_name or '—'}")
     _console.print(f"[bold]Version:[/bold]     {found.dist_version or '—'}")
     _console.print(f"[bold]Entry Point:[/bold] {found.value}")
+
+
+@app.command("scaffold")
+def scaffold(
+    kind: Annotated[
+        str,
+        typer.Argument(help=f"Plugin kind: {', '.join(_VALID_KINDS)}."),
+    ],
+    name: Annotated[
+        str,
+        typer.Argument(help="Plugin name (kebab-case, e.g. my-guard)."),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", "-o", help="Parent directory for the generated package."),
+    ] = Path(".tmp"),
+) -> None:
+    """Scaffold a publishable Aegis plugin package with a contract-kit test."""
+    try:
+        pkg_root = scaffold_plugin(kind, name, output_dir=output_dir)
+    except ValueError as exc:
+        _err_console.print(str(exc))
+        raise typer.Exit(1) from exc
+
+    _console.print(f"[green]Scaffolded {kind} plugin '{name}'[/green] at {pkg_root}")
+    _console.print(f"  Run tests: [cyan]pytest {pkg_root} -v[/cyan]")
