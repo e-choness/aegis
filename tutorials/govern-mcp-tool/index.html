@@ -1675,7 +1675,8 @@
 <p>This tutorial shows how to add governance to tool calls in an MCP-connected
 pipeline — scanning arguments before the call and results after it.</p>
 <h2 id="how-tool-governance-works">How tool governance works<a class="headerlink" href="#how-tool-governance-works" title="Permanent link">&para;</a></h2>
-<pre class="mermaid"><code>flowchart LR
+<pre class="mermaid"><code>%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'clusterBkg': '#e8eaf6', 'clusterBorder': '#7986cb', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
+flowchart LR
     EX[Execute node] --&gt;|tool call request| TCG[Tool-call guard]
     TCG --&gt;|approved args| MCP[MCP tool]
     MCP --&gt;|tool result| TRG[Tool-result guard]
@@ -1798,6 +1799,8 @@ causes the run to end with <code>status="blocked"</code>.</p>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-extra.js"></script>
       
     
   </body>

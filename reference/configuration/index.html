@@ -1945,7 +1945,8 @@
 <p>Aegis is configured via <code>aegis.yaml</code>. All fields are validated at startup via
 pydantic v2 models. A schema change that breaks a config example breaks CI.</p>
 <h2 id="plugin-lifecycle">Plugin lifecycle<a class="headerlink" href="#plugin-lifecycle" title="Permanent link">&para;</a></h2>
-<pre class="mermaid"><code>flowchart LR
+<pre class="mermaid"><code>%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'clusterBkg': '#e8eaf6', 'clusterBorder': '#7986cb', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
+flowchart LR
     subgraph INSTALL[Install]
         PKG[pip install aegis-guardrail-foo]
         EP[entry_points aegis.guardrails]
@@ -2279,6 +2280,8 @@ precedence over <code>aegis.yaml</code> values.</p>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-extra.js"></script>
       
     
   </body>

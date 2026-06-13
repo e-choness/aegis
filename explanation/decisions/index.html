@@ -1960,7 +1960,8 @@
 <h1 id="design-decisions-d1d18">Design decisions (D1–D18)<a class="headerlink" href="#design-decisions-d1d18" title="Permanent link">&para;</a></h1>
 <p>The following decisions are frozen in <a href="https://github.com/aegis-ai/aegis/blob/main/PROJECT_SPEC.md"><code>PROJECT_SPEC.md</code></a>.
 They are reproduced here for documentation purposes. The spec file is the authoritative source.</p>
-<pre class="mermaid"><code>stateDiagram-v2
+<pre class="mermaid"><code>%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
+stateDiagram-v2
     [*] --&gt; allow : Guardrail.scan()
     allow --&gt; [*] : continue
     allow --&gt; sanitize : compose deltas
@@ -2066,6 +2067,8 @@ They are reproduced here for documentation purposes. The spec file is the author
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-extra.js"></script>
       
     
   </body>
