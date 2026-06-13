@@ -45,7 +45,7 @@ async def main() -> None:
     print(f"  arguments : {json.dumps(tool_call.arguments)}")
 
     info = provider.info()
-    print(f"\n[provider]")
+    print("\n[provider]")
     print(f"  name              : {info.name}")
     print(f"  supports_streaming: {info.supports_streaming}")
 
@@ -62,7 +62,7 @@ async def main() -> None:
 
     result = await pipeline.run(state)
 
-    print(f"\n[run]")
+    print("\n[run]")
     print(f"  run_id : {result.run_id}")
     print(f"  status : {result.status}")
     print(f"  events : {len(result.events)}")
