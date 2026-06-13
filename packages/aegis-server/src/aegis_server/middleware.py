@@ -15,7 +15,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._authenticator = authenticator
 
+    # Paths that bypass authentication (Prometheus scraper, health probes).
+    _BYPASS_PREFIXES: tuple[str, ...] = ("/metrics",)
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        for prefix in self._BYPASS_PREFIXES:
+            if request.url.path.startswith(prefix):
+                return await call_next(request)
+
         principal = await self._authenticator.authenticate(request)  # type: ignore[union-attr]
         if principal is None:
             return JSONResponse(

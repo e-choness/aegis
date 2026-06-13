@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from opentelemetry import trace
 
 from aegis_server.auth import NoneAuthenticator
 from aegis_server.middleware import AuthMiddleware
+from aegis_server.routes.approvals import router as approvals_router
+from aegis_server.routes.audit import router as audit_router
 from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
 from aegis_server.store.run_store import InMemoryRunStore
+from aegis_server.telemetry import make_metrics_app
 
 
 class AEGServError(RuntimeError):
@@ -25,6 +29,7 @@ def create_app(
     rag_store: object | None = None,
     embedding_provider: object | None = None,
     no_auth: bool = False,
+    tracer: trace.Tracer | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -65,9 +70,16 @@ def create_app(
     app.state.run_store = run_store if run_store is not None else InMemoryRunStore()
     app.state.rag_store = rag_store
     app.state.embedding_provider = embedding_provider
+    app.state.tracer = tracer  # None → runs.py falls back to global OTel tracer
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
     app.include_router(runs_router)
     app.include_router(chat_router)
     app.include_router(hitl_router)
     app.include_router(rag_router)
+    app.include_router(audit_router)
+    app.include_router(approvals_router)
+
+    # Mount Prometheus /metrics endpoint (unauthenticated — Prometheus scrapes it)
+    app.mount("/metrics", make_metrics_app())
+
     return app

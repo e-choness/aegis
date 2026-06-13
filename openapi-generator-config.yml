@@ -1,0 +1,15 @@
+# openapi-generator-cli configuration for Aegis v2.
+# Used by the `codegen` compose service to generate community-language clients.
+#
+# Usage (Go example):
+#   docker compose run --rm codegen generate \
+#     -i /workspace/openapi.json \
+#     -g go \
+#     -o /workspace/.tmp/go-client \
+#     -c /workspace/openapi-generator-config.yml
+
+generatorName: go
+outputDir: /workspace/.tmp/go-client
+inputSpec: /workspace/openapi.json
+packageName: aegis
+packageVersion: "2.0.0-alpha"

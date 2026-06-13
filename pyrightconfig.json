@@ -7,7 +7,9 @@
   "reportMissingImports": true,
   "reportMissingTypeStubs": false,
   "include": [
-    "packages"
+    "packages",
+    "sdk/python",
+    "scripts"
   ],
   "exclude": [
     ".venv",

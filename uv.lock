@@ -12,16 +12,24 @@ members = [
     "aegis-cli",
     "aegis-core",
     "aegis-fixture-plugin",
+    "aegis-pack-budgets",
+    "aegis-pack-classification",
     "aegis-pack-llm-guard",
     "aegis-pack-pii",
+    "aegis-pack-residency",
+    "aegis-sdk",
     "aegis-server",
 ]
 
 [manifest.dependency-groups]
 dev = [
     { name = "aegis-core", extras = ["rag"], editable = "packages/aegis-core" },
+    { name = "aegis-pack-budgets", editable = "packages/aegis-pack-budgets" },
+    { name = "aegis-pack-classification", editable = "packages/aegis-pack-classification" },
     { name = "aegis-pack-llm-guard", editable = "packages/aegis-pack-llm-guard" },
     { name = "aegis-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
+    { name = "aegis-pack-residency", editable = "packages/aegis-pack-residency" },
+    { name = "aegis-sdk", editable = "sdk/python" },
     { name = "import-linter", specifier = ">=2.0" },
     { name = "pre-commit", specifier = ">=4" },
     { name = "pyright", specifier = ">=1.1" },
@@ -36,6 +44,7 @@ version = "2.0.0a0"
 source = { editable = "packages/aegis-cli" }
 dependencies = [
     { name = "aegis-core" },
+    { name = "aegis-sdk" },
     { name = "aegis-server" },
     { name = "rich" },
     { name = "typer" },
@@ -44,6 +53,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aegis-core", editable = "packages/aegis-core" },
+    { name = "aegis-sdk", editable = "sdk/python" },
     { name = "aegis-server", editable = "packages/aegis-server" },
     { name = "rich", specifier = ">=13" },
     { name = "typer", specifier = ">=0.12" },
@@ -103,6 +113,28 @@ version = "0.1.0"
 source = { editable = "packages/aegis-fixture-plugin" }
 
 [[package]]
+name = "aegis-pack-budgets"
+version = "2.0.0a0"
+source = { editable = "packages/aegis-pack-budgets" }
+dependencies = [
+    { name = "aegis-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+
+[[package]]
+name = "aegis-pack-classification"
+version = "2.0.0a0"
+source = { editable = "packages/aegis-pack-classification" }
+dependencies = [
+    { name = "aegis-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+
+[[package]]
 name = "aegis-pack-llm-guard"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-llm-guard" }
@@ -160,6 +192,32 @@ requires-dist = [
 provides-extras = ["pii", "all"]
 
 [[package]]
+name = "aegis-pack-residency"
+version = "2.0.0a0"
+source = { editable = "packages/aegis-pack-residency" }
+dependencies = [
+    { name = "aegis-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+
+[[package]]
+name = "aegis-sdk"
+version = "2.0.0a0"
+source = { editable = "sdk/python" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "pydantic", specifier = ">=2" },
+]
+
+[[package]]
 name = "aegis-server"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-server" }
@@ -167,6 +225,9 @@ dependencies = [
     { name = "aegis-core" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "prometheus-client" },
     { name = "sse-starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -176,6 +237,9 @@ requires-dist = [
     { name = "aegis-core", editable = "packages/aegis-core" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "opentelemetry-api", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", specifier = ">=1.27" },
+    { name = "prometheus-client", specifier = ">=0.21" },
     { name = "sse-starlette", specifier = ">=2.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
@@ -2978,6 +3042,15 @@ dependencies = [
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/43/21/f00a2d321ef264e67e83a3bb8476efc97296be84bb260507fb984852e03c/presidio_anonymizer-2.2.358-py3-none-any.whl", hash = "sha256:54c7e26cfc7dc7887551774f97ef9070b011feea420fba3d0d0dde9689650432", size = 31283, upload-time = "2025-03-18T09:38:25.375Z" },
+]
+
+[[package]]
+name = "prometheus-client"
+version = "0.25.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/fb/d9aa83ffe43ce1f19e557c0971d04b90561b0cfd50762aafb01968285553/prometheus_client-0.25.0.tar.gz", hash = "sha256:5e373b75c31afb3c86f1a52fa1ad470c9aace18082d39ec0d2f918d11cc9ba28", size = 86035, upload-time = "2026-04-09T19:53:42.359Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/9b/d4b1e644385499c8346fa9b622a3f030dce14cd6ef8a1871c221a17a67e7/prometheus_client-0.25.0-py3-none-any.whl", hash = "sha256:d5aec89e349a6ec230805d0df882f3807f74fd6c1a2fa86864e3c2279059fed1", size = 64154, upload-time = "2026-04-09T19:53:41.324Z" },
 ]
 
 [[package]]

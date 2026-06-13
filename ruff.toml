@@ -18,7 +18,7 @@ ignore = [
 ]
 
 [lint.isort]
-known-first-party = ["aegis_core", "aegis_server", "aegis_cli"]
+known-first-party = ["aegis_core", "aegis_server", "aegis_cli", "aegis_sdk"]
 
 [format]
 quote-style = "double"

@@ -1,0 +1,46 @@
+# docker-compose.demo.yml — Aegis showcase stack
+#
+# Starts the Aegis dev gateway (FakeProvider, no auth) and Open WebUI
+# pre-pointed at the OpenAI-compatible endpoint.
+#
+# Usage:
+#   docker compose -f docker-compose.demo.yml up
+#
+# Then open http://localhost:3000 in your browser and start chatting.
+# Every request passes through the Aegis pipeline — try asking anything.
+#
+# Stop with:  Ctrl-C  or  docker compose -f docker-compose.demo.yml down
+
+services:
+  aegis:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      UV_CACHE_DIR: /workspace/.uv-cache
+    command: uv run aegis dev --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/docs > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    environment:
+      # Point Open WebUI at the Aegis OpenAI-compatible endpoint
+      OPENAI_API_BASE_URL: http://aegis:8000/v1
+      OPENAI_API_KEY: demo
+      # Disable the default Ollama integration
+      ENABLE_OLLAMA_API: "false"
+      WEBUI_AUTH: "false"
+    depends_on:
+      aegis:
+        condition: service_healthy
