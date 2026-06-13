@@ -44,7 +44,7 @@ cleanup() {
 
 wait_for_server() {
   local url="$1"
-  local max_attempts=30
+  local max_attempts=90
   local attempt=0
   while ! curl -sf "$url" > /dev/null 2>&1; do
     attempt=$((attempt + 1))
@@ -86,7 +86,7 @@ uv run aegis dev --host 127.0.0.1 --port "${DEMO_PORT}" &
 SERVER_PID=$!
 
 info "Waiting for server…"
-wait_for_server "${BASE}/docs"
+wait_for_server "${BASE}/openapi.json"
 pass "Server is up."
 
 # ── 1. Governed chat ──────────────────────────────────────────────────────────
