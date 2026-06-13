@@ -1,0 +1,130 @@
+![aegis-banner](images/banner-wide.png)
+
+[![CI](https://github.com/echo-yin/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/echo-yin/aegis/actions/workflows/ci.yml)
+[![Docs](https://github.com/echo-yin/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/echo-yin/aegis/actions/workflows/docs.yml)
+[![PyPI version](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/astral-sh/ruff)
+
+## What Aegis is
+
+An open-source, plugin-first AI gateway framework. A small kernel plus seven
+plugin contracts puts a governed, observable, provider-agnostic pipeline
+between applications and LLM providers. Every flagship feature is built on the
+same public contracts third-party developers use (the policy packs are the
+permanent proof). Self-hosted, CLI-first, single-tenant-by-design at identity
+level L2 (principal-aware, not multi-tenant).
+
+**Features:**
+
+- **Guardrail pipeline** — ingress, tool-call, tool-result, and egress stages;
+  verdicts `allow / block / sanitize / require_approval`
+- **Provider-agnostic** — OpenAI, Anthropic, Bedrock, Vertex, or any
+  OpenAI-compatible endpoint; hot-swappable per route
+- **Human-in-the-loop** — `require_approval` pauses execution via LangGraph
+  `interrupt()`; resume via REST or CLI
+- **Streaming** — true incremental streaming when all egress guards support
+  `scan_chunk()`; buffered SSE otherwise; `policy lint` reports downgrades
+- **Tool governance** — argument scan + masked-data exfiltration check on every
+  tool call; prompt-injection scan on every tool result
+- **Residency / data sovereignty** — declared region metadata + endpoint
+  validation; fail-closed provider filtering; per-request audit
+- **Observability** — Prometheus metrics, OpenTelemetry traces, Grafana
+  dashboard included
+- **Plugin-first** — seven contracts: `ModelProvider`, `GuardrailProvider`,
+  `VectorStoreProvider`, `EmbeddingProvider`, `SecretProvider`,
+  `PipelineNode`, `Authenticator`
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph IF[Interfaces]
+        CLI[CLI · Typer + Rich]
+        REST[REST API · native + OpenAI-compat]
+        MCPS[MCP server]
+        SDK[SDKs · Python + TypeScript]
+    end
+    AUTH[Auth middleware — Authenticator resolves Principal]
+    subgraph PR[Pipeline runtime — LangGraph StateGraph]
+        IN[Ingress guards] --> RX[Route + execute] --> EG[Egress guards]
+    end
+    subgraph K[Plugin kernel]
+        REG[Plugin registry — entry points]
+        CFG[Typed config + secret resolution]
+        ASM[Per-route graph assembler]
+        HK[Hooks + events — pluggy]
+    end
+    subgraph C[Seven plugin contracts]
+        MP[ModelProvider] & GP[GuardrailProvider] & RG[VectorStore/Embedding]
+        SP[SecretProvider] & TE[Telemetry exporter] & PN[PipelineNode] & AU[Authenticator]
+    end
+    subgraph PP[Optional policy packs — public contracts only]
+        CL[Classification] & RES[Residency] & BUD[Budgets] & PII[PII mask]
+    end
+    IF --> AUTH --> PR --> K --> C --> PP
+```
+
+## Quick start
+
+**Five-minute path (no Docker):**
+
+```bash
+pip install aegis-ai
+aegis init          # writes aegis.yaml — PII masking enabled by default
+aegis dev           # binds localhost:8000, no auth, FakeProvider
+```
+
+In a second terminal:
+
+```bash
+curl -s http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"default","messages":[{"role":"user","content":"Hello!"}]}' \
+  | python3 -m json.tool
+```
+
+**Point any OpenAI client at Aegis:**
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="dev")
+response = client.chat.completions.create(
+    model="default",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
+```
+
+## Request lifecycle
+
+```mermaid
+flowchart LR
+    REQ([Request]) --> AUTH{Auth}
+    AUTH -- no principal --> R401([401])
+    AUTH --> IN[Ingress guards]
+    IN -- block --> REF([Refused + audit])
+    IN -- require_approval --> HOLD([Paused — HITL])
+    HOLD -- approved --> RT
+    IN -- allow / sanitize --> RT[Route]
+    RT -- no compliant provider --> REF
+    RT --> EX[Execute]
+    EX -- tool call --> TG[Tool-call guard] --> MCP[MCP tool] --> TR[Tool-result guard] --> EX
+    EX --> EG[Egress guards]
+    EG -- block --> REF
+    EG -- allow / sanitize --> RESP([Response + audit])
+```
+
+## Documentation
+
+- [Full docs](https://aegis-ai.dev) — tutorials, how-to guides, reference, architecture
+- [Examples](examples/) — runnable demo scripts for every major feature
+- [Plugin authoring guide](https://aegis-ai.dev/how-to/first-guardrail/) — write and publish a guardrail pack
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development environment, gate policy, commit conventions
+- [SECURITY.md](SECURITY.md) — responsible disclosure process
+
+**Upgrading from v1?** See the
+[migration guide](https://aegis-ai.dev/how-to/migrating-from-v1/). The v1
+codebase is preserved at the `v1-legacy` tag.
