@@ -1,0 +1,88 @@
+name: Plugin Submission
+description: Submit a community guardrail pack or plugin for listing in the registry
+labels: ["plugin", "community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to submit your Aegis guardrail pack or plugin for inclusion
+        in the community registry at https://aegis-ai.dev/plugins.
+
+        **Requirements before submitting:**
+        - Package published to PyPI with the `aegis-` prefix
+        - `aegis.guardrails` entry point registered
+        - README covers install, config keys, and a minimal `aegis.yaml` snippet
+        - Tests included (real integration preferred, mocks documented)
+
+  - type: input
+    id: package_name
+    attributes:
+      label: PyPI package name
+      placeholder: "e.g. aegis-pii-spacy"
+    validations:
+      required: true
+
+  - type: input
+    id: pypi_url
+    attributes:
+      label: PyPI URL
+      placeholder: "https://pypi.org/project/aegis-pii-spacy/"
+    validations:
+      required: true
+
+  - type: input
+    id: repo_url
+    attributes:
+      label: Source repository URL
+      placeholder: "https://github.com/your-org/aegis-pii-spacy"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - PII / Privacy
+        - Prompt injection
+        - Content moderation
+        - Residency / data sovereignty
+        - Secrets detection
+        - Custom classification
+        - Observability
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What does this plugin do?
+      description: One paragraph description. What guardrail problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: aegis_yaml
+    attributes:
+      label: Minimal aegis.yaml snippet
+      description: Show the minimum config needed to activate this plugin.
+      render: yaml
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission checklist
+      options:
+        - label: Package is published to PyPI
+          required: true
+        - label: Entry point `aegis.guardrails` is declared in pyproject.toml
+          required: true
+        - label: README includes install instructions and aegis.yaml example
+          required: true
+        - label: Tests are included in the repository
+          required: true
+        - label: I am the author or an authorised maintainer of this package
+          required: true

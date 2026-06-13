@@ -20,6 +20,13 @@ dev-dependencies = [
     "aegis-pack-residency",
     "aegis-pack-budgets",
     "aegis-sdk",
+    # Docs
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+    "mkdocs-swagger-ui-tag>=0.6",
+    "pytest-examples>=0.0.13",
+    # Changelog
+    "git-cliff>=2.0",
 ]
 
 [tool.uv.sources]
