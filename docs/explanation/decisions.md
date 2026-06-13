@@ -4,6 +4,7 @@ The following decisions are frozen in [`PROJECT_SPEC.md`](https://github.com/aeg
 They are reproduced here for documentation purposes. The spec file is the authoritative source.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
 stateDiagram-v2
     [*] --> allow : Guardrail.scan()
     allow --> [*] : continue

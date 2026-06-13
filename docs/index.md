@@ -24,6 +24,7 @@ An open-source, plugin-first AI gateway framework. A small kernel plus seven plu
 ## Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'clusterBkg': '#e8eaf6', 'clusterBorder': '#7986cb', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
 flowchart TD
     subgraph IF[Interfaces]
         CLI[CLI · Typer + Rich]

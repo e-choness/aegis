@@ -1,7 +1,7 @@
 ![aegis-banner](images/banner-wide.png)
 
-[![CI](https://github.com/echo-yin/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/echo-yin/aegis/actions/workflows/ci.yml)
-[![Docs](https://github.com/echo-yin/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/echo-yin/aegis/actions/workflows/docs.yml)
+[![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
+[![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/docs.yml)
 [![PyPI version](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
 [![Python versions](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)

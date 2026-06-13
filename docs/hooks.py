@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 
-def on_pre_build(config, **kwargs):  # noqa: ARG001
+def on_pre_build(config, **kwargs):
     src = Path("openapi.json")
     dst = Path("docs/assets/openapi.json")
     dst.parent.mkdir(parents=True, exist_ok=True)

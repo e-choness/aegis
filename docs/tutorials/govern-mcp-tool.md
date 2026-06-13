@@ -6,6 +6,7 @@ pipeline — scanning arguments before the call and results after it.
 ## How tool governance works
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'clusterBkg': '#e8eaf6', 'clusterBorder': '#7986cb', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
 flowchart LR
     EX[Execute node] -->|tool call request| TCG[Tool-call guard]
     TCG -->|approved args| MCP[MCP tool]

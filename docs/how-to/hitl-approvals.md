@@ -6,6 +6,7 @@ Human-in-the-loop (HITL) approval pauses a run at a guardrail that returns
 ## HITL sequence
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'actorBkg': '#3f51b5', 'actorTextColor': '#ffffff', 'actorBorder': '#283593', 'actorLineColor': '#7986cb', 'signalColor': '#5c6bc0', 'signalTextColor': '#1a237e', 'noteBkgColor': '#e8eaf6', 'noteTextColor': '#1a237e', 'edgeLabelBackground': '#e8eaf6'}}}%%
 sequenceDiagram
     participant C as Client
     participant A as Aegis

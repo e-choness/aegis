@@ -47,7 +47,7 @@ def _collect_yaml_examples() -> list[tuple[str, str]]:
 _EXAMPLES = _collect_yaml_examples()
 
 
-@pytest.mark.parametrize("label,yaml_text", _EXAMPLES, ids=[e[0] for e in _EXAMPLES])
+@pytest.mark.parametrize(("label", "yaml_text"), _EXAMPLES, ids=[e[0] for e in _EXAMPLES])
 def test_aegis_yaml_block_parses(label: str, yaml_text: str) -> None:
     """Aegis-config-like YAML blocks in docs/ must parse without error."""
     from aegis_core.config import AegisConfig

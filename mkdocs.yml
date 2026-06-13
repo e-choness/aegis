@@ -29,6 +29,9 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 
+extra_javascript:
+  - javascripts/mermaid-extra.js
+
 plugins:
   - search
   - mkdocstrings:
