@@ -25,6 +25,8 @@ dev-dependencies = [
     "mkdocstrings[python]>=0.27",
     "mkdocs-swagger-ui-tag>=0.6",
     "pytest-examples>=0.0.13",
+    # Changelog
+    "git-cliff>=2.0",
 ]
 
 [tool.uv.sources]
