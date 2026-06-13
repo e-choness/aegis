@@ -100,7 +100,7 @@ The scaffold generates a publishable package with contract tests. Publish to
 PyPI with the `aegis.guardrails` (or appropriate) entry point declared in
 `pyproject.toml`.
 
-See the [plugin authoring tutorial](docs/tutorials/first-guardrail.md) for a
+See the [plugin authoring tutorial](tutorials/first-guardrail.md) for a
 full walkthrough.
 
 ## Code of conduct

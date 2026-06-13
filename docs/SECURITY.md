@@ -45,6 +45,6 @@ coordinate).
 ## Hardening guidance
 
 See the deployment how-to and the explanation docs — in particular the
-[residency model](docs/explanation/residency-model.md) (what is enforced vs
+[residency model](explanation/residency-model.md) (what is enforced vs
 declared, and why network egress controls are the last line) and
-[identity levels](docs/explanation/identity-levels.md) (secure defaults).
+[identity levels](explanation/identity-levels.md) (secure defaults).

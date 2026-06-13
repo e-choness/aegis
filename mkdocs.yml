@@ -85,3 +85,7 @@ nav:
     - Identity levels: explanation/identity-levels.md
     - Dependency doctrine: explanation/dependency-doctrine.md
     - Design decisions: explanation/decisions.md
+  - Community:
+    - Contributing: CONTRIBUTING.md
+    - Code of conduct: CODE_OF_CONDUCT.md
+    - Security policy: SECURITY.md

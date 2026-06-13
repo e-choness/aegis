@@ -122,8 +122,8 @@ flowchart LR
 - [Full docs](https://aegis-ai.dev) — tutorials, how-to guides, reference, architecture
 - [Examples](examples/) — runnable demo scripts for every major feature
 - [Plugin authoring guide](https://aegis-ai.dev/how-to/first-guardrail/) — write and publish a guardrail pack
-- [CONTRIBUTING.md](CONTRIBUTING.md) — development environment, gate policy, commit conventions
-- [SECURITY.md](SECURITY.md) — responsible disclosure process
+- [CONTRIBUTING.md](docs/CONTRIBUTING.md) — development environment, gate policy, commit conventions
+- [SECURITY.md](docs/SECURITY.md) — responsible disclosure process
 
 **Upgrading from v1?** See the
 [migration guide](https://aegis-ai.dev/how-to/migrating-from-v1/). The v1

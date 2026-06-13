@@ -41,8 +41,8 @@ FORBIDDEN_BADGES = ["codecov", "stars", "downloads"]
 # Relative links that must exist on disk (resolve from root)
 REQUIRED_LINKS = [
     "images/banner-wide.png",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
+    "docs/CONTRIBUTING.md",
+    "docs/SECURITY.md",
 ]
 
 

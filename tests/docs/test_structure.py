@@ -10,9 +10,9 @@ DOCS_ROOT = ROOT / "docs"
 SPEC_FILE = ROOT / "PROJECT_SPEC.md"
 
 REQUIRED_FRONT_MATTER = [
-    ROOT / "CONTRIBUTING.md",
-    ROOT / "CODE_OF_CONDUCT.md",
-    ROOT / "SECURITY.md",
+    ROOT / "docs" / "CONTRIBUTING.md",
+    ROOT / "docs" / "CODE_OF_CONDUCT.md",
+    ROOT / "docs" / "SECURITY.md",
 ]
 
 MIN_MERMAID_COUNT = 8

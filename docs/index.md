@@ -78,6 +78,6 @@ See the [five-minute gateway tutorial](tutorials/five-minute-gateway.md) for a f
 
 - [Examples gallery](https://github.com/aegis-ai/aegis/tree/main/examples)
 - [Plugin authoring guide](tutorials/first-guardrail.md)
-- [Contributing](https://github.com/aegis-ai/aegis/blob/main/CONTRIBUTING.md)
-- [Security policy](https://github.com/aegis-ai/aegis/blob/main/SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 - [v1 legacy tag](https://github.com/aegis-ai/aegis/releases/tag/v1-legacy) — v1 users, start here
