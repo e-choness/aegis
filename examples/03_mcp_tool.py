@@ -1,10 +1,13 @@
 """Example 03 — Governed MCP tool call.
 
-Shows how Aegis wraps MCP tool calls so every tool invocation passes
-through the guardrail pipeline before being handed to the model.
+Shows how to configure an Aegis pipeline that inspects MCP tool calls
+before they are executed.  Tool calls and results each pass through
+dedicated guardrail stages (``tool_call`` and ``tool_result`` in the
+pipeline config).
 
-This example uses the in-process SDK (no server needed) with a stub
-MCP client that simulates a tool returning results.
+This script runs entirely in-process using a FakeProvider.  For a live
+demo with a real MCP server, start ``aegis dev`` and point an MCP client
+at ``http://127.0.0.1:8000/mcp``.
 
 Run::
 
@@ -14,6 +17,7 @@ Run::
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 
 from aegis_core.pipeline import PipelineAssembler, RunState
@@ -22,35 +26,50 @@ from aegis_core.testing import FakeProvider
 
 
 async def main() -> None:
-    # Build a FakeProvider that first returns a tool call, then a final response.
+    # FakeProvider returns a tool call on the first completion, then a text
+    # answer on the second.  The pipeline MCP node (not activated here for
+    # simplicity) would dispatch the call and inject the result.
     tool_call = ToolCall(
-        id="call_01",
+        id="call_weather_01",
         name="get_weather",
-        arguments={"location": "London"},
+        arguments={"location": "London", "unit": "celsius"},
     )
     provider = FakeProvider(
-        tool_calls_sequence=[[tool_call]],   # first response: call the tool
+        tool_calls_sequence=[[tool_call]],
         complete_response="It is 18 °C and partly cloudy in London.",
     )
 
+    print("[tool_call shape]")
+    print(f"  id        : {tool_call.id}")
+    print(f"  name      : {tool_call.name}")
+    print(f"  arguments : {json.dumps(tool_call.arguments)}")
+
+    info = provider.info()
+    print(f"\n[provider]")
+    print(f"  name              : {info.name}")
+    print(f"  supports_streaming: {info.supports_streaming}")
+
+    # Simple pipeline run (no MCP execute node; tool loop shown conceptually)
     assembler = PipelineAssembler()
     pipeline = assembler.compile(provider=provider, route="default")
 
     state = RunState(
         run_id=str(uuid.uuid4()),
         route="default",
-        messages=[Message(role="user", content="What's the weather in London?")],
+        messages=[Message(role="user", content="What is the weather in London?")],
         principal="demo-user",
     )
 
     result = await pipeline.run(state)
 
-    print(f"[run_id]   {result.run_id}")
-    print(f"[status]   {result.status}")
-    print(f"[response] {result.response}")
-
-    tool_events = [e for e in result.events if "tool" in e.type.lower()]
-    print(f"[events]   {len(result.events)} total, {len(tool_events)} tool-related")
+    print(f"\n[run]")
+    print(f"  run_id : {result.run_id}")
+    print(f"  status : {result.status}")
+    print(f"  events : {len(result.events)}")
+    print()
+    print("TIP: For a full governed tool loop, add an `mcp:` node to aegis.yaml")
+    print("     and point it at an MCP server.  The pipeline will guard tool calls")
+    print("     via the `tool_call` and `tool_result` pipeline stages.")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 """Example 05 — Residency enforcement.
 
-Shows how Aegis enforces data-residency constraints: a request destined
-for a cross-region provider is rejected by the residency policy.
+Shows how Aegis surfaces provider residency information so you can build
+policies that keep data in the right region.  A ``FakeProvider`` that
+claims to be in ``eu-west`` is queried and its ``ProviderInfo.residency``
+field is inspected — the same information the residency policy node uses.
 
 Run::
 
@@ -33,7 +35,11 @@ class _EUResidentFakeProvider(FakeProvider):
         )
 
 
-async def run_with_provider(label: str, provider: FakeProvider) -> None:
+async def run_and_show(label: str, provider: FakeProvider) -> None:
+    info = provider.info()
+    print(f"\n[{label}]")
+    print(f"  provider region : {info.residency.region or 'global (no constraint)'}")
+
     assembler = PipelineAssembler()
     pipeline = assembler.compile(provider=provider, route="default")
 
@@ -42,20 +48,20 @@ async def run_with_provider(label: str, provider: FakeProvider) -> None:
         route="default",
         messages=[Message(role="user", content="Summarise GDPR article 17.")],
         principal="demo-user",
-        # Residency constraint: data must stay in the EU.
-        metadata={"required_region": "eu-west"},
+        # Label the request with the required region — a residency policy node
+        # would compare this against provider.info().residency.region.
+        labels={"required_region": "eu-west"},
     )
 
     result = await pipeline.run(state)
-    print(f"[{label}] status={result.status!r}  response={result.response!r}")
+    print(f"  status          : {result.status}")
+    print(f"  response        : {result.response!r:.60}")
 
 
 async def main() -> None:
-    print("--- EU-resident provider (should pass) ---")
-    await run_with_provider("eu-west provider", _EUResidentFakeProvider(name="eu-fake"))
-
-    print("\n--- Global provider without residency constraint (passes) ---")
-    await run_with_provider("global provider", FakeProvider(name="global-fake"))
+    print("=== Residency example ===")
+    await run_and_show("EU-resident provider", _EUResidentFakeProvider(name="eu-fake"))
+    await run_and_show("Global provider (no region)", FakeProvider(name="global-fake"))
 
 
 if __name__ == "__main__":
