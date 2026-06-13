@@ -7,6 +7,7 @@ from opentelemetry import trace
 
 from aegis_server.auth import NoneAuthenticator
 from aegis_server.middleware import AuthMiddleware
+from aegis_server.routes.approvals import router as approvals_router
 from aegis_server.routes.audit import router as audit_router
 from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
@@ -76,6 +77,7 @@ def create_app(
     app.include_router(hitl_router)
     app.include_router(rag_router)
     app.include_router(audit_router)
+    app.include_router(approvals_router)
 
     # Mount Prometheus /metrics endpoint (unauthenticated — Prometheus scrapes it)
     app.mount("/metrics", make_metrics_app())
