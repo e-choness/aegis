@@ -1,115 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://aegis-ai.github.io/aegis/</loc>
+         <loc>https://e-choness.github.io/aegis/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/CODE_OF_CONDUCT/</loc>
+         <loc>https://e-choness.github.io/aegis/CODE_OF_CONDUCT/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/CONTRIBUTING/</loc>
+         <loc>https://e-choness.github.io/aegis/CONTRIBUTING/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/SECURITY/</loc>
+         <loc>https://e-choness.github.io/aegis/SECURITY/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/architecture/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/architecture/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/decisions/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/decisions/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/dependency-doctrine/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/dependency-doctrine/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/identity-levels/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/identity-levels/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/pipeline-and-verdicts/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/pipeline-and-verdicts/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/residency-model/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/residency-model/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/explanation/streaming-negotiation/</loc>
+         <loc>https://e-choness.github.io/aegis/explanation/streaming-negotiation/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/budgets/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/budgets/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/classification/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/classification/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/deployment/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/deployment/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/hitl-approvals/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/hitl-approvals/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/migrating-from-v1/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/migrating-from-v1/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/pii-masking/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/pii-masking/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/residency/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/residency/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/secret-backends/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/secret-backends/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/how-to/streaming-modes/</loc>
+         <loc>https://e-choness.github.io/aegis/how-to/streaming-modes/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/reference/cli/</loc>
+         <loc>https://e-choness.github.io/aegis/reference/cli/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/reference/configuration/</loc>
+         <loc>https://e-choness.github.io/aegis/reference/configuration/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/reference/errors/</loc>
+         <loc>https://e-choness.github.io/aegis/reference/errors/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/reference/metrics/</loc>
+         <loc>https://e-choness.github.io/aegis/reference/metrics/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/reference/rest-api/</loc>
+         <loc>https://e-choness.github.io/aegis/reference/rest-api/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/tutorials/first-guardrail/</loc>
+         <loc>https://e-choness.github.io/aegis/tutorials/first-guardrail/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/tutorials/five-minute-gateway/</loc>
+         <loc>https://e-choness.github.io/aegis/tutorials/five-minute-gateway/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
     <url>
-         <loc>https://aegis-ai.github.io/aegis/tutorials/govern-mcp-tool/</loc>
+         <loc>https://e-choness.github.io/aegis/tutorials/govern-mcp-tool/</loc>
          <lastmod>2026-06-16</lastmod>
     </url>
 </urlset>
