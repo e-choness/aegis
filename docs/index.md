@@ -1,7 +1,7 @@
 # Aegis AI Gateway
 
 [![CI](https://github.com/aegis-ai/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/aegis-ai/aegis/actions/workflows/ci.yml)
-[![Docs](https://github.com/aegis-ai/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://aegis-ai.github.io/aegis/)
+[![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://e-choness.github.io/aegis/)
 [![PyPI](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
 [![Python](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/aegis-ai/aegis/blob/main/LICENSE)

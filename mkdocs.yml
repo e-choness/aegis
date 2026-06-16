@@ -1,8 +1,8 @@
 site_name: Aegis AI Gateway
 site_description: Open-source, plugin-first AI gateway framework
-site_url: https://aegis-ai.github.io/aegis/
-repo_url: https://github.com/aegis-ai/aegis
-repo_name: aegis-ai/aegis
+site_url: https://e-choness.github.io/aegis/
+repo_url: https://github.com/e-choness/aegis
+repo_name: e-choness/aegis
 docs_dir: docs
 hooks:
   - docs/hooks.py
