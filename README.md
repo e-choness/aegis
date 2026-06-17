@@ -1,4 +1,4 @@
-![aegis-banner](images/banner-wide.png)
+![aegis-banner](images/banner-wide.jpg)
 
 [![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/docs.yml)

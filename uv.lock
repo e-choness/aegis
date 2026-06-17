@@ -12,6 +12,7 @@ members = [
     "aegis-cli",
     "aegis-core",
     "aegis-fixture-plugin",
+    "aegis-gateway",
     "aegis-pack-budgets",
     "aegis-pack-classification",
     "aegis-pack-llm-guard",
@@ -116,6 +117,33 @@ provides-extras = ["rag"]
 name = "aegis-fixture-plugin"
 version = "0.1.0"
 source = { editable = "packages/aegis-fixture-plugin" }
+
+[[package]]
+name = "aegis-gateway"
+version = "2.0.0a0"
+source = { editable = "packages/aegis-gateway" }
+dependencies = [
+    { name = "aegis-cli" },
+    { name = "aegis-core" },
+    { name = "aegis-pack-budgets" },
+    { name = "aegis-pack-classification" },
+    { name = "aegis-pack-llm-guard", extra = ["llm-guard"] },
+    { name = "aegis-pack-pii", extra = ["pii"] },
+    { name = "aegis-pack-residency" },
+    { name = "aegis-server" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aegis-cli", editable = "packages/aegis-cli" },
+    { name = "aegis-core", editable = "packages/aegis-core" },
+    { name = "aegis-pack-budgets", editable = "packages/aegis-pack-budgets" },
+    { name = "aegis-pack-classification", editable = "packages/aegis-pack-classification" },
+    { name = "aegis-pack-llm-guard", extras = ["llm-guard"], editable = "packages/aegis-pack-llm-guard" },
+    { name = "aegis-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
+    { name = "aegis-pack-residency", editable = "packages/aegis-pack-residency" },
+    { name = "aegis-server", editable = "packages/aegis-server" },
+]
 
 [[package]]
 name = "aegis-pack-budgets"
