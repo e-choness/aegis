@@ -1,11 +1,11 @@
 # Aegis AI Gateway
 
-[![CI](https://github.com/aegis-ai/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/aegis-ai/aegis/actions/workflows/ci.yml)
+[![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://e-choness.github.io/aegis/)
 [![PyPI](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
 [![Python](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/aegis-ai/aegis/blob/main/LICENSE)
-[![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/aegis-ai/aegis)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/e-choness/aegis/blob/main/LICENSE)
+[![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/e-choness/aegis)
 
 An open-source, plugin-first AI gateway framework. A small kernel plus seven plugin contracts puts a governed, observable, provider-agnostic pipeline between applications and LLM providers. Every flagship feature — data classification, residency enforcement, PII masking, budgets — is built on the same public contracts third-party developers use. Self-hosted, CLI-first, single-tenant-by-design.
 
@@ -77,8 +77,8 @@ See the [five-minute gateway tutorial](tutorials/five-minute-gateway.md) for a f
 
 ## Links
 
-- [Examples gallery](https://github.com/aegis-ai/aegis/tree/main/examples)
+- [Examples gallery](https://github.com/e-choness/aegis/tree/main/examples)
 - [Plugin authoring guide](tutorials/first-guardrail.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
-- [v1 legacy tag](https://github.com/aegis-ai/aegis/releases/tag/v1-legacy) — v1 users, start here
+- [v1 legacy tag](https://github.com/e-choness/aegis/releases/tag/v1-legacy) — v1 users, start here
