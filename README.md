@@ -127,5 +127,4 @@ flowchart LR
 - [SECURITY.md](docs/SECURITY.md) — responsible disclosure process
 - [LICENSE](LICENSE) — MIT license
 - **Upgrading from v1?** See the
-  [migration guide](https://e-choness.github.io/aegis/how-to/migrating-from-v1/). The v1
-  codebase is preserved at the `v1-legacy` tag.
+  [migration guide](https://e-choness.github.io/aegis/how-to/migrating-from-v1/).
