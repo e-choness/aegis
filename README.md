@@ -119,12 +119,11 @@ flowchart LR
 
 ## Documentation
 
-- [Full docs](https://aegis-ai.dev) — tutorials, how-to guides, reference, architecture
-- [Examples](examples/) — runnable demo scripts for every major feature
-- [Plugin authoring guide](https://aegis-ai.dev/how-to/first-guardrail/) — write and publish a guardrail pack
+- [Full docs](https://e-choness.github.io/aegis/) — tutorials, how-to guides, reference, architecture
+- [Plugin authoring guide](https://e-choness.github.io/aegis/tutorials/first-guardrail/) — write and publish a guardrail pack
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md) — development environment, gate policy, commit conventions
 - [SECURITY.md](docs/SECURITY.md) — responsible disclosure process
-
-**Upgrading from v1?** See the
-[migration guide](https://aegis-ai.dev/how-to/migrating-from-v1/). The v1
-codebase is preserved at the `v1-legacy` tag.
+- [LICENSE](LICENSE) — MIT license
+- **Upgrading from v1?** See the
+  [migration guide](https://e-choness.github.io/aegis/how-to/migrating-from-v1/). The v1
+  codebase is preserved at the `v1-legacy` tag.
