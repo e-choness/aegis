@@ -4,6 +4,7 @@ version = "2.0.0a0"
 description = "Aegis v2 — FastAPI server: auth middleware, REST API, SSE streaming."
 license = { text = "MIT" }
 requires-python = ">=3.12"
+
 dependencies = [
     "aegis-gateway-core",
     "fastapi>=0.115",
@@ -14,6 +15,11 @@ dependencies = [
     "opentelemetry-sdk>=1.27",
     "prometheus-client>=0.21",
 ]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
 aegis-gateway-core = { workspace = true }

@@ -4,7 +4,13 @@ version = "2.0.0a0"
 description = "Aegis v2 — data residency policy pack."
 license = { text = "MIT" }
 requires-python = ">=3.12"
+
 dependencies = ["aegis-gateway-core"]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
 aegis-gateway-core = { workspace = true }

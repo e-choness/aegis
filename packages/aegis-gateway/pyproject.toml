@@ -4,6 +4,7 @@ version = "2.0.0a0"
 description = "Aegis v2 — umbrella package: CLI, server, core, and default policy packs."
 license = { text = "MIT" }
 requires-python = ">=3.12"
+
 dependencies = [
     "aegis-gateway-cli",
     "aegis-gateway-core",
@@ -14,6 +15,11 @@ dependencies = [
     "aegis-gateway-pack-residency",
     "aegis-gateway-pack-budgets",
 ]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
 aegis-gateway-cli = { workspace = true }
