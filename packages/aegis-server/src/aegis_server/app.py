@@ -81,7 +81,7 @@ def create_app(
     app.include_router(audit_router)
     app.include_router(approvals_router)
 
-    # Mount Prometheus /metrics endpoint (unauthenticated — Prometheus scrapes it)
+    # Mount Prometheus /metrics endpoint (unauthenticated - Prometheus scrapes it)
     app.mount("/metrics", make_metrics_app())
 
     return app
