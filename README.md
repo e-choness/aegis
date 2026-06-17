@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/docs.yml)
-[![PyPI version](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
-[![Python versions](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
+[![PyPI version](https://img.shields.io/pypi/v/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/astral-sh/ruff)
 
@@ -71,7 +71,7 @@ flowchart TD
 **Five-minute path (no Docker):**
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 aegis init          # writes aegis.yaml — PII masking enabled by default
 aegis dev           # binds localhost:8000, no auth, FakeProvider
 ```
