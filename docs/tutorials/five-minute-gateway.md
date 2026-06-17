@@ -11,7 +11,7 @@ chat request through it, and inspect the audit log.
 ## 1. Install
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 ```
 
 ## 2. Initialise

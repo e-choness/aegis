@@ -6,7 +6,7 @@ and unmasks it in the model's response — the model never sees real PII.
 ## Install
 
 ```bash
-pip install "aegis-ai[pii]"
+pip install "aegis-gateway[pii]"
 python -m spacy download en_core_web_sm
 ```
 

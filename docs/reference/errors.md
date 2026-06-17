@@ -38,7 +38,7 @@ All Aegis errors follow the `AEG-<AREA>-<NNN>` format. Every error has a
 | Code | What | Why | Fix |
 |---|---|---|---|
 | AEG-POL-001 | Broken guardrail reference | Config references an unknown guardrail pack | Install the pack or fix the `pack:` value |
-| AEG-POL-002 | Missing policy pack | Required pack module not installed | Install the package, e.g. `pip install aegis-ai[pii]` |
+| AEG-POL-002 | Missing policy pack | Required pack module not installed | Install the package, e.g. `pip install aegis-gateway[pii]` |
 | AEG-POL-003 | Streaming downgrade | Non-incremental egress guard on streaming route | Make the guard incremental or accept buffered mode |
 
 ## MCP (`AEG-MCP-*`)

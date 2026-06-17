@@ -11,11 +11,11 @@ plugin implementing one of seven published contracts:
 |---|---|
 | `ModelProvider` | complete / stream / embed against any model backend |
 | `Guardrail` | scan content, return a verdict |
-| `VectorStoreProvider` / `EmbeddingProvider` | RAG storage and embedding |
+| `VectorStoreProvider` | RAG storage |
+| `EmbeddingProvider` | RAG embedding |
 | `SecretProvider` | resolve `secret://` references at config load |
-| Telemetry exporter | ship OpenTelemetry data wherever you watch it |
 | `PipelineNode` | arbitrary middleware in the request graph |
-| `Authenticator` | resolve request credentials into a `Principal` |
+| `Authenticator` | resolve request credentials into a `Principal` (shipped by aegis-server) |
 
 Discovery uses Python entry points — the pytest/Flake8 model. A third-party
 package declares an entry point in its `pyproject.toml` and Aegis finds it at

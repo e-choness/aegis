@@ -1,7 +1,6 @@
 # How-to: Migrating from v1
 
-Aegis v2 is a substantial rewrite. This guide covers the key breaking changes
-and migration paths. The v1 codebase is available at the `v1-legacy` git tag.
+Aegis v2 is a substantial rewrite. This guide covers the key breaking changes and migration paths.
 
 ## Breaking changes summary
 
@@ -115,5 +114,5 @@ kit.assert_allows(["clean message"])
 
 ## Getting help
 
-Open a migration issue at [aegis-ai/aegis](https://github.com/aegis-ai/aegis/issues)
+Open a migration issue at [e-choness/aegis](https://github.com/e-choness/aegis/issues)
 with the `migration` label.
