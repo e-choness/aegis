@@ -28,6 +28,9 @@ jobs:
       - name: Run tests
         run: docker compose run --rm dev uv run pytest -q
 
+      - name: Build docs (strict)
+        run: docker compose run --rm dev uv run mkdocs build --strict
+
       - name: Teardown
         if: always()
         run: docker compose down -v
