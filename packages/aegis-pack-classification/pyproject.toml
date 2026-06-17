@@ -1,13 +1,13 @@
 [project]
-name = "aegis-pack-classification"
+name = "aegis-gateway-pack-classification"
 version = "2.0.0a0"
 description = "Aegis v2 — content classification policy pack (regex labeler)."
 license = { text = "MIT" }
 requires-python = ">=3.12"
-dependencies = ["aegis-core"]
+dependencies = ["aegis-gateway-core"]
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
+aegis-gateway-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

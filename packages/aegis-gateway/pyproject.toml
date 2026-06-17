@@ -5,25 +5,25 @@ description = "Aegis v2 — umbrella package: CLI, server, core, and default pol
 license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
-    "aegis-cli",
-    "aegis-core",
-    "aegis-server",
-    "aegis-pack-pii[pii]",
-    "aegis-pack-llm-guard[llm-guard]",
-    "aegis-pack-classification",
-    "aegis-pack-residency",
-    "aegis-pack-budgets",
+    "aegis-gateway-cli",
+    "aegis-gateway-core",
+    "aegis-gateway-server",
+    "aegis-gateway-pack-pii[pii]",
+    "aegis-gateway-pack-llm-guard[llm-guard]",
+    "aegis-gateway-pack-classification",
+    "aegis-gateway-pack-residency",
+    "aegis-gateway-pack-budgets",
 ]
 
 [tool.uv.sources]
-aegis-cli = { workspace = true }
-aegis-core = { workspace = true }
-aegis-server = { workspace = true }
-aegis-pack-pii = { workspace = true }
-aegis-pack-llm-guard = { workspace = true }
-aegis-pack-classification = { workspace = true }
-aegis-pack-residency = { workspace = true }
-aegis-pack-budgets = { workspace = true }
+aegis-gateway-cli = { workspace = true }
+aegis-gateway-core = { workspace = true }
+aegis-gateway-server = { workspace = true }
+aegis-gateway-pack-pii = { workspace = true }
+aegis-gateway-pack-llm-guard = { workspace = true }
+aegis-gateway-pack-classification = { workspace = true }
+aegis-gateway-pack-residency = { workspace = true }
+aegis-gateway-pack-budgets = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

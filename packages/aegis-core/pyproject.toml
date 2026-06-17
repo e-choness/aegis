@@ -1,5 +1,5 @@
 [project]
-name = "aegis-core"
+name = "aegis-gateway-core"
 version = "2.0.0a0"
 description = "Aegis v2 — core kernel: plugin registry, typed config, pipeline contracts."
 license = { text = "MIT" }

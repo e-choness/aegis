@@ -13,13 +13,13 @@ dev-dependencies = [
     "pyright>=1.1",
     "pre-commit>=4",
     "import-linter>=2.0",
-    "aegis-pack-pii[pii]",
-    "aegis-pack-llm-guard",
-    "aegis-core[rag]",
-    "aegis-pack-classification",
-    "aegis-pack-residency",
-    "aegis-pack-budgets",
-    "aegis-sdk",
+    "aegis-gateway-pack-pii[pii]",
+    "aegis-gateway-pack-llm-guard",
+    "aegis-gateway-core[rag]",
+    "aegis-gateway-pack-classification",
+    "aegis-gateway-pack-residency",
+    "aegis-gateway-pack-budgets",
+    "aegis-gateway-sdk",
     # Docs
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
@@ -30,13 +30,13 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-aegis-pack-pii = { workspace = true }
-aegis-pack-llm-guard = { workspace = true }
-aegis-core = { workspace = true }
-aegis-pack-classification = { workspace = true }
-aegis-pack-residency = { workspace = true }
-aegis-pack-budgets = { workspace = true }
-aegis-sdk = { workspace = true }
+aegis-gateway-pack-pii = { workspace = true }
+aegis-gateway-pack-llm-guard = { workspace = true }
+aegis-gateway-core = { workspace = true }
+aegis-gateway-pack-classification = { workspace = true }
+aegis-gateway-pack-residency = { workspace = true }
+aegis-gateway-pack-budgets = { workspace = true }
+aegis-gateway-sdk = { workspace = true }
 
 # ── pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

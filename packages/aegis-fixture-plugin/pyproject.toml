@@ -1,5 +1,5 @@
 [project]
-name = "aegis-fixture-plugin"
+name = "aegis-gateway-fixture"
 version = "0.1.0"
 description = "Fixture plugin for Aegis registry tests — not for production use."
 license = { text = "MIT" }

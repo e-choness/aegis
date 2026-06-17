@@ -1,11 +1,11 @@
 [project]
-name = "aegis-server"
+name = "aegis-gateway-server"
 version = "2.0.0a0"
 description = "Aegis v2 — FastAPI server: auth middleware, REST API, SSE streaming."
 license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
-    "aegis-core",
+    "aegis-gateway-core",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sse-starlette>=2.1",
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
+aegis-gateway-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
