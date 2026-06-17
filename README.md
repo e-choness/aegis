@@ -32,9 +32,10 @@ level L2 (principal-aware, not multi-tenant).
   validation; fail-closed provider filtering; per-request audit
 - **Observability** — Prometheus metrics, OpenTelemetry traces, Grafana
   dashboard included
-- **Plugin-first** — seven contracts: `ModelProvider`, `GuardrailProvider`,
+- **Plugin-first** — seven contracts: `ModelProvider`, `Guardrail`,
   `VectorStoreProvider`, `EmbeddingProvider`, `SecretProvider`,
-  `PipelineNode`, `Authenticator`
+  `PipelineNode`, and `Authenticator` (shipped by `aegis-server`, not the core
+  kernel)
 
 ## Architecture
 
@@ -57,8 +58,9 @@ flowchart TD
         HK[Hooks + events — pluggy]
     end
     subgraph C[Seven plugin contracts]
-        MP[ModelProvider] & GP[GuardrailProvider] & RG[VectorStore/Embedding]
-        SP[SecretProvider] & TE[Telemetry exporter] & PN[PipelineNode] & AU[Authenticator]
+        MP[ModelProvider] & GR[Guardrail] & VS[VectorStoreProvider]
+        EB[EmbeddingProvider] & SP[SecretProvider]
+        PN[PipelineNode] & AU[Authenticator (aegis-server)]
     end
     subgraph PP[Optional policy packs — public contracts only]
         CL[Classification] & RES[Residency] & BUD[Budgets] & PII[PII mask]
