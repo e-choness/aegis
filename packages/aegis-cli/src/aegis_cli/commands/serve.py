@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, cast
 
 import typer
 from rich.console import Console
 
+if TYPE_CHECKING:
+    from aegis_core.pipeline.protocol import PipelineNode
+
 _console = Console()
 _DEFAULT_KEYS_PATH = Path.home() / ".aegis" / "keys.json"
+
+try:
+    from aegis_pack_pii import PiiMaskNode, PiiUnmaskNode
+except ImportError:
+    PiiMaskNode = None  # type: ignore[misc,assignment]
+    PiiUnmaskNode = None  # type: ignore[misc,assignment]
 
 
 def serve(
@@ -52,15 +61,32 @@ def dev(
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", "-p", help="Bind port.")] = 8000,
 ) -> None:
-    """Start Aegis in development mode (localhost, no auth, FakeProvider)."""
+    """Start Aegis in development mode (localhost, no auth, FakeProvider, PII demo)."""
     import uvicorn
 
     from aegis_core.pipeline.executor import PipelineExecutor
     from aegis_core.testing.providers import FakeProvider
     from aegis_server.app import create_app
+    from aegis_server.store.run_store import InMemoryRunStore
 
     executor = PipelineExecutor()
-    executor.register("default", provider=FakeProvider(complete_response="[dev] hello from Aegis"))
-    app = create_app(executor, no_auth=True)
-    _console.print(f"[green]Starting Aegis dev server on {host}:{port} (auth off)[/green]")
+    ingress_nodes = (
+        cast("list[PipelineNode]", [PiiMaskNode()]) if PiiMaskNode is not None else []
+    )
+    egress_nodes = (
+        cast("list[PipelineNode]", [PiiUnmaskNode()]) if PiiUnmaskNode is not None else []
+    )
+
+    executor.register(
+        "default",
+        provider=FakeProvider(complete_response="[dev] hello from Aegis"),
+        ingress=ingress_nodes,
+        egress=egress_nodes,
+    )
+    app = create_app(executor, no_auth=True, run_store=InMemoryRunStore())
+    msg = f"Starting Aegis dev server on {host}:{port} (auth off"
+    if PiiMaskNode is not None:
+        msg += ", PII enabled"
+    msg += ")"
+    _console.print(f"[green]{msg}[/green]")
     uvicorn.run(app, host=host, port=port)

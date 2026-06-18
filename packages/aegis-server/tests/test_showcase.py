@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 import pytest
 from starlette.testclient import TestClient
 
 from aegis_core.pipeline.executor import PipelineExecutor
-from aegis_core.pipeline.state import RunState
-from aegis_core.providers.models import Message
 from aegis_core.testing.providers import FakeProvider
 from aegis_server.app import create_app
-from aegis_server.auth.none import NoneAuthenticator
 from aegis_server.store.run_store import InMemoryRunStore
+
+if TYPE_CHECKING:
+    from aegis_core.pipeline.protocol import PipelineNode
+
+try:
+    from aegis_pack_pii import PiiMaskNode, PiiUnmaskNode
+except ImportError:
+    PiiMaskNode = None  # type: ignore[misc,assignment]
+    PiiUnmaskNode = None  # type: ignore[misc,assignment]
+
+try:
+    from aegis_pack_pii import PiiMaskNode, PiiUnmaskNode
+except ImportError:
+    PiiMaskNode = None  # type: ignore[misc,assignment]
+    PiiUnmaskNode = None  # type: ignore[misc,assignment]
 
 
 @pytest.fixture
@@ -22,7 +36,13 @@ def fake_provider() -> FakeProvider:
 @pytest.fixture
 def executor(fake_provider: FakeProvider) -> PipelineExecutor:
     ex = PipelineExecutor()
-    ex.register("default", provider=fake_provider)
+    ingress_nodes = (
+        cast("list[PipelineNode]", [PiiMaskNode()]) if PiiMaskNode is not None else []
+    )
+    egress_nodes = (
+        cast("list[PipelineNode]", [PiiUnmaskNode()]) if PiiUnmaskNode is not None else []
+    )
+    ex.register("default", provider=fake_provider, ingress=ingress_nodes, egress=egress_nodes)
     return ex
 
 
@@ -92,4 +112,24 @@ def test_showcase_route_not_in_openapi_schema(client: TestClient) -> None:
     paths = schema_resp.json()["paths"]
     assert "/showcase" not in paths
     assert "/showcase/api/invoke" not in paths
+
+
+@pytest.mark.skipif(
+    PiiMaskNode is None, reason="PII pack not installed (requires [pii] extra)"
+)
+def test_showcase_pii_masking(client: TestClient) -> None:
+    """Step 17 check: PII in prompt triggers mask_map populated (mask/unmask demo)."""
+    r = client.post(
+        "/showcase/api/invoke",
+        json={"prompt": "My email is user@example.com and SSN is 123-45-6789", "route": "default"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    mask_map = body.get("mask_map", {})
+    assert "<EMAIL_ADDRESS_0>" in mask_map, f"Expected masked email, got: {mask_map}"
+    assert mask_map["<EMAIL_ADDRESS_0>"] == "user@example.com"
+    # Check events include mask node
+    event_types = [e.get("event_type") for e in body.get("events", [])]
+    assert "node_start" in event_types
+    assert "node_end" in event_types
 
