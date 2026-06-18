@@ -1,17 +1,23 @@
 [project]
-name = "aegis-pack-llm-guard"
+name = "aegis-gateway-pack-llm-guard"
 version = "2.0.0a0"
 description = "Aegis v2 — LLM Guard adapter policy pack."
 license = { text = "MIT" }
 requires-python = ">=3.12"
-dependencies = ["aegis-core"]
+
+dependencies = ["aegis-gateway-core"]
 
 [project.optional-dependencies]
 llm-guard = ["llm-guard>=0.3"]
-all = ["aegis-pack-llm-guard[llm-guard]"]
+all = ["aegis-gateway-pack-llm-guard[llm-guard]"]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
+aegis-gateway-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

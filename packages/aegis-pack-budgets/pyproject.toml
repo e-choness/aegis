@@ -1,13 +1,19 @@
 [project]
-name = "aegis-pack-budgets"
+name = "aegis-gateway-pack-budgets"
 version = "2.0.0a0"
 description = "Aegis v2 — per-principal monthly budget caps policy pack."
 license = { text = "MIT" }
 requires-python = ">=3.12"
-dependencies = ["aegis-core"]
+
+dependencies = ["aegis-gateway-core"]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
+aegis-gateway-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

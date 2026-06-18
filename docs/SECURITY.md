@@ -40,7 +40,6 @@ coordinate).
 |---|---|
 | 2.x (latest minor) | yes |
 | 2.x (older minors) | critical fixes only |
-| 1.x (`v1-legacy` tag) | no |
 
 ## Hardening guidance
 

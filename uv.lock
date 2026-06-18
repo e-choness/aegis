@@ -9,27 +9,28 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "aegis-cli",
-    "aegis-core",
-    "aegis-fixture-plugin",
-    "aegis-pack-budgets",
-    "aegis-pack-classification",
-    "aegis-pack-llm-guard",
-    "aegis-pack-pii",
-    "aegis-pack-residency",
-    "aegis-sdk",
-    "aegis-server",
+    "aegis-gateway",
+    "aegis-gateway-cli",
+    "aegis-gateway-core",
+    "aegis-gateway-fixture",
+    "aegis-gateway-pack-budgets",
+    "aegis-gateway-pack-classification",
+    "aegis-gateway-pack-llm-guard",
+    "aegis-gateway-pack-pii",
+    "aegis-gateway-pack-residency",
+    "aegis-gateway-sdk",
+    "aegis-gateway-server",
 ]
 
 [manifest.dependency-groups]
 dev = [
-    { name = "aegis-core", extras = ["rag"], editable = "packages/aegis-core" },
-    { name = "aegis-pack-budgets", editable = "packages/aegis-pack-budgets" },
-    { name = "aegis-pack-classification", editable = "packages/aegis-pack-classification" },
-    { name = "aegis-pack-llm-guard", editable = "packages/aegis-pack-llm-guard" },
-    { name = "aegis-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
-    { name = "aegis-pack-residency", editable = "packages/aegis-pack-residency" },
-    { name = "aegis-sdk", editable = "sdk/python" },
+    { name = "aegis-gateway-core", extras = ["rag"], editable = "packages/aegis-core" },
+    { name = "aegis-gateway-pack-budgets", editable = "packages/aegis-pack-budgets" },
+    { name = "aegis-gateway-pack-classification", editable = "packages/aegis-pack-classification" },
+    { name = "aegis-gateway-pack-llm-guard", editable = "packages/aegis-pack-llm-guard" },
+    { name = "aegis-gateway-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
+    { name = "aegis-gateway-pack-residency", editable = "packages/aegis-pack-residency" },
+    { name = "aegis-gateway-sdk", editable = "sdk/python" },
     { name = "git-cliff", specifier = ">=2.0" },
     { name = "import-linter", specifier = ">=2.0" },
     { name = "mkdocs-material", specifier = ">=9.5" },
@@ -44,28 +45,55 @@ dev = [
 ]
 
 [[package]]
-name = "aegis-cli"
+name = "aegis-gateway"
+version = "2.0.0a0"
+source = { editable = "packages/aegis-gateway" }
+dependencies = [
+    { name = "aegis-gateway-cli" },
+    { name = "aegis-gateway-core" },
+    { name = "aegis-gateway-pack-budgets" },
+    { name = "aegis-gateway-pack-classification" },
+    { name = "aegis-gateway-pack-llm-guard", extra = ["llm-guard"] },
+    { name = "aegis-gateway-pack-pii", extra = ["pii"] },
+    { name = "aegis-gateway-pack-residency" },
+    { name = "aegis-gateway-server" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aegis-gateway-cli", editable = "packages/aegis-cli" },
+    { name = "aegis-gateway-core", editable = "packages/aegis-core" },
+    { name = "aegis-gateway-pack-budgets", editable = "packages/aegis-pack-budgets" },
+    { name = "aegis-gateway-pack-classification", editable = "packages/aegis-pack-classification" },
+    { name = "aegis-gateway-pack-llm-guard", extras = ["llm-guard"], editable = "packages/aegis-pack-llm-guard" },
+    { name = "aegis-gateway-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
+    { name = "aegis-gateway-pack-residency", editable = "packages/aegis-pack-residency" },
+    { name = "aegis-gateway-server", editable = "packages/aegis-server" },
+]
+
+[[package]]
+name = "aegis-gateway-cli"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-cli" }
 dependencies = [
-    { name = "aegis-core" },
-    { name = "aegis-sdk" },
-    { name = "aegis-server" },
+    { name = "aegis-gateway-core" },
+    { name = "aegis-gateway-sdk" },
+    { name = "aegis-gateway-server" },
     { name = "rich" },
     { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis-core" },
-    { name = "aegis-sdk", editable = "sdk/python" },
-    { name = "aegis-server", editable = "packages/aegis-server" },
+    { name = "aegis-gateway-core", editable = "packages/aegis-core" },
+    { name = "aegis-gateway-sdk", editable = "sdk/python" },
+    { name = "aegis-gateway-server", editable = "packages/aegis-server" },
     { name = "rich", specifier = ">=13" },
     { name = "typer", specifier = ">=0.12" },
 ]
 
 [[package]]
-name = "aegis-core"
+name = "aegis-gateway-core"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-core" }
 dependencies = [
@@ -113,38 +141,38 @@ requires-dist = [
 provides-extras = ["rag"]
 
 [[package]]
-name = "aegis-fixture-plugin"
+name = "aegis-gateway-fixture"
 version = "0.1.0"
 source = { editable = "packages/aegis-fixture-plugin" }
 
 [[package]]
-name = "aegis-pack-budgets"
+name = "aegis-gateway-pack-budgets"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-budgets" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core" }]
 
 [[package]]
-name = "aegis-pack-classification"
+name = "aegis-gateway-pack-classification"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-classification" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core" }]
 
 [[package]]
-name = "aegis-pack-llm-guard"
+name = "aegis-gateway-pack-llm-guard"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-llm-guard" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
 ]
 
 [package.optional-dependencies]
@@ -157,18 +185,18 @@ llm-guard = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis-core" },
-    { name = "aegis-pack-llm-guard", extras = ["llm-guard"], marker = "extra == 'all'", editable = "packages/aegis-pack-llm-guard" },
+    { name = "aegis-gateway-core", editable = "packages/aegis-core" },
+    { name = "aegis-gateway-pack-llm-guard", extras = ["llm-guard"], marker = "extra == 'all'", editable = "packages/aegis-pack-llm-guard" },
     { name = "llm-guard", marker = "extra == 'llm-guard'", specifier = ">=0.3" },
 ]
 provides-extras = ["llm-guard", "all"]
 
 [[package]]
-name = "aegis-pack-pii"
+name = "aegis-gateway-pack-pii"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-pii" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
 ]
 
 [package.optional-dependencies]
@@ -187,8 +215,8 @@ pii = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis-core" },
-    { name = "aegis-pack-pii", extras = ["pii"], marker = "extra == 'all'", editable = "packages/aegis-pack-pii" },
+    { name = "aegis-gateway-core", editable = "packages/aegis-core" },
+    { name = "aegis-gateway-pack-pii", extras = ["pii"], marker = "extra == 'all'", editable = "packages/aegis-pack-pii" },
     { name = "en-core-web-sm", marker = "extra == 'pii'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "presidio-analyzer", marker = "extra == 'pii'", specifier = ">=2.2" },
     { name = "presidio-anonymizer", marker = "extra == 'pii'", specifier = ">=2.2" },
@@ -197,18 +225,18 @@ requires-dist = [
 provides-extras = ["pii", "all"]
 
 [[package]]
-name = "aegis-pack-residency"
+name = "aegis-gateway-pack-residency"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-pack-residency" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aegis-core", editable = "packages/aegis-core" }]
+requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core" }]
 
 [[package]]
-name = "aegis-sdk"
+name = "aegis-gateway-sdk"
 version = "2.0.0a0"
 source = { editable = "sdk/python" }
 dependencies = [
@@ -223,11 +251,11 @@ requires-dist = [
 ]
 
 [[package]]
-name = "aegis-server"
+name = "aegis-gateway-server"
 version = "2.0.0a0"
 source = { editable = "packages/aegis-server" }
 dependencies = [
-    { name = "aegis-core" },
+    { name = "aegis-gateway-core" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "opentelemetry-api" },
@@ -239,7 +267,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis-core" },
+    { name = "aegis-gateway-core", editable = "packages/aegis-core" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "opentelemetry-api", specifier = ">=1.27" },

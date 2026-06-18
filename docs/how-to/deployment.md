@@ -5,7 +5,7 @@
 Install and run directly:
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 aegis serve --host 0.0.0.0 --port 8000
 ```
 

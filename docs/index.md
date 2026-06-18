@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://e-choness.github.io/aegis/)
-[![PyPI](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
-[![Python](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
+[![PyPI](https://img.shields.io/pypi/v/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
+[![Python](https://img.shields.io/pypi/pyversions/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/e-choness/aegis/blob/main/LICENSE)
 [![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/e-choness/aegis)
 
@@ -55,7 +55,7 @@ flowchart TD
 ## Quick start
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 aegis init            # writes starter aegis.yaml
 aegis dev             # localhost gateway, no auth, FakeProvider
 ```
@@ -81,4 +81,4 @@ See the [five-minute gateway tutorial](tutorials/five-minute-gateway.md) for a f
 - [Plugin authoring guide](tutorials/first-guardrail.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
-- [v1 legacy tag](https://github.com/e-choness/aegis/releases/tag/v1-legacy) — v1 users, start here
+

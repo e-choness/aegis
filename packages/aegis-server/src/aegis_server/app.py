@@ -13,6 +13,7 @@ from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
+from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
 
@@ -59,7 +60,7 @@ def create_app(
     """
     if authenticator is None and not no_auth:
         raise AEGServError(
-            "AEG-SRV-001: serve refused — no authenticator configured. "
+            "AEG-SRV-001: serve refused - no authenticator configured. "
             "Pass --no-auth or configure an authenticator."
         )
     if no_auth:
@@ -70,8 +71,9 @@ def create_app(
     app.state.run_store = run_store if run_store is not None else InMemoryRunStore()
     app.state.rag_store = rag_store
     app.state.embedding_provider = embedding_provider
-    app.state.tracer = tracer  # None → runs.py falls back to global OTel tracer
+    app.state.tracer = tracer  # None -> runs.py falls back to global OTel tracer
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
+    app.include_router(showcase_router)
     app.include_router(runs_router)
     app.include_router(chat_router)
     app.include_router(hitl_router)
@@ -79,7 +81,7 @@ def create_app(
     app.include_router(audit_router)
     app.include_router(approvals_router)
 
-    # Mount Prometheus /metrics endpoint (unauthenticated — Prometheus scrapes it)
+    # Mount Prometheus /metrics endpoint (unauthenticated - Prometheus scrapes it)
     app.mount("/metrics", make_metrics_app())
 
     return app

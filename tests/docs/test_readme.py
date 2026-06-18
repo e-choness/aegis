@@ -11,7 +11,7 @@ SPEC_FILE = ROOT / "PROJECT_SPEC.md"
 
 # Required sections in README, in this order
 REQUIRED_SECTIONS = [
-    "images/banner-wide.png",           # banner
+    "images/banner-wide.jpg",           # banner
     "[![CI]",                            # badge row — CI first
     "[![Docs]",
     "[![PyPI version]",
@@ -30,8 +30,8 @@ REQUIRED_SECTIONS = [
 REQUIRED_BADGES = [
     "workflows/ci.yml/badge.svg",
     "workflows/docs.yml/badge.svg",
-    "img.shields.io/pypi/v/aegis-ai",
-    "img.shields.io/pypi/pyversions/aegis-ai",
+    "img.shields.io/pypi/v/aegis-gateway",
+    "img.shields.io/pypi/pyversions/aegis-gateway",
     "badge/license-MIT",
     "code%20style-ruff",
 ]
@@ -40,7 +40,7 @@ FORBIDDEN_BADGES = ["codecov", "stars", "downloads"]
 
 # Relative links that must exist on disk (resolve from root)
 REQUIRED_LINKS = [
-    "images/banner-wide.png",
+    "images/banner-wide.jpg",
     "docs/CONTRIBUTING.md",
     "docs/SECURITY.md",
 ]
@@ -95,8 +95,8 @@ def test_badge_row_exact() -> None:
 
 def test_banner_path_exists() -> None:
     """The banner image path referenced in README must exist on disk."""
-    assert (ROOT / "images" / "banner-wide.png").exists(), (
-        "images/banner-wide.png does not exist"
+    assert (ROOT / "images" / "banner-wide.jpg").exists(), (
+        "images/banner-wide.jpg does not exist"
     )
 
 

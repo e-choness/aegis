@@ -1,0 +1,32 @@
+# Reuse the dev base image (Python 3.12, uv, spaCy baked in).
+FROM python:3.12-slim
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    build-essential \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv — official binary from the release image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+
+# Install the aegis workspace (umbrella + deps).
+# uv reads pyproject.toml from /app; we copy just enough to resolve,
+# then install in editable mode so the showcase routes are present.
+COPY pyproject.toml uv.lock* ./
+COPY packages ./packages
+COPY sdk ./sdk
+
+RUN uv sync --all-packages --python 3.12
+
+# Expose the demo port (HF Spaces defaults to 7860).
+EXPOSE 7860
+
+# Run the dev server — no auth, FakeProvider, showcase page on /showcase.
+# Uses the SqliteRunStore for persistence across restarts (optional).
+CMD ["bash", "-lc", "aegis dev --host 0.0.0.0 --port 7860"]

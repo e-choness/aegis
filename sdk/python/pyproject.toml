@@ -1,13 +1,19 @@
 [project]
-name = "aegis-sdk"
+name = "aegis-gateway-sdk"
 version = "2.0.0a0"
 description = "Aegis v2 — first-party Python SDK (sync + async clients)."
 license = { text = "MIT" }
 requires-python = ">=3.12"
+
 dependencies = [
     "httpx>=0.27",
     "pydantic>=2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
 # No workspace dependencies — the SDK is standalone.

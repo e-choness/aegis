@@ -1,0 +1,39 @@
+[project]
+name = "aegis-gateway"
+version = "2.0.0a0"
+description = "Aegis v2 — umbrella package: CLI, server, core, and default policy packs."
+license = { text = "MIT" }
+requires-python = ">=3.12"
+
+dependencies = [
+    "aegis-gateway-cli",
+    "aegis-gateway-core",
+    "aegis-gateway-server",
+    "aegis-gateway-pack-pii[pii]",
+    "aegis-gateway-pack-llm-guard[llm-guard]",
+    "aegis-gateway-pack-classification",
+    "aegis-gateway-pack-residency",
+    "aegis-gateway-pack-budgets",
+]
+
+[project.urls]
+Homepage = "https://github.com/e-choness/aegis"
+Repository = "https://github.com/e-choness/aegis"
+Issues = "https://github.com/e-choness/aegis/issues"
+
+[tool.uv.sources]
+aegis-gateway-cli = { workspace = true }
+aegis-gateway-core = { workspace = true }
+aegis-gateway-server = { workspace = true }
+aegis-gateway-pack-pii = { workspace = true }
+aegis-gateway-pack-llm-guard = { workspace = true }
+aegis-gateway-pack-classification = { workspace = true }
+aegis-gateway-pack-residency = { workspace = true }
+aegis-gateway-pack-budgets = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aegis_gateway"]

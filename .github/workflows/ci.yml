@@ -28,6 +28,73 @@ jobs:
       - name: Run tests
         run: docker compose run --rm dev uv run pytest -q
 
+      - name: Build docs (strict)
+        run: docker compose run --rm dev uv run mkdocs build --strict
+
+      - name: Link-check docs (lychee)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose
+            --no-progress
+            --base https://e-choness.github.io
+            --exclude 'https://e-choness\.github\.io'
+            --exclude-path site/assets/stylesheets/swagger-ui.css
+            site/
+
       - name: Teardown
         if: always()
         run: docker compose down -v
+
+  publish:
+    name: Release to PyPI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [test]
+    permissions:
+      # Required for Trusted Publishing (OIDC)
+      id-token: write
+      # Required to read repository content
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build all packages
+        run: uv build --all-packages
+
+      - name: Sequential Publish (Avoid 429)
+        shell: bash
+        run: |
+          # Publish each package (sdist + matching wheel) one at a time with a
+          # delay to stay under PyPI's new-project creation rate limit (~1/min).
+          first=true
+          for sdist in dist/*.tar.gz; do
+            # Find the wheel that corresponds to this sdist (same stem).
+            stem=$(basename "${sdist%.tar.gz}")
+            wheel=$(ls dist/"${stem}"-*.whl 2>/dev/null | head -1)
+            if [[ -z "$wheel" ]]; then
+              echo "WARNING: no wheel found for $sdist, skipping"
+              continue
+            fi
+            # Wait before every package except the first.
+            if [[ "$first" != "true" ]]; then
+              echo "Waiting 90 seconds for PyPI project creation rate limit..."
+              sleep 90
+            fi
+            first=false
+            echo "Publishing $sdist + $wheel ..."
+            publish_output=$(uv publish "$sdist" "$wheel" 2>&1)
+            exit_code=$?
+            echo "$publish_output"
+            if echo "$publish_output" | grep -q "429\|Too Many Requests"; then
+              echo "::error::PyPI rate limit (429) hit — stopping immediately to avoid extending the lockout window."
+              exit 1
+            fi
+            if [[ $exit_code -ne 0 ]]; then
+              echo "::error::uv publish failed for $sdist (exit $exit_code)"
+              exit $exit_code
+            fi
+          done

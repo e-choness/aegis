@@ -1,9 +1,9 @@
-![aegis-banner](images/banner-wide.png)
+![aegis-banner](images/banner-wide.jpg)
 
 [![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/docs.yml)
-[![PyPI version](https://img.shields.io/pypi/v/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
-[![Python versions](https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square)](https://pypi.org/project/aegis-ai/)
+[![PyPI version](https://img.shields.io/pypi/v/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/astral-sh/ruff)
 
@@ -32,9 +32,10 @@ level L2 (principal-aware, not multi-tenant).
   validation; fail-closed provider filtering; per-request audit
 - **Observability** — Prometheus metrics, OpenTelemetry traces, Grafana
   dashboard included
-- **Plugin-first** — seven contracts: `ModelProvider`, `GuardrailProvider`,
+- **Plugin-first** — seven contracts: `ModelProvider`, `Guardrail`,
   `VectorStoreProvider`, `EmbeddingProvider`, `SecretProvider`,
-  `PipelineNode`, `Authenticator`
+  `PipelineNode`, and `Authenticator` (shipped by `aegis-server`, not the core
+  kernel)
 
 ## Architecture
 
@@ -57,8 +58,9 @@ flowchart TD
         HK[Hooks + events — pluggy]
     end
     subgraph C[Seven plugin contracts]
-        MP[ModelProvider] & GP[GuardrailProvider] & RG[VectorStore/Embedding]
-        SP[SecretProvider] & TE[Telemetry exporter] & PN[PipelineNode] & AU[Authenticator]
+        MP[ModelProvider] & GR[Guardrail] & VS[VectorStoreProvider]
+        EB[EmbeddingProvider] & SP[SecretProvider]
+        PN[PipelineNode] & AU[Authenticator (aegis-server)]
     end
     subgraph PP[Optional policy packs — public contracts only]
         CL[Classification] & RES[Residency] & BUD[Budgets] & PII[PII mask]
@@ -71,7 +73,7 @@ flowchart TD
 **Five-minute path (no Docker):**
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 aegis init          # writes aegis.yaml — PII masking enabled by default
 aegis dev           # binds localhost:8000, no auth, FakeProvider
 ```
@@ -119,12 +121,10 @@ flowchart LR
 
 ## Documentation
 
-- [Full docs](https://aegis-ai.dev) — tutorials, how-to guides, reference, architecture
-- [Examples](examples/) — runnable demo scripts for every major feature
-- [Plugin authoring guide](https://aegis-ai.dev/how-to/first-guardrail/) — write and publish a guardrail pack
+- [Full docs](https://e-choness.github.io/aegis/) — tutorials, how-to guides, reference, architecture
+- [Plugin authoring guide](https://e-choness.github.io/aegis/tutorials/first-guardrail/) — write and publish a guardrail pack
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md) — development environment, gate policy, commit conventions
 - [SECURITY.md](docs/SECURITY.md) — responsible disclosure process
-
-**Upgrading from v1?** See the
-[migration guide](https://aegis-ai.dev/how-to/migrating-from-v1/). The v1
-codebase is preserved at the `v1-legacy` tag.
+- [LICENSE](LICENSE) — MIT license
+- **Upgrading from v1?** See the
+  [migration guide](https://e-choness.github.io/aegis/how-to/migrating-from-v1/).

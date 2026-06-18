@@ -1,7 +1,6 @@
 # Design decisions (D1–D18)
 
-The following decisions are frozen in [`PROJECT_SPEC.md`](https://github.com/aegis-ai/aegis/blob/main/PROJECT_SPEC.md).
-They are reproduced here for documentation purposes. The spec file is the authoritative source.
+The following decisions are frozen and reproduced here for documentation purposes.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
@@ -29,7 +28,7 @@ LangGraph `StateGraph` over typed `RunState`. Staged spine (ingress → route �
 
 ## D3 — Seven contracts
 
-ModelProvider, GuardrailProvider, VectorStoreProvider+EmbeddingProvider, SecretProvider, telemetry exporters, PipelineNode, Authenticator.
+ModelProvider, Guardrail, VectorStoreProvider+EmbeddingProvider, SecretProvider, PipelineNode, Authenticator (aegis-server).
 
 ## D4 — Policy packs on public contracts
 
@@ -81,7 +80,7 @@ Plain Postgres default (SQLite for dev), SQLAlchemy 2 + Alembic. Timescale optio
 
 ## D16 — Distribution
 
-Tiered extras — `aegis-ai` (slim), `[pii]`, `[llm-guard]`, `[rag]`, `[all]` — mapping one-to-one onto packs. Observability (Prometheus/Grafana) is an opt-in compose profile over an OpenTelemetry core.
+Tiered extras — `aegis-gateway` (slim), `[pii]`, `[llm-guard]`, `[rag]`, `[all]` — mapping one-to-one onto packs. Observability (Prometheus/Grafana) is an opt-in compose profile over an OpenTelemetry core.
 
 ## D17 — Identity (L2)
 

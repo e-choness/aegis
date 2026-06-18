@@ -8,7 +8,7 @@ without importing each other.
 ## Install
 
 ```bash
-pip install aegis-ai
+pip install aegis-gateway
 ```
 
 Classification has no extra dependencies — it ships in the core install.
