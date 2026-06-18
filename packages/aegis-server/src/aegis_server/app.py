@@ -7,13 +7,13 @@ from opentelemetry import trace
 
 from aegis_server.auth import NoneAuthenticator
 from aegis_server.middleware import AuthMiddleware
-from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.routes.approvals import router as approvals_router
 from aegis_server.routes.audit import router as audit_router
 from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
+from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
 

@@ -408,7 +408,7 @@ async def showcase_list_runs(request: Request) -> dict[str, list[dict[str, objec
 
 @router.post("/showcase/api/runs/{run_id}/resume")
 async def showcase_resume_run(run_id: str, body: dict[str, str], request: Request) -> dict[str, object]:
-    from aegis_server.routes.hitl import resume_run as _hitl_resume, ResumeRequest
+    from aegis_server.routes.hitl import ResumeRequest, resume_run as _hitl_resume  # noqa: I001
     req = ResumeRequest(decision=body.get("decision", "approved"))
     result = await _hitl_resume(run_id, req, request)
     return result.model_dump()
