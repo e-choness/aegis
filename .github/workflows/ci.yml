@@ -34,7 +34,12 @@ jobs:
       - name: Link-check docs (lychee)
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --verbose --no-progress site/
+          args: >-
+            --verbose
+            --no-progress
+            --base https://e-choness.github.io
+            --exclude-path site/assets/stylesheets/swagger-ui.css
+            site/
 
       - name: Teardown
         if: always()
