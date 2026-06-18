@@ -1,16 +1,4 @@
-"""Showcase page — DEP-3 thin server-rendered pipeline visualizer.
-
-Serves a self-contained page that lets a user send a prompt and watch it
-traverse the pipeline, surfacing verdict/event log, PII mask/unmask, and
-the approval trigger.
-
-Backend routes:
-  GET  /showcase                    — serve the page
-  POST /showcase/api/invoke         — run a prompt through the pipeline, return
-                                      the full result (response, events, mask_map)
-  GET  /showcase/api/runs           — recent run records from the run store
-  POST /showcase/api/runs/{id}/resume — approve or deny a paused run (proxied)
-"""
+"""Showcase page — DEP-3 thin server-rendered pipeline visualizer."""
 
 from __future__ import annotations
 
@@ -342,7 +330,7 @@ _SHOWCASE_HTML = """\
 
 
 # ---------------------------------------------------------------------------
-# Page
+# Routes
 # ---------------------------------------------------------------------------
 
 @router.get("/showcase", response_class=HTMLResponse, include_in_schema=False)
@@ -350,11 +338,7 @@ async def showcase_page() -> str:
     return _SHOWCASE_HTML
 
 
-# ---------------------------------------------------------------------------
-# API helpers
-# ---------------------------------------------------------------------------
-
-@router.post("/showcase/api/invoke", response_model=InvokeResponse)
+@router.post("/showcase/api/invoke", response_model=InvokeResponse, include_in_schema=False)
 async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse:
     executor: PipelineExecutor = request.app.state.executor  # type: ignore[attr-defined]
     run_store: RunStore = request.app.state.run_store  # type: ignore[attr-defined]
@@ -399,14 +383,14 @@ async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse
     )
 
 
-@router.get("/showcase/api/runs")
+@router.get("/showcase/api/runs", include_in_schema=False)
 async def showcase_list_runs(request: Request) -> dict[str, list[dict[str, object]]]:
     run_store: RunStore = request.app.state.run_store  # type: ignore[attr-defined]
     records = await run_store.list_runs()
     return {"runs": [r.to_dict() for r in records]}
 
 
-@router.post("/showcase/api/runs/{run_id}/resume")
+@router.post("/showcase/api/runs/{run_id}/resume", include_in_schema=False)
 async def showcase_resume_run(run_id: str, body: dict[str, str], request: Request) -> dict[str, object]:
     from aegis_server.routes.hitl import ResumeRequest, resume_run as _hitl_resume  # noqa: I001
     req = ResumeRequest(decision=body.get("decision", "approved"))
