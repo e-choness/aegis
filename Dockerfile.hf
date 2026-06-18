@@ -13,14 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # uv — official binary from the release image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
+# Install spaCy + en_core_web_sm for PII pack (required by aegis-gateway-pack-pii[pii])
+RUN pip install --no-cache-dir spacy click && \
+    python -m spacy download en_core_web_sm
+
 WORKDIR /app
 
 # Install the aegis workspace (umbrella + deps).
-# uv reads pyproject.toml from /app; we copy just enough to resolve,
-# then install in editable mode so the showcase routes are present.
 COPY pyproject.toml uv.lock* ./
 COPY packages ./packages
-COPY sdk ./sdk
+COPY sdk/python ./sdk/python
 
 RUN uv sync --all-packages --python 3.12
 
@@ -29,4 +31,4 @@ EXPOSE 7860
 
 # Run the dev server — no auth, FakeProvider, showcase page on /showcase.
 # Uses the SqliteRunStore for persistence across restarts (optional).
-CMD ["bash", "-lc", "aegis dev --host 0.0.0.0 --port 7860"]
+ENTRYPOINT ["uv", "run", "aegis", "dev", "--host", "0.0.0.0", "--port", "7860"]

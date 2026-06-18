@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+.venv/
+
+# UV
+.uv-cache/
+.uv-build/
+
+# Docker
+.docker/
+
+# Git
+.git/
+
+# Docs build output
+site/
+
+# Node (for TypeScript SDK - not needed for Python Docker image)
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+
+# Environment
+.env
+.env.*
