@@ -8,6 +8,8 @@ services:
     working_dir: /workspace
     environment:
       UV_CACHE_DIR: /workspace/.uv-cache
+    env_file:
+      - .env.publish
     stdin_open: true
     tty: true
 
