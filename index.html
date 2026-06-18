@@ -1623,8 +1623,8 @@
 <h1 id="aegis-ai-gateway">Aegis AI Gateway<a class="headerlink" href="#aegis-ai-gateway" title="Permanent link">&para;</a></h1>
 <p><a href="https://github.com/e-choness/aegis/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square" /></a>
 <a href="https://e-choness.github.io/aegis/"><img alt="Docs" src="https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square" /></a>
-<a href="https://pypi.org/project/aegis-ai/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aegis-ai?style=flat-square" /></a>
-<a href="https://pypi.org/project/aegis-ai/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/aegis-ai?style=flat-square" /></a>
+<a href="https://pypi.org/project/aegis-gateway/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aegis-gateway?style=flat-square" /></a>
+<a href="https://pypi.org/project/aegis-gateway/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/aegis-gateway?style=flat-square" /></a>
 <a href="https://github.com/e-choness/aegis/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
 <a href="https://github.com/e-choness/aegis"><img alt="Code style: ruff + pyright" src="https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square" /></a></p>
 <p>An open-source, plugin-first AI gateway framework. A small kernel plus seven plugin contracts puts a governed, observable, provider-agnostic pipeline between applications and LLM providers. Every flagship feature — data classification, residency enforcement, PII masking, budgets — is built on the same public contracts third-party developers use. Self-hosted, CLI-first, single-tenant-by-design.</p>
@@ -1668,7 +1668,7 @@ flowchart TD
     end
     IF --&gt; AUTH --&gt; PR --&gt; K --&gt; C --&gt; PP</code></pre>
 <h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>aegis-ai
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>aegis-gateway
 aegis<span class="w"> </span>init<span class="w">            </span><span class="c1"># writes starter aegis.yaml</span>
 aegis<span class="w"> </span>dev<span class="w">             </span><span class="c1"># localhost gateway, no auth, FakeProvider</span>
 </code></pre></div>
@@ -1689,7 +1689,6 @@ aegis<span class="w"> </span>dev<span class="w">             </span><span class=
 <li><a href="tutorials/first-guardrail/">Plugin authoring guide</a></li>
 <li><a href="CONTRIBUTING/">Contributing</a></li>
 <li><a href="SECURITY/">Security policy</a></li>
-<li><a href="https://github.com/e-choness/aegis/releases/tag/v1-legacy">v1 legacy tag</a> — v1 users, start here</li>
 </ul>
 
 

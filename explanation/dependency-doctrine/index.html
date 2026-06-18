@@ -1674,7 +1674,7 @@ revisit.</p>
 imported outside its adapter module, or if a policy pack imports anything but
 public <code>aegis</code> APIs. Doctrine that is not executable is opinion.</p>
 <p>One consequence worth naming: tiered extras. The slim install
-(<code>pip install aegis-ai</code>) carries the kernel, server, and CLI only. Heavy
+(<code>pip install aegis-gateway</code>) carries the kernel, server, and CLI only. Heavy
 dependencies (spaCy models, transformers) arrive only with the pack that needs
 them (<code>[pii]</code>, <code>[llm-guard]</code>, <code>[rag]</code>). A framework whose install pulls torch
 before the first request would contradict everything above.</p>

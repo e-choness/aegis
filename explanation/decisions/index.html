@@ -1958,8 +1958,7 @@
 
 
 <h1 id="design-decisions-d1d18">Design decisions (D1–D18)<a class="headerlink" href="#design-decisions-d1d18" title="Permanent link">&para;</a></h1>
-<p>The following decisions are frozen in <a href="https://github.com/aegis-ai/aegis/blob/main/PROJECT_SPEC.md"><code>PROJECT_SPEC.md</code></a>.
-They are reproduced here for documentation purposes. The spec file is the authoritative source.</p>
+<p>The following decisions are frozen and reproduced here for documentation purposes.</p>
 <pre class="mermaid"><code>%%{init: {'theme': 'base', 'themeVariables': {'background': 'transparent', 'primaryColor': '#3f51b5', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#283593', 'lineColor': '#7986cb', 'secondaryColor': '#3949ab', 'tertiaryColor': '#5c6bc0', 'edgeLabelBackground': '#e8eaf6', 'titleColor': '#1a237e', 'nodeTextColor': '#ffffff'}}}%%
 stateDiagram-v2
     [*] --&gt; allow : Guardrail.scan()
@@ -1977,7 +1976,7 @@ stateDiagram-v2
 <h2 id="d2-pipeline">D2 — Pipeline<a class="headerlink" href="#d2-pipeline" title="Permanent link">&para;</a></h2>
 <p>LangGraph <code>StateGraph</code> over typed <code>RunState</code>. Staged spine (ingress → route → execute → egress → finalize) configured via ordered node lists in YAML; code-level escape hatch accepts a fully custom compiled <code>StateGraph</code>. One graph compiled per route profile at startup; recompiled on config reload.</p>
 <h2 id="d3-seven-contracts">D3 — Seven contracts<a class="headerlink" href="#d3-seven-contracts" title="Permanent link">&para;</a></h2>
-<p>ModelProvider, GuardrailProvider, VectorStoreProvider+EmbeddingProvider, SecretProvider, telemetry exporters, PipelineNode, Authenticator.</p>
+<p>ModelProvider, Guardrail, VectorStoreProvider+EmbeddingProvider, SecretProvider, PipelineNode, Authenticator (aegis-server).</p>
 <h2 id="d4-policy-packs-on-public-contracts">D4 — Policy packs on public contracts<a class="headerlink" href="#d4-policy-packs-on-public-contracts" title="Permanent link">&para;</a></h2>
 <p>All governance ships as optional policy packs built only on public contracts. An import-linter rule enforces zero private-API usage by packs.</p>
 <h2 id="d5-providers">D5 — Providers<a class="headerlink" href="#d5-providers" title="Permanent link">&para;</a></h2>
@@ -2003,7 +2002,7 @@ stateDiagram-v2
 <h2 id="d15-persistence">D15 — Persistence<a class="headerlink" href="#d15-persistence" title="Permanent link">&para;</a></h2>
 <p>Plain Postgres default (SQLite for dev), SQLAlchemy 2 + Alembic. Timescale optional, documented drop-in. pgvector and LangGraph checkpoints co-locate on the same instance.</p>
 <h2 id="d16-distribution">D16 — Distribution<a class="headerlink" href="#d16-distribution" title="Permanent link">&para;</a></h2>
-<p>Tiered extras — <code>aegis-ai</code> (slim), <code>[pii]</code>, <code>[llm-guard]</code>, <code>[rag]</code>, <code>[all]</code> — mapping one-to-one onto packs. Observability (Prometheus/Grafana) is an opt-in compose profile over an OpenTelemetry core.</p>
+<p>Tiered extras — <code>aegis-gateway</code> (slim), <code>[pii]</code>, <code>[llm-guard]</code>, <code>[rag]</code>, <code>[all]</code> — mapping one-to-one onto packs. Observability (Prometheus/Grafana) is an opt-in compose profile over an OpenTelemetry core.</p>
 <h2 id="d17-identity-l2">D17 — Identity (L2)<a class="headerlink" href="#d17-identity-l2" title="Permanent link">&para;</a></h2>
 <p><code>Authenticator</code> contract resolves credentials → <code>Principal{id, team, labels}</code>. Default impls: <code>none</code> (dev) and <code>api_key</code> (Aegis-issued virtual keys, SHA-256 hashed, <code>Authorization: Bearer aeg-...</code>, managed via <code>aegis keys create|list|revoke</code>; plaintext shown once). Auth runs as FastAPI middleware before the graph. Policy-per-principal via existing packs (budgets per team, allowed routes per key, residency per principal label). <code>runs approve</code> checks approver principal against an <code>approvers:</code> policy. <code>aegis serve</code> refuses to start without an authenticator unless <code>--no-auth</code> is explicit; <code>aegis dev</code> binds localhost with auth off. L3 multi-tenancy is explicitly out of scope; seams left: <code>Principal.labels</code>, RAG namespaces, per-principal policy.</p>
 <h2 id="d18-dx">D18 — DX<a class="headerlink" href="#d18-dx" title="Permanent link">&para;</a></h2>

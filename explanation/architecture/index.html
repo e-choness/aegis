@@ -1651,16 +1651,16 @@ plugin implementing one of seven published contracts:</p>
 <td>scan content, return a verdict</td>
 </tr>
 <tr>
-<td><code>VectorStoreProvider</code> / <code>EmbeddingProvider</code></td>
-<td>RAG storage and embedding</td>
+<td><code>VectorStoreProvider</code></td>
+<td>RAG storage</td>
+</tr>
+<tr>
+<td><code>EmbeddingProvider</code></td>
+<td>RAG embedding</td>
 </tr>
 <tr>
 <td><code>SecretProvider</code></td>
 <td>resolve <code>secret://</code> references at config load</td>
-</tr>
-<tr>
-<td>Telemetry exporter</td>
-<td>ship OpenTelemetry data wherever you watch it</td>
 </tr>
 <tr>
 <td><code>PipelineNode</code></td>
@@ -1668,7 +1668,7 @@ plugin implementing one of seven published contracts:</p>
 </tr>
 <tr>
 <td><code>Authenticator</code></td>
-<td>resolve request credentials into a <code>Principal</code></td>
+<td>resolve request credentials into a <code>Principal</code> (shipped by aegis-server)</td>
 </tr>
 </tbody>
 </table>
