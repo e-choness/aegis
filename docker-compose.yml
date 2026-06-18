@@ -9,7 +9,8 @@ services:
     environment:
       UV_CACHE_DIR: /workspace/.uv-cache
     env_file:
-      - .env.publish
+      - path: .env.publish
+        required: false
     stdin_open: true
     tty: true
 

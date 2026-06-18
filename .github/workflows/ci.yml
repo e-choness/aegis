@@ -62,11 +62,33 @@ jobs:
       - name: Sequential Publish (Avoid 429)
         shell: bash
         run: |
-          # Extract unique package names from the build artifacts
-          # and publish them one by one with a delay.
+          # Publish each package (sdist + matching wheel) one at a time with a
+          # delay to stay under PyPI's new-project creation rate limit (~1/min).
+          first=true
           for sdist in dist/*.tar.gz; do
-            echo "Publishing $sdist..."
-            uv publish "$sdist" "${sdist%.tar.gz}-py3-none-any.whl" || uv publish "$sdist" "${sdist%.tar.gz}-*.whl"
-            echo "Waiting 60 seconds for PyPI project creation limits..."
-            sleep 60
+            # Find the wheel that corresponds to this sdist (same stem).
+            stem=$(basename "${sdist%.tar.gz}")
+            wheel=$(ls dist/"${stem}"-*.whl 2>/dev/null | head -1)
+            if [[ -z "$wheel" ]]; then
+              echo "WARNING: no wheel found for $sdist, skipping"
+              continue
+            fi
+            # Wait before every package except the first.
+            if [[ "$first" != "true" ]]; then
+              echo "Waiting 90 seconds for PyPI project creation rate limit..."
+              sleep 90
+            fi
+            first=false
+            echo "Publishing $sdist + $wheel ..."
+            publish_output=$(uv publish "$sdist" "$wheel" 2>&1)
+            exit_code=$?
+            echo "$publish_output"
+            if echo "$publish_output" | grep -q "429\|Too Many Requests"; then
+              echo "::error::PyPI rate limit (429) hit — stopping immediately to avoid extending the lockout window."
+              exit 1
+            fi
+            if [[ $exit_code -ne 0 ]]; then
+              echo "::error::uv publish failed for $sdist (exit $exit_code)"
+              exit $exit_code
+            fi
           done
