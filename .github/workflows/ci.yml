@@ -38,7 +38,7 @@ jobs:
             --verbose
             --no-progress
             --base https://e-choness.github.io
-            --exclude 'https://e-choness\.github\.io/aegis'
+            --exclude 'https://e-choness\.github\.io'
             --exclude-path site/assets/stylesheets/swagger-ui.css
             site/
 
