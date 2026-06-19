@@ -1,13 +1,20 @@
-"""Showcase page — DEP-3 thin server-rendered pipeline visualizer."""
+"""Showcase page — DEP-3 thin server-rendered pipeline visualizer.
+
+Step 19 adds demo safety rails: per-IP rate limit + hard request cap.
+"""
 
 from __future__ import annotations
 
+import time
 import uuid
+from collections import defaultdict
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.pipeline.state import RunState
@@ -15,6 +22,71 @@ from aegis_core.providers.models import Message
 from aegis_server.auth.protocol import Principal
 from aegis_server.store.run_store import RunRecord, RunStore
 from aegis_server.telemetry import run_span
+
+# ---------------------------------------------------------------------------
+# Demo safety rails: per-IP rate limit + hard request cap
+# ---------------------------------------------------------------------------
+
+_RATE_LIMIT: int = 10  # Max requests per minute per IP
+_HARD_CAP: int = 100  # Max total requests across all IPs
+_rate_counts: dict[str, list[float]] = defaultdict(list)
+_total_requests: int = 0
+
+
+class DemoRateLimitMiddleware:
+    """ASGI middleware enforcing per-IP rate limits and a global hard cap."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        # Only rate-limit showcase routes
+        if not path.startswith("/showcase"):
+            await self._app(scope, receive, send)
+            return
+
+        global _total_requests
+
+        # Check hard cap
+        if _total_requests >= _HARD_CAP:
+            response = JSONResponse(
+                {"detail": "Demo request cap exceeded"},
+                status_code=429,
+            )
+            await response(scope, receive, send)
+            return
+
+        # Get client IP
+        client_host = scope.get("client")
+        if client_host:
+            ip = client_host[0]
+        else:
+            ip = scope.get("headers", {}).get(b"x-forwarded-for", b"unknown").decode()
+
+        now = time.time()
+        # Clean old entries (older than 60s)
+        _rate_counts[ip] = [t for t in _rate_counts[ip] if now - t < 60]
+
+        # Check per-IP rate limit
+        if len(_rate_counts[ip]) >= _RATE_LIMIT:
+            response = JSONResponse(
+                {"detail": "Rate limit exceeded. Please wait a moment."},
+                status_code=429,
+            )
+            await response(scope, receive, send)
+            return
+
+        # Record this request
+        _rate_counts[ip].append(now)
+        _total_requests += 1
+
+        await self._app(scope, receive, send)
+
 
 router = APIRouter()
 

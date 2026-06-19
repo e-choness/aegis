@@ -21,12 +21,6 @@ except ImportError:
     PiiMaskNode = None  # type: ignore[misc,assignment]
     PiiUnmaskNode = None  # type: ignore[misc,assignment]
 
-try:
-    from aegis_pack_pii import PiiMaskNode, PiiUnmaskNode
-except ImportError:
-    PiiMaskNode = None  # type: ignore[misc,assignment]
-    PiiUnmaskNode = None  # type: ignore[misc,assignment]
-
 
 @pytest.fixture
 def fake_provider() -> FakeProvider:
@@ -52,6 +46,7 @@ def client(executor: PipelineExecutor) -> TestClient:
         executor,
         no_auth=True,
         run_store=InMemoryRunStore(),
+        demo_mode=True,
     )
     return TestClient(app, raise_server_exceptions=True)
 
@@ -132,4 +127,27 @@ def test_showcase_pii_masking(client: TestClient) -> None:
     event_types = [e.get("event_type") for e in body.get("events", [])]
     assert "node_start" in event_types
     assert "node_end" in event_types
+
+
+def test_showcase_rate_limit_returns_429(client: TestClient) -> None:
+    """Step 19 check: per-IP rate limit returns 429."""
+    # Reset rate limit state to test from clean state
+    from aegis_server.routes.showcase import _rate_counts, _total_requests
+    _rate_counts.clear()
+    import aegis_server.routes.showcase as sc
+    sc._total_requests = 0
+
+    # Make requests up to and past the limit (10 req/min)
+    last_status = 200
+    for i in range(15):
+        r = client.post(
+            "/showcase/api/invoke",
+            json={"prompt": f"request {i}", "route": "default"},
+        )
+        last_status = r.status_code
+        if r.status_code == 429:
+            break
+
+    # At least one request should have been rate-limited
+    assert last_status == 429, f"Expected 429 for rate-limited request, got {last_status}"
 

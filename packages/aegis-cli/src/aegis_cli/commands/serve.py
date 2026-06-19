@@ -20,6 +20,12 @@ except ImportError:
     PiiMaskNode = None  # type: ignore[misc,assignment]
     PiiUnmaskNode = None  # type: ignore[misc,assignment]
 
+try:
+    from aegis_pack_budgets import BudgetGuard, BudgetLedger
+except ImportError:
+    BudgetGuard = None  # type: ignore[misc,assignment]
+    BudgetLedger = None  # type: ignore[misc,assignment]
+
 
 def serve(
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "0.0.0.0",
@@ -61,32 +67,53 @@ def dev(
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", "-p", help="Bind port.")] = 8000,
 ) -> None:
-    """Start Aegis in development mode (localhost, no auth, FakeProvider, PII demo)."""
+    """Start Aegis in development mode (localhost, no auth, FakeProvider, PII demo).
+
+    Demo mode enables the showcase page with per-IP rate limiting and hard request cap
+    (Step 19 safety rails) plus the budget guard for dogfooding.
+    """
     import uvicorn
 
+    from aegis_core.guardrails.spine import GuardNode
     from aegis_core.pipeline.executor import PipelineExecutor
     from aegis_core.testing.providers import FakeProvider
     from aegis_server.app import create_app
     from aegis_server.store.run_store import InMemoryRunStore
 
     executor = PipelineExecutor()
-    ingress_nodes = (
-        cast("list[PipelineNode]", [PiiMaskNode()]) if PiiMaskNode is not None else []
-    )
-    egress_nodes = (
-        cast("list[PipelineNode]", [PiiUnmaskNode()]) if PiiUnmaskNode is not None else []
-    )
+    ingress_nodes: list[PipelineNode] = []
+    egress_nodes: list[PipelineNode] = []
+
+    # PII nodes
+    if PiiMaskNode is not None:
+        ingress_nodes.append(PiiMaskNode())
+    if PiiUnmaskNode is not None:
+        egress_nodes.append(PiiUnmaskNode())
+
+    # Budget guard for demo dogfooding (Step 19)
+    if BudgetGuard is not None and BudgetLedger is not None:
+        ingress_nodes.insert(
+            0,
+            GuardNode([BudgetGuard(BudgetLedger(default_cap=100.0))], name="budget"),
+        )
+
+    # Cast to satisfy type checker (runtime types are correct)
+    ingress_nodes = cast("list[PipelineNode]", ingress_nodes)  # type: ignore[assignment]
+    egress_nodes = cast("list[PipelineNode]", egress_nodes)  # type: ignore[assignment]
 
     executor.register(
         "default",
         provider=FakeProvider(complete_response="[dev] hello from Aegis"),
-        ingress=ingress_nodes,
-        egress=egress_nodes,
+        ingress=ingress_nodes or None,
+        egress=egress_nodes or None,
     )
-    app = create_app(executor, no_auth=True, run_store=InMemoryRunStore())
+    # Step 19: Enable demo_mode for rate limit + hard cap safety rails
+    app = create_app(executor, no_auth=True, run_store=InMemoryRunStore(), demo_mode=True)
     msg = f"Starting Aegis dev server on {host}:{port} (auth off"
     if PiiMaskNode is not None:
         msg += ", PII enabled"
-    msg += ")"
+    if BudgetGuard is not None and BudgetLedger is not None:
+        msg += ", budget guard"
+    msg += ", demo safety rails)"
     _console.print(f"[green]{msg}[/green]")
     uvicorn.run(app, host=host, port=port)
