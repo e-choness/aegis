@@ -132,9 +132,11 @@ def test_showcase_pii_masking(client: TestClient) -> None:
 def test_showcase_rate_limit_returns_429(client: TestClient) -> None:
     """Step 19 check: per-IP rate limit returns 429."""
     # Reset rate limit state to test from clean state
-    from aegis_server.routes.showcase import _rate_counts, _total_requests
+    from aegis_server.routes.showcase import _rate_counts
+
     _rate_counts.clear()
     import aegis_server.routes.showcase as sc
+
     sc._total_requests = 0
 
     # Make requests up to and past the limit (10 req/min)

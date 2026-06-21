@@ -2,8 +2,11 @@ import requests
 
 # Test showcase API with PII content
 r = requests.post(
-    'http://localhost:8000/showcase/api/invoke',
-    json={"prompt": "My email is user@example.com and my SSN is 123-45-6789", "route": "default"},
+    "http://localhost:8000/showcase/api/invoke",
+    json={
+        "prompt": "My email is user@example.com and my SSN is 123-45-6789",
+        "route": "default",
+    },
 )
 print(f"Status: {r.status_code}")
 data = r.json()

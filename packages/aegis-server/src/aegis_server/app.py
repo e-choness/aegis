@@ -14,7 +14,8 @@ from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
-from aegis_server.routes.showcase import DemoRateLimitMiddleware, router as showcase_router
+from aegis_server.routes.showcase import DemoRateLimitMiddleware
+from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
 
