@@ -42,15 +42,32 @@ jobs:
             --exclude-path site/assets/stylesheets/swagger-ui.css
             site/
 
-      - name: Run examples
+      - name: Run demo smoke test
+        run: docker compose run --rm dev bash scripts/demo.sh --ci
+
+      - name: Run standalone examples
         run: |
           docker compose run --rm dev uv run python examples/01_governed_chat.py
           docker compose run --rm dev uv run python examples/03_mcp_tool.py
           docker compose run --rm dev uv run python examples/04_rag.py
           docker compose run --rm dev uv run python examples/05_residency.py
 
-      - name: Run demo smoke test
-        run: docker compose run --rm dev bash scripts/demo.sh --ci
+      - name: Run example 02 (approval flow - requires running server)
+        run: |
+          docker compose up -d dev
+          echo "Waiting for server to be fully ready..."
+          for i in {1..40}; do
+            response=$(curl -s -X POST http://localhost:8000/v1/chat/completions \
+              -H "Content-Type: application/json" \
+              -d '{"messages":[{"role":"user","content":"test"}],"route":"default"}' 2>/dev/null)
+            if echo "$response" | grep -q "response"; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+          docker compose exec dev uv run python examples/02_approval_flow.py
+        continue-on-error: true
 
       - name: Teardown
         if: always()
