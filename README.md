@@ -126,5 +126,3 @@ flowchart LR
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md) — development environment, gate policy, commit conventions
 - [SECURITY.md](docs/SECURITY.md) — responsible disclosure process
 - [LICENSE](LICENSE) — MIT license
-- **Upgrading from v1?** See the
-  [migration guide](https://e-choness.github.io/aegis/how-to/migrating-from-v1/).
