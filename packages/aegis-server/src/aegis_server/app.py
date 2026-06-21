@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from opentelemetry import trace
 
 from aegis_server.auth import NoneAuthenticator
@@ -79,6 +80,11 @@ def create_app(
     app.state.embedding_provider = embedding_provider
     app.state.tracer = tracer  # None -> runs.py falls back to global OTel tracer
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        """Redirect root to showcase page."""
+        return RedirectResponse(url="/showcase")
 
     # Step 19: Demo safety rails - per-IP rate limit + hard cap on showcase routes
     if demo_mode:
