@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from opentelemetry import trace
 
 from aegis_server.auth import NoneAuthenticator
@@ -13,6 +14,7 @@ from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
+from aegis_server.routes.showcase import DemoRateLimitMiddleware
 from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
@@ -30,6 +32,7 @@ def create_app(
     rag_store: object | None = None,
     embedding_provider: object | None = None,
     no_auth: bool = False,
+    demo_mode: bool = False,
     tracer: trace.Tracer | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
@@ -52,6 +55,11 @@ def create_app(
         Required when *rag_store* is set.
     no_auth:
         If ``True`` use :class:`~aegis_server.auth.NoneAuthenticator` (dev mode).
+    demo_mode:
+        If ``True`` wrap the showcase routes with rate limiting and hard cap
+        middleware (Step 19 safety rails).
+    tracer:
+        Optional OpenTelemetry tracer for spans.
 
     Raises
     ------
@@ -73,6 +81,17 @@ def create_app(
     app.state.embedding_provider = embedding_provider
     app.state.tracer = tracer  # None -> runs.py falls back to global OTel tracer
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        """Redirect root to showcase page."""
+        return RedirectResponse(url="/showcase")
+
+    # Step 19: Demo safety rails - per-IP rate limit + hard cap on showcase routes
+    if demo_mode:
+        # Wrap the showcase router with rate limiting middleware
+        app.add_middleware(DemoRateLimitMiddleware)
+
     app.include_router(showcase_router)
     app.include_router(runs_router)
     app.include_router(chat_router)

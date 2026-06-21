@@ -26,9 +26,13 @@ COPY sdk/python ./sdk/python
 
 RUN uv sync --all-packages --python 3.12
 
+# Copy diagnostic and fix scripts
+COPY scripts/diagnose-container.sh scripts/fix-container-entrypoint.sh ./scripts/
+RUN chmod +x ./scripts/*.sh
+
 # Expose the demo port (HF Spaces defaults to 7860).
 EXPOSE 7860
 
-# Run the dev server — no auth, FakeProvider, showcase page on /showcase.
-# Uses the SqliteRunStore for persistence across restarts (optional).
-ENTRYPOINT ["uv", "run", "aegis", "dev", "--host", "0.0.0.0", "--port", "7860"]
+# Run the fix script which ensures packages are properly installed before starting the server.
+# This handles the case where uv sync completes but entry points aren't properly registered.
+ENTRYPOINT ["./scripts/fix-container-entrypoint.sh"]
