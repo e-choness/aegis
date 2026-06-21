@@ -60,7 +60,7 @@ flowchart TD
     subgraph C[Seven plugin contracts]
         MP[ModelProvider] & GR[Guardrail] & VS[VectorStoreProvider]
         EB[EmbeddingProvider] & SP[SecretProvider]
-        PN[PipelineNode] & AU[Authenticator (aegis-server)]
+        PN[PipelineNode] & AU[Authenticator - aegis-server]
     end
     subgraph PP[Optional policy packs — public contracts only]
         CL[Classification] & RES[Residency] & BUD[Budgets] & PII[PII mask]
