@@ -65,8 +65,9 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
         )
         await run_store.create(record)
         _tracer = getattr(request.app.state, "tracer", None)
+        _config_digest = getattr(request.app.state, "config_digest", None)
         _task = asyncio.create_task(
-            _run_background(run_id, body.route, state, pipeline, run_store, _tracer)
+            _run_background(run_id, body.route, state, pipeline, run_store, _tracer, _config_digest)
         )
         _background_tasks.add(_task)
         _task.add_done_callback(_background_tasks.discard)
@@ -94,7 +95,9 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
         span.set_attribute("run.status", result.status)
         status_holder[0] = result.status
 
+    config_digest = getattr(request.app.state, "config_digest", None)
     await run_store.update_status(run_id, result.status)
+    await run_store.update_events(run_id, [e.to_dict() for e in result.events], config_digest)
     return RunResponse(
         run_id=result.run_id,
         response=result.response,
@@ -111,6 +114,7 @@ async def _run_background(
     pipeline: object,
     run_store: RunStore,
     tracer: object | None,
+    config_digest: str | None = None,
 ) -> None:
     """Execute pipeline in background and update run_store on completion."""
 
@@ -122,6 +126,7 @@ async def _run_background(
             span.set_attribute("run.status", result.status)
             status_holder[0] = result.status
         await run_store.update_status(run_id, result.status)
+        await run_store.update_events(run_id, [e.to_dict() for e in result.events], config_digest)
     except Exception:
         await run_store.update_status(run_id, "error")
         raise

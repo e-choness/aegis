@@ -27,6 +27,8 @@ class RunRecord:
     status: str  # running | completed | blocked | paused | denied | pending
     approvers: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=_now_iso)
+    events: list[dict[str, object]] = field(default_factory=list)
+    config_digest: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -36,6 +38,8 @@ class RunRecord:
             "status": self.status,
             "approvers": self.approvers,
             "created_at": self.created_at,
+            "events": self.events,
+            "config_digest": self.config_digest,
         }
 
 
@@ -46,6 +50,12 @@ class RunStore(Protocol):
     async def create(self, record: RunRecord) -> None: ...
     async def get(self, run_id: str) -> RunRecord | None: ...
     async def update_status(self, run_id: str, status: str) -> None: ...
+    async def update_events(
+        self,
+        run_id: str,
+        events: list[dict[str, object]],
+        config_digest: str | None,
+    ) -> None: ...
     async def list_pending(self) -> list[RunRecord]: ...
     async def list_runs(
         self,
@@ -71,6 +81,17 @@ class InMemoryRunStore:
         rec = self._records.get(run_id)
         if rec is not None:
             rec.status = status
+
+    async def update_events(
+        self,
+        run_id: str,
+        events: list[dict[str, object]],
+        config_digest: str | None,
+    ) -> None:
+        rec = self._records.get(run_id)
+        if rec is not None:
+            rec.events = events
+            rec.config_digest = config_digest
 
     async def list_pending(self) -> list[RunRecord]:
         return [r for r in self._records.values() if r.status == "paused"]
@@ -98,29 +119,39 @@ CREATE TABLE IF NOT EXISTS runs (
     principal_id TEXT NOT NULL,
     status       TEXT NOT NULL,
     approvers    TEXT NOT NULL DEFAULT '[]',
-    created_at   TEXT NOT NULL DEFAULT ''
+    created_at   TEXT NOT NULL DEFAULT '',
+    events       TEXT NOT NULL DEFAULT '[]',
+    config_digest TEXT
 )
 """
 
+_MIGRATE_EVENTS_SQL = "ALTER TABLE runs ADD COLUMN events TEXT NOT NULL DEFAULT '[]'"
+_MIGRATE_DIGEST_SQL = "ALTER TABLE runs ADD COLUMN config_digest TEXT"
+
 _INSERT_SQL = (
-    "INSERT OR REPLACE INTO runs (run_id, route, principal_id, status, approvers, created_at)"
-    " VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT OR REPLACE INTO runs"
+    " (run_id, route, principal_id, status, approvers, created_at, events, config_digest)"
+    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 )
 _SELECT_SQL = (
-    "SELECT run_id, route, principal_id, status, approvers, created_at"
+    "SELECT run_id, route, principal_id, status, approvers, created_at, events, config_digest"
     " FROM runs WHERE run_id = ?"
 )
 _UPDATE_SQL = "UPDATE runs SET status = ? WHERE run_id = ?"
+_UPDATE_EVENTS_SQL = (
+    "UPDATE runs SET events = ?, config_digest = ? WHERE run_id = ?"
+)
 _PENDING_SQL = (
-    "SELECT run_id, route, principal_id, status, approvers, created_at"
+    "SELECT run_id, route, principal_id, status, approvers, created_at, events, config_digest"
     " FROM runs WHERE status = 'paused'"
 )
 _LIST_SQL = (
-    "SELECT run_id, route, principal_id, status, approvers, created_at FROM runs"
+    "SELECT run_id, route, principal_id, status, approvers, created_at, events, config_digest"
+    " FROM runs"
 )
 
 
-def _row_to_record(row: tuple[str, str, str, str, str, str]) -> RunRecord:
+def _row_to_record(row: tuple[str, ...]) -> RunRecord:
     return RunRecord(
         run_id=row[0],
         route=row[1],
@@ -128,6 +159,8 @@ def _row_to_record(row: tuple[str, str, str, str, str, str]) -> RunRecord:
         status=row[3],
         approvers=json.loads(row[4]),
         created_at=row[5],
+        events=json.loads(row[6]) if len(row) > 6 and row[6] else [],
+        config_digest=row[7] if len(row) > 7 else None,
     )
 
 
@@ -145,6 +178,12 @@ class SqliteRunStore:
 
         async with aiosqlite.connect(self._path) as db:
             await db.execute(_CREATE_SQL)
+            # Idempotent migrations for existing databases without the new columns.
+            for migrate_sql in (_MIGRATE_EVENTS_SQL, _MIGRATE_DIGEST_SQL):
+                try:
+                    await db.execute(migrate_sql)
+                except Exception:  # noqa: BLE001 — column already exists
+                    pass
             await db.commit()
         self._ready = True
 
@@ -162,6 +201,8 @@ class SqliteRunStore:
                     record.status,
                     json.dumps(record.approvers),
                     record.created_at,
+                    json.dumps(record.events),
+                    record.config_digest,
                 ),
             )
             await db.commit()
@@ -181,6 +222,19 @@ class SqliteRunStore:
 
         async with aiosqlite.connect(self._path) as db:
             await db.execute(_UPDATE_SQL, (status, run_id))
+            await db.commit()
+
+    async def update_events(
+        self,
+        run_id: str,
+        events: list[dict[str, object]],
+        config_digest: str | None,
+    ) -> None:
+        await self._ensure_table()
+        import aiosqlite
+
+        async with aiosqlite.connect(self._path) as db:
+            await db.execute(_UPDATE_EVENTS_SQL, (json.dumps(events), config_digest, run_id))
             await db.commit()
 
     async def list_pending(self) -> list[RunRecord]:

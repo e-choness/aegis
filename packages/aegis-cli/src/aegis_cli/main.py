@@ -14,6 +14,7 @@ from aegis_cli.commands.plugin import app as plugin_app
 from aegis_cli.commands.policy import app as policy_app
 from aegis_cli.commands.provider import app as provider_app
 from aegis_cli.commands.rag import app as rag_app
+from aegis_cli.commands.explain import explain
 from aegis_cli.commands.runs import app as runs_app
 from aegis_cli.commands.serve import serve
 
@@ -24,6 +25,7 @@ app = typer.Typer(
 )
 
 app.command("chat")(chat)
+app.command("explain")(explain)
 app.command("serve")(serve)
 app.add_typer(config_app, name="config")
 app.add_typer(doctor_app, name="doctor")

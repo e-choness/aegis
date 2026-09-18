@@ -28,6 +28,8 @@ class RunStatusResponse(BaseModel):
     principal_id: str
     status: str
     approvers: list[str]
+    events: list[dict[str, Any]] = []
+    config_digest: str | None = None
 
 
 class ResumeResponse(BaseModel):
@@ -49,6 +51,8 @@ async def get_run(run_id: str, request: Request) -> RunStatusResponse:
         principal_id=record.principal_id,
         status=record.status,
         approvers=record.approvers,
+        events=record.events,
+        config_digest=record.config_digest,
     )
 
 
