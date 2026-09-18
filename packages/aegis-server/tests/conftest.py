@@ -47,3 +47,15 @@ def client(executor: PipelineExecutor, key_store: KeyStore, valid_key: str) -> T
 def client_no_auth(executor: PipelineExecutor) -> TestClient:
     app = create_app(executor, no_auth=True)
     return TestClient(app, raise_server_exceptions=True)
+
+
+@pytest.fixture
+def client_with_digest(executor: PipelineExecutor) -> TestClient:
+    """Client with config_digest and config_path wired (Phase 0)."""
+    app = create_app(
+        executor,
+        no_auth=True,
+        config_digest="sha256:abc123",
+        config_path="/etc/aegis/aegis.yaml",
+    )
+    return TestClient(app, raise_server_exceptions=True)

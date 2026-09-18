@@ -27,3 +27,6 @@ residency = "aegis_pack_residency:ResidencyGuard"
 
 [project.entry-points."aegis.nodes"]
 residency_node = "aegis_pack_residency:ResidencyGuard"
+
+[project.entry-points."aegis.packs"]
+"aegis.residency" = "aegis_pack_residency.factory:from_config"

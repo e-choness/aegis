@@ -24,3 +24,6 @@ packages = ["src/aegis_pack_budgets"]
 
 [project.entry-points."aegis.guardrails"]
 budget = "aegis_pack_budgets:BudgetGuard"
+
+[project.entry-points."aegis.packs"]
+"aegis.budgets" = "aegis_pack_budgets.factory:from_config"

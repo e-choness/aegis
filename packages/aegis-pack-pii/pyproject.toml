@@ -39,3 +39,6 @@ pii_mask = "aegis_pack_pii:PiiMaskGuard"
 [project.entry-points."aegis.nodes"]
 pii_mask_node = "aegis_pack_pii:PiiMaskNode"
 pii_unmask_node = "aegis_pack_pii:PiiUnmaskNode"
+
+[project.entry-points."aegis.packs"]
+"aegis.pii" = "aegis_pack_pii.factory:from_config"

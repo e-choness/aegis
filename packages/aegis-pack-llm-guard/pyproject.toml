@@ -28,3 +28,6 @@ packages = ["src/aegis_pack_llm_guard"]
 
 [project.entry-points."aegis.guardrails"]
 llm_guard = "aegis_pack_llm_guard:LlmGuardAdapter"
+
+[project.entry-points."aegis.packs"]
+"aegis.llm_guard" = "aegis_pack_llm_guard.factory:from_config"

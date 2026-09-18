@@ -17,6 +17,7 @@ PLUGIN_GROUPS: tuple[str, ...] = (
     "aegis.nodes",
     "aegis.vectorstores",
     "aegis.exporters",
+    "aegis.packs",
 )
 
 

@@ -75,6 +75,9 @@ class RouteConfig(_StrictModel):
     provider: str
     model: str | None = None
     pipeline: PipelineConfig | None = None
+    owner: str | None = None
+    risk_rating: Literal["low", "medium", "high"] | None = None
+    review_interval_days: int | None = None
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 

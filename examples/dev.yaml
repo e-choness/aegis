@@ -1,0 +1,29 @@
+# dev.yaml — zero-credential development config for `aegis serve`
+# Run: aegis serve --config examples/dev.yaml --no-auth
+#
+# Uses FakeProvider so no API keys are needed.
+# PII masking and budget guard are enabled for local dogfooding.
+
+providers:
+  fake:
+    type: fake
+    complete_response: "[dev] hello from Aegis"
+
+guardrails:
+  pii:
+    pack: aegis.pii
+    mode: mask
+  budget:
+    pack: aegis.budgets
+    default_cap: 100.0
+
+pipeline:
+  ingress: [budget, pii]
+  egress: [pii]
+
+routes:
+  default:
+    provider: fake
+
+auth:
+  type: none

@@ -14,6 +14,7 @@ from aegis_server.routes.chat import router as chat_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
+from aegis_server.routes.health import router as health_router
 from aegis_server.routes.showcase import DemoRateLimitMiddleware
 from aegis_server.routes.showcase import router as showcase_router
 from aegis_server.store.run_store import InMemoryRunStore
@@ -34,6 +35,8 @@ def create_app(
     no_auth: bool = False,
     demo_mode: bool = False,
     tracer: trace.Tracer | None = None,
+    config_digest: str | None = None,
+    config_path: str | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -80,6 +83,8 @@ def create_app(
     app.state.rag_store = rag_store
     app.state.embedding_provider = embedding_provider
     app.state.tracer = tracer  # None -> runs.py falls back to global OTel tracer
+    app.state.config_digest = config_digest
+    app.state.config_path = config_path
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
 
     @app.get("/", include_in_schema=False)
@@ -92,6 +97,7 @@ def create_app(
         # Wrap the showcase router with rate limiting middleware
         app.add_middleware(DemoRateLimitMiddleware)
 
+    app.include_router(health_router)
     app.include_router(showcase_router)
     app.include_router(runs_router)
     app.include_router(chat_router)

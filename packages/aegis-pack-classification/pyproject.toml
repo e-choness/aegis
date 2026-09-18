@@ -24,3 +24,6 @@ packages = ["src/aegis_pack_classification"]
 
 [project.entry-points."aegis.nodes"]
 classification = "aegis_pack_classification:ClassificationNode"
+
+[project.entry-points."aegis.packs"]
+"aegis.classification" = "aegis_pack_classification.factory:from_config"

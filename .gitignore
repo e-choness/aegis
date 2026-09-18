@@ -23,6 +23,7 @@ AGENTS.md
 CLAUDE.md
 .claude
 .claude-flow
+reference/
 
 # MCP
 .mcp.json
