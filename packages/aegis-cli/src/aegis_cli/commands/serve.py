@@ -13,6 +13,9 @@ _DEFAULT_KEYS_PATH = Path.home() / ".aegis" / "keys.json"
 _DEFAULT_CONFIG = Path("aegis.yaml")
 
 
+_DEFAULT_LEDGER_DB = Path("aegis_ledger.db")
+
+
 def serve(
     config: Annotated[
         Path,
@@ -28,6 +31,10 @@ def serve(
         Path,
         typer.Option("--keys-file", help="Path to keys JSON file."),
     ] = _DEFAULT_KEYS_PATH,
+    ledger_db: Annotated[
+        Path,
+        typer.Option("--ledger-db", help="Path to SQLite evidence ledger."),
+    ] = _DEFAULT_LEDGER_DB,
 ) -> None:
     """Start the Aegis server (loads aegis.yaml, builds pipeline from config)."""
     import uvicorn
@@ -38,6 +45,7 @@ def serve(
     from aegis_server.app import AEGServError, create_app
     from aegis_server.auth import ApiKeyAuthenticator
     from aegis_server.keys import KeyStore
+    from aegis_server.store.ledger import SqliteLedgerStore
 
     # 1. Load and validate config
     try:
@@ -65,7 +73,22 @@ def serve(
         store = KeyStore(path=keys_path)
         authenticator = ApiKeyAuthenticator(store)
 
-    # 4. Create app
+    # 4. Build route_metadata from config
+    route_metadata: dict[str, dict] = {}
+    for route_name, route_cfg in cfg.routes.items():
+        meta: dict = {}
+        if route_cfg.owner is not None:
+            meta["owner"] = route_cfg.owner
+        if route_cfg.risk_rating is not None:
+            meta["risk_rating"] = route_cfg.risk_rating
+        if route_cfg.review_interval_days is not None:
+            meta["review_interval_days"] = route_cfg.review_interval_days
+        route_metadata[route_name] = meta
+
+    # 5. Create ledger store
+    ledger_store = SqliteLedgerStore(path=str(ledger_db))
+
+    # 6. Create app
     try:
         app = create_app(
             executor,
@@ -73,6 +96,8 @@ def serve(
             no_auth=no_auth,
             config_digest=digest,
             config_path=str(config.resolve()),
+            ledger_store=ledger_store,
+            route_metadata=route_metadata,
         )
     except AEGServError as exc:
         _console.print(f"[red]{exc}[/red]")
@@ -82,6 +107,6 @@ def serve(
     _console.print(
         f"[green]Starting Aegis server on {host}:{port}[/green] "
         f"({route_count} route{'s' if route_count != 1 else ''}, "
-        f"digest={digest[:16]}…)"
+        f"digest={digest[:16]}…, ledger={ledger_db})"
     )
     uvicorn.run(app, host=host, port=port)

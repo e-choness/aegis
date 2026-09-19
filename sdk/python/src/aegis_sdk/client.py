@@ -97,6 +97,12 @@ class AegisClient:
         resp.raise_for_status()
         return resp.json()["records"]
 
+    def audit_report(self) -> dict[str, Any]:
+        resp = self._client.get("/v1/audit/report")
+        resp.raise_for_status()
+        result: dict[str, Any] = resp.json()
+        return result
+
     def chat(
         self,
         messages: list[dict[str, str]],
@@ -220,6 +226,12 @@ class AsyncAegisClient:
         resp = await self._client.get("/v1/audit/inventory", params=params)
         resp.raise_for_status()
         return resp.json()["records"]
+
+    async def audit_report(self) -> dict[str, Any]:
+        resp = await self._client.get("/v1/audit/report")
+        resp.raise_for_status()
+        result: dict[str, Any] = resp.json()
+        return result
 
     async def chat(
         self,

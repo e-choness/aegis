@@ -13,6 +13,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -197,6 +198,25 @@ async def chat_completions(
         return EventSourceResponse(gen)
 
     result = await pipeline.run(state)
+
+    ledger_store = getattr(request.app.state, "ledger_store", None)
+    if ledger_store is not None:
+        from types import SimpleNamespace
+
+        from aegis_server.store.ledger import make_run_evidence
+
+        completed_at = datetime.now(tz=UTC).isoformat()
+        evidence_obj = SimpleNamespace(
+            run_id=state.run_id,
+            route=state.route,
+            config_digest=getattr(request.app.state, "config_digest", None),
+            principal_id=state.principal,
+            created_at=completed_at,
+            status="completed",
+            events=[],
+        )
+        await ledger_store.append(state.run_id, make_run_evidence(evidence_obj, completed_at))
+
     return ChatCompletionResponse(  # type: ignore[return-value]
         id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
         object="chat.completion",
