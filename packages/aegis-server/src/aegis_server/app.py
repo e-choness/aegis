@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from opentelemetry import trace
@@ -37,6 +41,8 @@ def create_app(
     tracer: trace.Tracer | None = None,
     config_digest: str | None = None,
     config_path: str | None = None,
+    ledger_store: object | None = None,
+    route_metadata: dict[str, dict] | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -77,7 +83,30 @@ def create_app(
     if no_auth:
         authenticator = NoneAuthenticator()
 
-    app = FastAPI(title="Aegis AI Gateway", version="2.0.0a0")
+    _route_metadata: dict[str, dict] = route_metadata or {}
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        """Emit a model_inventory ledger record for each registered route on startup."""
+        if ledger_store is not None:
+            from aegis_server.store.ledger import make_inventory_record
+
+            routes_fn = getattr(executor, "routes", None)
+            routes_list: list[str] = routes_fn() if callable(routes_fn) else []
+            deployed_at = datetime.now(tz=UTC).isoformat()
+            for route in routes_list:
+                meta = _route_metadata.get(route, {})
+                body = make_inventory_record(
+                    route=route,
+                    config_digest=config_digest,
+                    route_meta=meta,
+                    config_path=config_path,
+                    deployed_at=deployed_at,
+                )
+                await ledger_store.append(None, body)
+        yield
+
+    app = FastAPI(title="Aegis AI Gateway", version="2.0.0a0", lifespan=_lifespan)
     app.state.executor = executor
     app.state.run_store = run_store if run_store is not None else InMemoryRunStore()
     app.state.rag_store = rag_store
@@ -85,6 +114,8 @@ def create_app(
     app.state.tracer = tracer  # None -> runs.py falls back to global OTel tracer
     app.state.config_digest = config_digest
     app.state.config_path = config_path
+    app.state.ledger_store = ledger_store
+    app.state.route_metadata = _route_metadata
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
 
     @app.get("/", include_in_schema=False)

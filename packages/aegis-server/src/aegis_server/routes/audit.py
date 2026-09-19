@@ -13,6 +13,34 @@ class AuditEntry(RunRecord):
     """Run record serialised for the audit response."""
 
 
+@router.get("/v1/audit/ledger")
+async def audit_ledger(
+    request: Request,
+    since_seq: int = Query(default=0, description="Return records with seq > since_seq"),
+    route: str | None = Query(default=None, description="Filter by model_id/route"),
+) -> dict[str, list[dict]]:
+    """Return hash-chained evidence records from the ledger."""
+    ledger_store = getattr(request.app.state, "ledger_store", None)
+    if ledger_store is None:
+        return {"records": []}
+    records = await ledger_store.list_records(since_seq=since_seq, route=route)
+    return {"records": records}
+
+
+@router.get("/v1/audit/inventory")
+async def audit_inventory(
+    request: Request,
+    route: str | None = Query(default=None, description="Filter by model_id/route"),
+) -> dict[str, list[dict]]:
+    """Return model_inventory records from the evidence ledger."""
+    ledger_store = getattr(request.app.state, "ledger_store", None)
+    if ledger_store is None:
+        return {"records": []}
+    records = await ledger_store.list_records(route=route)
+    inventory = [r for r in records if r.get("record_type") == "model_inventory"]
+    return {"records": inventory}
+
+
 @router.get("/v1/audit")
 async def audit_runs(
     request: Request,

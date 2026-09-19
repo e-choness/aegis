@@ -76,6 +76,27 @@ class AegisClient:
         result: list[dict[str, Any]] = resp.json()["runs"]
         return result
 
+    def list_ledger(
+        self,
+        *,
+        since_seq: int = 0,
+        route: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"since_seq": since_seq}
+        if route is not None:
+            params["route"] = route
+        resp = self._client.get("/v1/audit/ledger", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    def inventory_records(self, *, route: str | None = None) -> list[dict[str, Any]]:
+        params: dict[str, str] = {}
+        if route is not None:
+            params["route"] = route
+        resp = self._client.get("/v1/audit/inventory", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
     def chat(
         self,
         messages: list[dict[str, str]],
@@ -178,6 +199,27 @@ class AsyncAegisClient:
         resp.raise_for_status()
         result: list[dict[str, Any]] = resp.json()["runs"]
         return result
+
+    async def list_ledger(
+        self,
+        *,
+        since_seq: int = 0,
+        route: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"since_seq": since_seq}
+        if route is not None:
+            params["route"] = route
+        resp = await self._client.get("/v1/audit/ledger", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    async def inventory_records(self, *, route: str | None = None) -> list[dict[str, Any]]:
+        params: dict[str, str] = {}
+        if route is not None:
+            params["route"] = route
+        resp = await self._client.get("/v1/audit/inventory", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
 
     async def chat(
         self,

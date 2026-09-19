@@ -14,6 +14,7 @@ from aegis_cli.commands.plugin import app as plugin_app
 from aegis_cli.commands.policy import app as policy_app
 from aegis_cli.commands.provider import app as provider_app
 from aegis_cli.commands.rag import app as rag_app
+from aegis_cli.commands.audit import app as audit_app
 from aegis_cli.commands.explain import explain
 from aegis_cli.commands.runs import app as runs_app
 from aegis_cli.commands.serve import serve
@@ -35,6 +36,7 @@ app.add_typer(plugin_app, name="plugin")
 app.add_typer(policy_app, name="policy")
 app.add_typer(provider_app, name="provider")
 app.add_typer(rag_app, name="rag")
+app.add_typer(audit_app, name="audit")
 app.add_typer(runs_app, name="runs")
 
 
