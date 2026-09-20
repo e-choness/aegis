@@ -40,6 +40,7 @@ def test_plugin_groups_contains_all_spec_groups() -> None:
         "aegis.nodes",
         "aegis.vectorstores",
         "aegis.exporters",
+        "aegis.packs",
     }
     assert set(PLUGIN_GROUPS) == expected
 

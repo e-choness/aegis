@@ -72,6 +72,7 @@ nav:
     - Secret backends: how-to/secret-backends.md
     - Streaming modes: how-to/streaming-modes.md
     - HITL approvals: how-to/hitl-approvals.md
+    - Write a pack: how-to/write-a-pack.md
     - Deployment: how-to/deployment.md
     - Migrating from v1: how-to/migrating-from-v1.md
   - Reference:
