@@ -1,0 +1,52 @@
+# fintech.yaml — Phase 4 vendor-diligence scenario
+#
+# One route, `underwriting`, calling a US-region model on a request that may
+# carry Canadian PII (a SIN). Two guardrails gate it:
+#   - `pii`      masks PII on ingress, unmasks on egress.
+#   - `residency` is fail-open-with-sign-off, not fail-closed: a non-CA
+#                 endpoint doesn't get blocked outright, it pauses for a
+#                 human (`require_approval: true`) — the OSFI E-23 posture
+#                 for a vendor-diligence review, not an automatic denial.
+#
+# Run:
+#   aegis serve --config examples/fintech.yaml --no-auth
+#
+# See examples/scenarios/02_approval_flow.py for the full walkthrough this
+# config is built for (submit -> pause -> deny -> explain -> audit export).
+
+providers:
+  us_underwriting_llm:
+    type: fake
+    complete_response: "[underwriting] synthetic risk assessment — not a real model"
+    residency:
+      region: us-east-1
+
+guardrails:
+  pii:
+    pack: aegis.pii
+    mode: mask
+  residency_ca:
+    pack: aegis.residency
+    region: us-east-1
+    jurisdiction: US
+    allowed_regions: [ca-central-1]
+    require_approval: true
+
+pipeline:
+  ingress: [pii, residency_ca]
+  egress: [pii]
+
+routes:
+  underwriting:
+    provider: us_underwriting_llm
+    risk_rating: high
+    review_interval_days: 180
+    owner: risk-team@example.com
+
+# Named approvers, not "anonymous" — the whole point of the evidence ledger
+# is that `aegis explain` shows *who* denied a request. Create keys first:
+#   aegis keys create svc-underwriting --keys-file examples/fintech-keys.json
+#   aegis keys create jane             --keys-file examples/fintech-keys.json
+# then: aegis serve -c examples/fintech.yaml --keys-file examples/fintech-keys.json
+auth:
+  type: api_key

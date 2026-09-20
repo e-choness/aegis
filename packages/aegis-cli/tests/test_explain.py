@@ -15,14 +15,28 @@ _VERDICT_EVENT = {
     "stage": "ingress",
     "node": "pii-guard",
     "event_type": "verdict",
-    "data": {"kind": "block", "reason": "pii-detected"},
+    # Real shape: GuardNode/assembler.py key the verdict kind as "verdict",
+    # never "kind" — this fixture used to say "kind" and every test still
+    # passed because explain.py had the identical bug (fell through to "?").
+    "data": {"verdict": "block", "guard": "pii-guard", "reason": "pii-detected"},
 }
 
 _COMPLETE_EVENT = {
     "stage": "ingress",
     "node": "execute",
     "event_type": "verdict",
-    "data": {"kind": "completed"},
+    "data": {"verdict": "completed"},
+}
+
+_REQUIRE_APPROVAL_EVENT = {
+    "stage": "ingress",
+    "node": "residency_ca",
+    "event_type": "verdict",
+    "data": {
+        "verdict": "require_approval",
+        "guard": "residency_ca",
+        "reason": "residency: region 'us-east-1' is not in the allowed set ['ca-central-1']",
+    },
 }
 
 
@@ -116,3 +130,25 @@ def test_explain_last_flag_fetches_most_recent() -> None:
 def test_explain_no_args_exits_1() -> None:
     result = runner.invoke(app, ["explain"])
     assert result.exit_code == 1
+
+
+def test_explain_renders_real_verdict_key_not_fallback() -> None:
+    """Regression: explain.py used to key off "kind"/"status", which no real
+    verdict-emitting node ever sets — every row rendered as an uncoloured "?".
+    """
+    status = RunStatusResponse(
+        run_id="ddddeeee-ffff-0000-1111-222222222222",
+        route="underwriting",
+        principal_id="anonymous",
+        status="paused",
+        approvers=[],
+        events=[_REQUIRE_APPROVAL_EVENT],
+        config_digest="sha256:abc",
+    )
+    mock = _mock_client(status)
+    with patch("aegis_cli.commands.explain.AegisClient", return_value=mock):
+        result = runner.invoke(app, ["explain", "ddddeeee-ffff-0000-1111-222222222222"])
+    assert result.exit_code == 0
+    assert "REQUIRE_APPROVAL" in result.output
+    assert "?" not in result.output.split("\n")[2]  # the rendered verdict row
+    assert "not in the allowed set" in result.output

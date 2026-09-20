@@ -22,8 +22,8 @@ def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]
 
     if mode == "mask":
         return {
-            "ingress": [PiiMaskNode(name=f"{name}.mask")],  # type: ignore[call-arg]
-            "egress": [PiiUnmaskNode(name=f"{name}.unmask")],  # type: ignore[call-arg]
+            "ingress": [PiiMaskNode(name=f"{name}.mask")],
+            "egress": [PiiUnmaskNode(name=f"{name}.unmask")],
         }
 
     if mode == "detect":

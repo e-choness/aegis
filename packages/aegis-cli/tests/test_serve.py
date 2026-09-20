@@ -79,26 +79,121 @@ def test_serve_help_shows_config_option() -> None:
 # ── serve launches (mocked uvicorn) ──────────────────────────────────────────
 
 
+def _patch_uvicorn_serve(monkeypatch: pytest.MonkeyPatch, launched: list[object]) -> None:
+    """Replace uvicorn.Server.serve with a no-op that records the built app.
+
+    `serve()` drives `uvicorn.Server(...).serve()` directly (not
+    `uvicorn.run()`) so it can hold a checkpointer's connection open for the
+    server's lifetime — see the comment in `commands/serve.py`.
+    """
+    import uvicorn
+
+    async def fake_serve(self: uvicorn.Server, sockets: object = None) -> None:
+        launched.append(self.config.app)
+
+    monkeypatch.setattr(uvicorn.Server, "serve", fake_serve)
+
+
 def test_serve_builds_and_calls_uvicorn(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """serve() loads config, builds executor, and calls uvicorn.run."""
+    """serve() loads config, builds executor, and starts a uvicorn.Server."""
     p = _write_yaml(tmp_path, _FAKE_YAML)
 
     launched: list[object] = []
+    _patch_uvicorn_serve(monkeypatch, launched)
 
-    def fake_run(app: object, **kwargs: object) -> None:
-        launched.append(app)
-
-    monkeypatch.setattr("uvicorn.run", fake_run)
-
-    result = runner.invoke(app, ["serve", "--config", str(p), "--no-auth"])
+    result = runner.invoke(
+        app,
+        ["serve", "--config", str(p), "--no-auth", "--checkpoint-db", str(tmp_path / "cp.db")],
+    )
     assert result.exit_code == 0, result.output
     assert len(launched) == 1
 
 
 def test_serve_prints_digest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     p = _write_yaml(tmp_path, _FAKE_YAML)
-    monkeypatch.setattr("uvicorn.run", lambda *a, **kw: None)
+    _patch_uvicorn_serve(monkeypatch, [])
 
-    result = runner.invoke(app, ["serve", "--config", str(p), "--no-auth"])
-    assert result.exit_code == 0
+    result = runner.invoke(
+        app,
+        ["serve", "--config", str(p), "--no-auth", "--checkpoint-db", str(tmp_path / "cp.db")],
+    )
+    assert result.exit_code == 0, result.output
     assert "digest=" in result.output
+
+
+def test_serve_resume_works_over_a_real_checkpointer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A route that pauses for approval can actually be resumed via `aegis serve`.
+
+    Regression test: `build_executor(cfg)` used to be called with no
+    checkpointer at all, so every approval-gated route would pause
+    successfully but then fail to resume with "Cannot resume a run without
+    a checkpointer" — `aegis serve` (unlike the test fixtures, which always
+    passed a checkpointer explicitly) never actually supported HITL.
+
+    The exchange has to happen *inside* the mocked `Server.serve()` call,
+    while `serve()`'s `async with sqlite_checkpointer(...)` block is still
+    open — the connection closes the moment that block exits.
+    """
+    import httpx
+    import uvicorn
+
+    yaml_path = _write_yaml(
+        tmp_path,
+        """\
+        providers:
+          fake:
+            type: fake
+            complete_response: hi
+        guardrails:
+          approval:
+            pack: aegis.residency
+            region: us-east-1
+            jurisdiction: US
+            allowed_regions: [ca-central-1]
+            require_approval: true
+        pipeline:
+          ingress: [approval]
+        routes:
+          default:
+            provider: fake
+        auth:
+          type: none
+        """,
+    )
+
+    captured: dict[str, object] = {}
+
+    async def fake_serve(self: uvicorn.Server, sockets: object = None) -> None:
+        transport = httpx.ASGITransport(app=self.config.app)  # type: ignore[arg-type]
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            run_resp = await client.post(
+                "/v1/runs", json={"messages": [{"role": "user", "content": "hi"}]}
+            )
+            captured["run_status"] = run_resp.json()["status"]
+            run_id = run_resp.json()["run_id"]
+
+            resume_resp = await client.post(
+                f"/v1/runs/{run_id}/resume", json={"decision": "denied"}
+            )
+            captured["resume_status_code"] = resume_resp.status_code
+            captured["resume_json"] = resume_resp.json()
+
+    monkeypatch.setattr(uvicorn.Server, "serve", fake_serve)
+
+    result = runner.invoke(
+        app,
+        [
+            "serve",
+            "--config",
+            str(yaml_path),
+            "--no-auth",
+            "--checkpoint-db",
+            str(tmp_path / "cp.db"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["run_status"] == "paused"
+    assert captured["resume_status_code"] == 200, captured["resume_json"]
+    assert captured["resume_json"]["status"] == "denied"  # type: ignore[index]

@@ -18,7 +18,10 @@ _COLOUR = {
     "blocked": "red",
     "denied": "red",
     "paused": "yellow",
+    "require_approval": "yellow",
     "completed": "green",
+    "allow": "green",
+    "sanitize": "cyan",
     "pass": "green",
 }
 
@@ -91,8 +94,13 @@ def explain(
             stage = ev.get("stage", "?")
             node = ev.get("node", "?")
             ev_data = ev.get("data") or {}
-            kind = str(ev_data.get("kind", ev_data.get("status", "?")))
-            summary_parts = [f"{k}={v}" for k, v in ev_data.items() if k not in ("kind", "status")]
+            # Every real verdict-emitting node (GuardNode, MCP tool guards,
+            # RAG retrieval guards, the HITL resume path) keys the verdict
+            # kind as "verdict" — "kind"/"status" are kept as fallbacks only.
+            kind = str(ev_data.get("verdict", ev_data.get("kind", ev_data.get("status", "?"))))
+            summary_parts = [
+                f"{k}={v}" for k, v in ev_data.items() if k not in ("verdict", "kind", "status")
+            ]
             summary = "  " + "  ".join(summary_parts) if summary_parts else ""
             typer.echo(f"  {stage:12s}  {node:24s}  {_colour_kind(kind)}{summary}")
 
@@ -106,7 +114,8 @@ def explain(
     if data.status in ("blocked", "denied") and not execute_completed:
         blocked_at = None
         for ev in verdict_events:
-            kind = str((ev.get("data") or {}).get("kind", "")).lower()
+            ev_data = ev.get("data") or {}
+            kind = str(ev_data.get("verdict", ev_data.get("kind", ""))).lower()
             if kind in ("block", "blocked", "denied"):
                 blocked_at = f"{ev.get('stage')}/{ev.get('node')}"
                 break

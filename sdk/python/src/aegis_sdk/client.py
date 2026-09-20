@@ -10,6 +10,12 @@ import httpx
 
 from aegis_sdk.models import ResumeResponse, RunCreateResponse, RunStatusResponse
 
+#: httpx defaults to a 5-second timeout on every phase (connect/read/write/pool).
+#: A real model completion — or a guardrail doing first-call model loading,
+#: e.g. Presidio's spaCy pipeline — routinely takes longer than that, so the
+#: default here is deliberately generous. Pass `timeout=` to override.
+_DEFAULT_TIMEOUT = 60.0
+
 
 class AegisClient:
     """Synchronous Aegis API client."""
@@ -20,11 +26,12 @@ class AegisClient:
         api_key: str = "",
         *,
         transport: httpx.BaseTransport | None = None,
+        timeout: float | httpx.Timeout = _DEFAULT_TIMEOUT,
     ) -> None:
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers}
+        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers, "timeout": timeout}
         if transport is not None:
             kwargs["transport"] = transport
         self._client = httpx.Client(**kwargs)
@@ -150,11 +157,12 @@ class AsyncAegisClient:
         api_key: str = "",
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        timeout: float | httpx.Timeout = _DEFAULT_TIMEOUT,
     ) -> None:
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers}
+        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers, "timeout": timeout}
         if transport is not None:
             kwargs["transport"] = transport
         self._client = httpx.AsyncClient(**kwargs)

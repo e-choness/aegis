@@ -66,7 +66,7 @@ class GuardNode:
                     data={
                         "verdict": verdict.kind.value,
                         "guard": guard.name,
-                        "reason": verdict.reason,
+                        "reason": verdict.reason or verdict.prompt,
                     },
                 )
             )

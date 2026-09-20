@@ -29,6 +29,10 @@ reference/
 .mcp.json
 ruvector.db
 
+# aegis serve default state files (--ledger-db / --checkpoint-db)
+/aegis_ledger.db
+/aegis_checkpoints.db
+
 # ruflo agents
 .agents
 .swarm

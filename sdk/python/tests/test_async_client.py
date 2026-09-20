@@ -128,3 +128,14 @@ async def test_async_unauthenticated_raises() -> None:
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.create_run([{"role": "user", "content": "hi"}])
     assert exc_info.value.response.status_code == 401
+
+
+def test_async_client_default_timeout_exceeds_httpx_default() -> None:
+    client = AsyncAegisClient("http://test")
+    timeout = client._client.timeout
+    assert timeout.read is None or timeout.read > 5.0
+
+
+def test_async_client_timeout_override() -> None:
+    client = AsyncAegisClient("http://test", timeout=httpx.Timeout(3.0))
+    assert client._client.timeout.read == 3.0

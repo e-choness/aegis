@@ -18,6 +18,10 @@ class PiiUnmaskNode:
 
     name: str = "pii_unmask_node"
 
+    def __init__(self, name: str | None = None) -> None:
+        if name is not None:
+            self.name = name
+
     async def run(self, state: RunState) -> RunStateDelta:
         """Unmask placeholders in the response using the run's mask_map."""
         if not state.mask_map or state.response is None:

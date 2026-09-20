@@ -22,6 +22,7 @@ def _make_mock_client(
     list_runs_result: list[Any] | None = None,
     get_run_result: RunStatusResponse | None = None,
     resume_result: ResumeResponse | None = None,
+    create_run_result: Any | None = None,
 ) -> MagicMock:
     """Return a mock AegisClient context manager."""
     client = MagicMock()
@@ -33,7 +34,56 @@ def _make_mock_client(
         client.get_run.return_value = get_run_result
     if resume_result is not None:
         client.resume_run.return_value = resume_result
+    if create_run_result is not None:
+        client.create_run.return_value = create_run_result
     return client
+
+
+# ---------------------------------------------------------------------------
+# aegis runs create
+# ---------------------------------------------------------------------------
+
+
+def test_runs_create_calls_sdk_create_run() -> None:
+    from aegis_sdk.models import RunCreateResponse
+
+    result_obj = RunCreateResponse(
+        run_id="new-run", response=None, principal_id="anonymous", events=[], status="paused"
+    )
+    mock = _make_mock_client(create_run_result=result_obj)
+    with patch("aegis_cli.commands.runs.AegisClient", return_value=mock):
+        result = runner.invoke(app, ["create", "hello", "--route", "underwriting"])
+    assert result.exit_code == 0, result.output
+    mock.create_run.assert_called_once_with(
+        [{"role": "user", "content": "hello"}], route="underwriting", background=False, approvers=[]
+    )
+    assert "new-run" in result.output
+    assert "paused" in result.output
+
+
+def test_runs_create_passes_approvers() -> None:
+    from aegis_sdk.models import RunCreateResponse
+
+    result_obj = RunCreateResponse(
+        run_id="r2", response=None, principal_id="anonymous", events=[], status="paused"
+    )
+    mock = _make_mock_client(create_run_result=result_obj)
+    with patch("aegis_cli.commands.runs.AegisClient", return_value=mock):
+        result = runner.invoke(app, ["create", "hi", "--approver", "jane"])
+    assert result.exit_code == 0
+    mock.create_run.assert_called_once_with(
+        [{"role": "user", "content": "hi"}], route="default", background=False, approvers=["jane"]
+    )
+
+
+def test_runs_create_connect_error_exits_1() -> None:
+    mock = MagicMock()
+    mock.__enter__ = MagicMock(return_value=mock)
+    mock.__exit__ = MagicMock(return_value=False)
+    mock.create_run.side_effect = httpx.ConnectError("refused")
+    with patch("aegis_cli.commands.runs.AegisClient", return_value=mock):
+        result = runner.invoke(app, ["create", "hi"])
+    assert result.exit_code == 1
 
 
 # ---------------------------------------------------------------------------

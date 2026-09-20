@@ -8,7 +8,21 @@ from aegis_core.pipeline.protocol import PipelineNode
 
 
 def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]]:
-    """Return a GuardNode wrapping a ResidencyGuard in the ingress stage."""
+    """Return a GuardNode wrapping a ResidencyGuard in the ingress stage.
+
+    ``aegis.yaml`` fields (beyond ``pack``):
+
+    ``region`` (required)
+        The declared residency region of the endpoint this guardrail's
+        route(s) call, e.g. ``"ca-central-1"``.
+    ``jurisdiction`` (required)
+        Legal jurisdiction for that region, e.g. ``"CA"``.
+    ``allowed_regions`` (optional, default: ``[region]``)
+        Regions permitted without escalation.
+    ``require_approval`` (optional, default: ``false``)
+        When ``true``, a request outside ``allowed_regions`` pauses for
+        human review instead of being blocked outright.
+    """
     from aegis_core.guardrails.spine import GuardNode
     from aegis_pack_residency.guard import ResidencyGuard
     from aegis_pack_residency.schema import ResidencyProfile
@@ -20,14 +34,24 @@ def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]
             guardrail=name,
         )
 
+    jurisdiction: str | None = getattr(cfg, "jurisdiction", None)
+    if not jurisdiction:
+        raise AegisConfigValidationError(
+            f"guardrail {name!r}: aegis.residency requires a 'jurisdiction' field.",
+            guardrail=name,
+        )
+
     allowed_regions: list[str] = getattr(cfg, "allowed_regions", None) or [region]
-    # Build a catch-all profile that applies to every route using this guard.
-    # Routes without explicit profiles will be routed to the declared region.
-    profile = ResidencyProfile(region=region)
-    # We use a sentinel key "__default__" so the guard can find it;
-    # the guard is wrapped in a node that injects the route at scan time via state.
-    # For simplicity we pass profiles as {region: profile} and guard scans state.route.
+    require_approval: bool = bool(getattr(cfg, "require_approval", False))
+
+    # A "__default__" profile applies to every route this guard is attached
+    # to — a single YAML declaration describes one endpoint's residency, not
+    # a per-route map (see ResidencyGuard's per-route `profiles` dict, which
+    # is the lower-level API used when one guard instance polices several
+    # routes with different declared regions).
+    profile = ResidencyProfile(region=region, jurisdiction=jurisdiction)
     profiles: dict[str, ResidencyProfile] = {"__default__": profile}
 
-    guard = ResidencyGuard(profiles=profiles, allowed_regions=allowed_regions, name=name)
+    mode = "require_approval" if require_approval else "block"
+    guard = ResidencyGuard(profiles=profiles, allowed_regions=allowed_regions, mode=mode, name=name)
     return {"ingress": [GuardNode([guard], name=name)]}
