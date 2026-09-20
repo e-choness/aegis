@@ -66,8 +66,20 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
         await run_store.create(record)
         _tracer = getattr(request.app.state, "tracer", None)
         _config_digest = getattr(request.app.state, "config_digest", None)
+        _ledger_store = getattr(request.app.state, "ledger_store", None)
         _task = asyncio.create_task(
-            _run_background(run_id, body.route, state, pipeline, run_store, _tracer, _config_digest)
+            _run_background(
+                run_id,
+                body.route,
+                state,
+                pipeline,
+                run_store,
+                _tracer,
+                _config_digest,
+                ledger_store=_ledger_store,
+                principal_id=principal.id,
+                created_at=record.created_at,
+            )
         )
         _background_tasks.add(_task)
         _task.add_done_callback(_background_tasks.discard)
@@ -104,6 +116,7 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
     if ledger_store is not None:
         import types
         from datetime import UTC, datetime
+
         from aegis_server.store.ledger import make_run_evidence
         ev_ns = types.SimpleNamespace(
             run_id=run_id,
@@ -153,6 +166,7 @@ async def _run_background(
         if ledger_store is not None:
             import types
             from datetime import UTC, datetime
+
             from aegis_server.store.ledger import make_run_evidence
             ev_ns = types.SimpleNamespace(
                 run_id=run_id,

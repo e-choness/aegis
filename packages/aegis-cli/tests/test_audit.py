@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -59,6 +58,25 @@ def test_audit_export_jsonl_stdout() -> None:
     assert len(lines) == 2
     assert json.loads(lines[0])["record_type"] == "model_inventory"
     assert json.loads(lines[1])["record_type"] == "run_evidence"
+
+
+def test_audit_export_csv_columns_match_appendix_1_names() -> None:
+    """CSV header row uses the OSFI Appendix 1 field names verbatim, not internal aliases."""
+    records = [_INVENTORY_RECORD, _RUN_EVIDENCE_RECORD]
+    mock = _mock_client(ledger=records)
+    with patch("aegis_cli.commands.audit.AegisClient", return_value=mock):
+        result = runner.invoke(app, ["audit", "export", "--format", "csv"])
+    assert result.exit_code == 0
+    header = result.output.strip().splitlines()[0]
+    columns = header.split(",")
+    for expected in (
+        "model_id",
+        "model_version",
+        "date_of_deployment",
+        "model_risk_rating",
+        "model_owner",
+    ):
+        assert expected in columns, f"{expected!r} missing from CSV header: {columns}"
 
 
 def test_audit_verify_valid_chain() -> None:

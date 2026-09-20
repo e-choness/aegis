@@ -33,7 +33,7 @@ ruvector.db
 .agents
 .swarm
 .agentdb
-agentdb.db
+agentdb.db**
 
 # Environment variables
 .env

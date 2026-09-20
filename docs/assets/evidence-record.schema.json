@@ -64,7 +64,7 @@
         "completed_at": { "type": "string", "format": "date-time" },
         "status": {
           "type": "string",
-          "enum": ["completed", "blocked", "denied", "error", "running", "pending"]
+          "enum": ["completed", "blocked", "denied", "error", "running", "pending", "paused"]
         },
         "events": {
           "type": "array",
@@ -78,7 +78,15 @@
             }
           }
         },
-        "approver": { "type": ["string", "null"] }
+        "approver": {
+          "type": ["object", "null"],
+          "description": "Set when this record reflects a HITL /resume decision.",
+          "properties": {
+            "principal_id": { "type": "string" },
+            "decision": { "type": "string" },
+            "at": { "type": "string" }
+          }
+        }
       },
       "required": ["record_type", "run_id", "model_id", "principal_id", "completed_at", "status"]
     }

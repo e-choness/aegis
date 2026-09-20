@@ -18,7 +18,6 @@ import json
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -100,11 +99,16 @@ def make_inventory_record(
     }
 
 
-def make_run_evidence(record: object, completed_at: str) -> dict:
+def make_run_evidence(
+    record: object,
+    completed_at: str,
+    approver: dict | None = None,
+) -> dict:
     """Return a ``run_evidence`` body from a RunRecord-like object.
 
     Uses ``getattr`` so this module does not import from ``run_store``
-    (avoids circular imports).
+    (avoids circular imports). *approver* carries ``{"principal_id",
+    "decision", "at"}`` when this record reflects a HITL resume decision.
     """
     return {
         "record_type": "run_evidence",
@@ -116,7 +120,7 @@ def make_run_evidence(record: object, completed_at: str) -> dict:
         "completed_at": completed_at,
         "status": getattr(record, "status", ""),
         "events": redact_events(list(getattr(record, "events", []))),
-        "approver": None,
+        "approver": approver,
     }
 
 
