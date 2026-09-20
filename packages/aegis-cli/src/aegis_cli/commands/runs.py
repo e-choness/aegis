@@ -30,6 +30,36 @@ def _make_client() -> AegisClient:
     return AegisClient(base_url=_base_url(), api_key=_api_key())
 
 
+@app.command("create")
+def create_run(
+    message: str = typer.Argument(..., help="Message content to submit (role=user)."),
+    route: str = typer.Option("default", "--route", "-r", help="Route name to use."),
+    approver: list[str] | None = typer.Option(
+        None, "--approver", help="Principal ID allowed to approve/deny (repeatable). Any principal if omitted."
+    ),
+    background: bool = typer.Option(False, "--background", help="Submit as a background run."),
+) -> None:
+    """Submit a run against a live `aegis serve` server."""
+    try:
+        with _make_client() as client:
+            result = client.create_run(
+                [{"role": "user", "content": message}],
+                route=route,
+                background=background,
+                approvers=approver or [],
+            )
+    except httpx.ConnectError:
+        typer.echo(f"Cannot connect to {_base_url()}", err=True)
+        raise typer.Exit(1) from None
+    except httpx.HTTPStatusError as exc:
+        typer.echo(f"Error {exc.response.status_code}: {exc.response.text}", err=True)
+        raise typer.Exit(1) from None
+    typer.echo(f"run_id: {result.run_id}")
+    typer.echo(f"status: {result.status}")
+    if result.response is not None:
+        typer.echo(f"response: {result.response}")
+
+
 @app.command("list")
 def list_runs(
     pending: bool = typer.Option(False, "--pending", help="Show only paused/pending runs."),

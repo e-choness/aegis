@@ -62,6 +62,14 @@ class TestScaffoldGuardrail:
         toml = (result / "pyproject.toml").read_text()
         assert "aegis_guardrail_demo_guard" in toml
 
+    def test_creates_factory_with_packs_entry_point(self, tmp_path: Path) -> None:
+        """Guardrails are declarable in YAML `guardrails:` via the aegis.packs group (Phase 0)."""
+        result = scaffold_plugin("guardrail", "demo-guard", output_dir=tmp_path)
+        assert (result / "src" / "aegis_guardrail_demo_guard" / "factory.py").exists()
+        toml = (result / "pyproject.toml").read_text()
+        assert '"aegis.packs"' in toml
+        assert "factory:from_config" in toml
+
     def test_scaffolded_guardrail_passes_contract_test(self, tmp_path: Path) -> None:
         """The generated tests/ pass with zero edits to the scaffold."""
         result = scaffold_plugin("guardrail", "demo-guard", output_dir=tmp_path)
@@ -122,10 +130,104 @@ class TestScaffoldProvider:
         )
 
 
+class TestScaffoldNode:
+    def test_creates_package_root(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        assert result.exists()
+        assert result.name == "aegis-node-demo-node"
+
+    def test_creates_pyproject_toml(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        toml = (result / "pyproject.toml").read_text()
+        assert 'name = "aegis-node-demo-node"' in toml
+        assert '"aegis.nodes"' in toml
+
+    def test_creates_src_package(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        src_pkg = result / "src" / "aegis_node_demo_node"
+        assert (src_pkg / "__init__.py").exists()
+        assert (src_pkg / "node.py").exists()
+
+    def test_creates_contract_test(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        content = (result / "tests" / "test_contract.py").read_text()
+        assert "NodeContractKit" in content
+        assert "DemoNode" in content
+
+    def test_node_impl_has_run_method(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        impl = (result / "src" / "aegis_node_demo_node" / "node.py").read_text()
+        assert "async def run" in impl
+        assert "RunStateDelta" in impl
+
+    def test_creates_factory_with_packs_entry_point(self, tmp_path: Path) -> None:
+        """Nodes are declarable in YAML `guardrails:` via the aegis.packs group (Phase 0)."""
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        assert (result / "src" / "aegis_node_demo_node" / "factory.py").exists()
+        toml = (result / "pyproject.toml").read_text()
+        assert '"aegis.packs"' in toml
+        assert "factory:from_config" in toml
+
+    def test_creates_factory_roundtrip_test(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        content = (result / "tests" / "test_factory.py").read_text()
+        assert "from_config" in content
+        assert "test_from_config_is_deterministic" in content
+
+    def test_scaffolded_node_passes_contract_test(self, tmp_path: Path) -> None:
+        """The generated tests/ pass with zero edits to the scaffold."""
+        result = scaffold_plugin("node", "demo-node", output_dir=tmp_path)
+        outcome = subprocess.run(
+            [sys.executable, "-m", "pytest", str(result / "tests"), "-q", "--tb=short"],
+            capture_output=True,
+            text=True,
+        )
+        assert outcome.returncode == 0, (
+            f"Scaffolded node tests failed:\n{outcome.stdout}\n{outcome.stderr}"
+        )
+
+
+class TestScaffoldExporter:
+    def test_creates_package_root(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("exporter", "demo-sink", output_dir=tmp_path)
+        assert result.exists()
+        assert result.name == "aegis-exporter-demo-sink"
+
+    def test_creates_pyproject_toml(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("exporter", "demo-sink", output_dir=tmp_path)
+        toml = (result / "pyproject.toml").read_text()
+        assert 'name = "aegis-exporter-demo-sink"' in toml
+        assert '"aegis.exporters"' in toml
+        # Exporters aren't declared via YAML `guardrails:` — no packs entry.
+        assert '"aegis.packs"' not in toml
+
+    def test_creates_contract_test(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("exporter", "demo-sink", output_dir=tmp_path)
+        content = (result / "tests" / "test_contract.py").read_text()
+        assert "ExporterContractKit" in content
+        assert "DemoSink" in content
+
+    def test_exporter_impl_has_export_method(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("exporter", "demo-sink", output_dir=tmp_path)
+        impl = (result / "src" / "aegis_exporter_demo_sink" / "exporter.py").read_text()
+        assert "async def export" in impl
+
+    def test_scaffolded_exporter_passes_contract_test(self, tmp_path: Path) -> None:
+        result = scaffold_plugin("exporter", "demo-sink", output_dir=tmp_path)
+        outcome = subprocess.run(
+            [sys.executable, "-m", "pytest", str(result / "tests"), "-q", "--tb=short"],
+            capture_output=True,
+            text=True,
+        )
+        assert outcome.returncode == 0, (
+            f"Scaffolded exporter tests failed:\n{outcome.stdout}\n{outcome.stderr}"
+        )
+
+
 class TestScaffoldInvalidKind:
     def test_invalid_kind_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="Unknown plugin kind"):
-            scaffold_plugin("node", "my-node", output_dir=tmp_path)
+            scaffold_plugin("database", "my-thing", output_dir=tmp_path)
 
     def test_invalid_kind_message_lists_valid(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="guardrail"):

@@ -22,7 +22,7 @@ class TestWriteInitYaml:
         write_init_yaml(out)
         content = out.read_text()
         assert "pii" in content
-        assert "aegis_pack_pii" in content
+        assert "pack: aegis.pii" in content
 
     def test_file_is_valid_yaml(self, tmp_path: Path) -> None:
         out = tmp_path / "aegis.yaml"
@@ -107,9 +107,12 @@ class TestInitLintClean:
         assert isinstance(parsed, dict)
 
     def test_template_has_commented_sections(self) -> None:
-        """Template contains commented-out optional sections."""
-        assert "# providers:" in _TEMPLATE
-        assert "# routes:" in _TEMPLATE
+        """Template contains commented-out optional extras (a second provider,
+        additional guardrail packs) so a user can uncomment rather than write
+        them from scratch.
+        """
+        assert "# my_provider:" in _TEMPLATE
+        assert "# residency:" in _TEMPLATE
 
     def test_template_has_pii_active(self) -> None:
         """PII is active (not commented out)."""

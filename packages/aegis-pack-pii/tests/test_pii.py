@@ -212,3 +212,62 @@ async def test_round_trip_pii_never_reaches_provider() -> None:
 
     # Final response must contain the restored original email
     assert result.response == "Got it, user@example.com"
+
+
+# ---------------------------------------------------------------------------
+# Constructor `name` override (used by from_config to namespace declarations)
+# ---------------------------------------------------------------------------
+
+
+def test_mask_node_accepts_name_override() -> None:
+    node = PiiMaskNode(name="pii.mask")
+    assert node.name == "pii.mask"
+
+
+def test_mask_node_default_name_unchanged() -> None:
+    assert PiiMaskNode().name == "pii_mask_node"
+
+
+def test_unmask_node_accepts_name_override() -> None:
+    node = PiiUnmaskNode(name="pii.unmask")
+    assert node.name == "pii.unmask"
+
+
+def test_unmask_node_default_name_unchanged() -> None:
+    assert PiiUnmaskNode().name == "pii_unmask_node"
+
+
+# ---------------------------------------------------------------------------
+# from_config factory — must actually be callable from aegis.yaml
+# ---------------------------------------------------------------------------
+
+
+class TestPiiFactory:
+    def test_mask_mode_returns_ingress_and_egress_nodes(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+
+        result = from_config("pii", GuardrailConfig(pack="aegis.pii", mode="mask"))
+        assert set(result.keys()) == {"ingress", "egress"}
+        assert isinstance(result["ingress"][0], PiiMaskNode)
+        assert isinstance(result["egress"][0], PiiUnmaskNode)
+        assert result["ingress"][0].name == "pii.mask"
+        assert result["egress"][0].name == "pii.unmask"
+
+    def test_detect_mode_returns_guard_node(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+
+        result = from_config("pii", GuardrailConfig(pack="aegis.pii", mode="detect"))
+        assert set(result.keys()) == {"ingress"}
+
+    def test_unknown_mode_raises_config_error(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.errors import AegisConfigValidationError
+
+        with pytest.raises(AegisConfigValidationError):
+            from_config("pii", GuardrailConfig(pack="aegis.pii", mode="nope"))

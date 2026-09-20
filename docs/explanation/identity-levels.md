@@ -2,7 +2,7 @@
 
 Aegis v2 targets **L2** on this ladder:
 
-- **L0 — anonymous.** `aegis dev` on localhost: no auth, single user.
+- **L0 — anonymous.** `aegis serve --no-auth` on localhost: no auth, single user.
 - **L1 — authenticated.** Virtual API keys (`aeg-...`, SHA-256 hashed, shown
   once at creation) resolve to a `Principal{id, team, labels}` attached to
   every run. Clients hold Aegis keys, never real provider credentials — that
@@ -30,7 +30,6 @@ would live; RAG namespaces already partition collections; policy is already
 evaluated per principal; routes already compile independently. If L3 arrives,
 it arrives as addition, not rewrite.
 
-Two defaults follow from taking identity seriously: `aegis serve` refuses to
-start without an authenticator unless `--no-auth` is explicit, and `aegis dev`
-binds localhost with auth off. Secure by default; frictionless where it is
-safe to be.
+One default follows from taking identity seriously: `aegis serve` refuses to
+start without an authenticator unless `--no-auth` is explicit. Secure by
+default; frictionless where it is safe to be.

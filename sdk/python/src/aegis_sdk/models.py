@@ -26,6 +26,8 @@ class RunStatusResponse(BaseModel):
     principal_id: str
     status: str
     approvers: list[str]
+    events: list[dict[str, object]] = []
+    config_digest: str | None = None
 
 
 class ResumeResponse(BaseModel):

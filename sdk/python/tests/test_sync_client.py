@@ -193,3 +193,21 @@ def test_sync_create_run_raises_on_401() -> None:
     with patch.object(client._client, "post", return_value=_mock_response(401, {"detail": "Unauthorized"})):
         with pytest.raises(httpx.HTTPStatusError):
             client.create_run([{"role": "user", "content": "hi"}])
+
+
+# ---------------------------------------------------------------------------
+# timeout — httpx's 5s default is too short for a real completion or a
+# guardrail with first-call model loading (e.g. Presidio's spaCy pipeline)
+# ---------------------------------------------------------------------------
+
+
+def test_sync_client_default_timeout_exceeds_httpx_default() -> None:
+    client = AegisClient("http://test")
+    timeout = client._client.timeout
+    assert timeout.read is None or timeout.read > 5.0
+    assert timeout.connect is None or timeout.connect > 5.0
+
+
+def test_sync_client_timeout_override() -> None:
+    client = AegisClient("http://test", timeout=httpx.Timeout(3.0))
+    assert client._client.timeout.read == 3.0

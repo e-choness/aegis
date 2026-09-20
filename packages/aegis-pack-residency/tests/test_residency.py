@@ -16,7 +16,10 @@ from aegis_pack_residency import (
     ResidencyProfile,
     lint_endpoint,
 )
+from aegis_pack_residency.factory import from_config
 
+from aegis_core.config.models import GuardrailConfig
+from aegis_core.errors import AegisConfigValidationError
 from aegis_core.pipeline.state import RunState
 from aegis_core.providers.models import Message
 from aegis_core.testing.guardrails import GuardrailContractKit
@@ -249,6 +252,76 @@ class TestResidencyGuardRouting:
         assert verdict.is_block
         assert verdict.reason is not None
         assert "fail-closed" in verdict.reason
+
+    async def test_default_profile_fallback_applies_to_any_route(self) -> None:
+        """A "__default__" profile entry applies to a route with no explicit entry."""
+        guard = self._make_guard(
+            profiles={"__default__": ResidencyProfile(region="eu-west-1", jurisdiction="EU")},
+            allowed_regions=["eu-west-1"],
+        )
+        verdict = await guard.scan(_state("any-route-name"))
+        assert verdict.is_allow
+
+    async def test_require_approval_mode_pauses_instead_of_blocking(self) -> None:
+        guard = ResidencyGuard(
+            profiles={"__default__": ResidencyProfile(region="us-east-1", jurisdiction="US")},
+            allowed_regions=["ca-central-1"],
+            mode="require_approval",
+        )
+        verdict = await guard.scan(_state("underwriting"))
+        assert verdict.is_require_approval
+        assert verdict.prompt is not None
+        assert "underwriting" in verdict.prompt
+
+    async def test_require_approval_mode_still_fails_closed_on_no_profile(self) -> None:
+        """mode="require_approval" only softens a *declared* mismatch, not a missing profile."""
+        guard = ResidencyGuard(profiles={}, allowed_regions=["ca-central-1"], mode="require_approval")
+        verdict = await guard.scan(_state("orphan"))
+        assert verdict.is_block
+
+
+# ---------------------------------------------------------------------------
+# from_config factory (Phase 4 — must actually be usable from aegis.yaml)
+# ---------------------------------------------------------------------------
+
+
+class TestResidencyFactory:
+    def _cfg(self, **extra: object) -> GuardrailConfig:
+        return GuardrailConfig(pack="aegis.residency", region="ca-central-1", jurisdiction="CA", **extra)
+
+    def test_missing_region_raises_config_error(self) -> None:
+        with pytest.raises(AegisConfigValidationError, match="region"):
+            from_config("residency", GuardrailConfig(pack="aegis.residency", jurisdiction="CA"))
+
+    def test_missing_jurisdiction_raises_config_error(self) -> None:
+        with pytest.raises(AegisConfigValidationError, match="jurisdiction"):
+            from_config("residency", GuardrailConfig(pack="aegis.residency", region="ca-central-1"))
+
+    def test_returns_ingress_guard_node(self) -> None:
+        result = from_config("residency", self._cfg())
+        assert set(result.keys()) == {"ingress"}
+        assert len(result["ingress"]) == 1
+
+    async def test_allows_declared_region_from_any_route(self) -> None:
+        result = from_config("residency", self._cfg(allowed_regions=["ca-central-1"]))
+        node = result["ingress"][0]
+        guard = node.guards[0]  # type: ignore[attr-defined]
+        verdict = await guard.scan(_state("underwriting"))
+        assert verdict.is_allow
+
+    async def test_blocks_by_default_when_region_not_allowed(self) -> None:
+        result = from_config("residency", self._cfg(allowed_regions=["us-east-1"]))
+        guard = result["ingress"][0].guards[0]  # type: ignore[attr-defined]
+        verdict = await guard.scan(_state("underwriting"))
+        assert verdict.is_block
+
+    async def test_require_approval_flag_pauses_instead_of_blocking(self) -> None:
+        result = from_config(
+            "residency", self._cfg(allowed_regions=["us-east-1"], require_approval=True)
+        )
+        guard = result["ingress"][0].guards[0]  # type: ignore[attr-defined]
+        verdict = await guard.scan(_state("underwriting"))
+        assert verdict.is_require_approval
 
 
 # ---------------------------------------------------------------------------

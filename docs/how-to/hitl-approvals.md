@@ -45,14 +45,19 @@ class SensitiveTopicGuard:
 
 ## Enable a checkpointer
 
-HITL requires a checkpointer. For development, SQLite is automatic when using
-`aegis dev`. For production, configure Postgres:
+HITL requires a checkpointer — without one, a paused run can never be
+resumed. `aegis serve` wires a SQLite-backed checkpointer automatically:
 
-```yaml
-persistence:
-  type: postgres
-  url: secret://env/DATABASE_URL
+```bash
+aegis serve --config aegis.yaml --checkpoint-db /var/lib/aegis/checkpoints.db
 ```
+
+(`aegis_checkpoints.db` in the current directory if `--checkpoint-db` is
+omitted.) A Postgres-backed checkpointer
+(`aegis_core.pipeline.checkpointer.postgres_checkpointer`) exists for anyone
+embedding `aegis-server` programmatically, but there is no `aegis serve`
+config option to select it yet — there is no `persistence:` key in
+`aegis.yaml`'s schema.
 
 ## Approve or deny
 

@@ -1,69 +1,107 @@
-"""Scenario 02 — Human-in-the-loop approval flow.
+"""Scenario 02 — Vendor-diligence approval flow (Phase 4).
+
+The scenario the README hero cast is built from: a loan-underwriting
+request carrying a Canadian SIN gets routed to a US-region model. The
+`residency_ca` guardrail doesn't block that outright — it's
+`require_approval`, not fail-closed — so the run pauses for a named human
+reviewer instead. The reviewer denies it. The evidence ledger records both
+the pause and the denial, with the reviewer's identity attached, and the
+whole chain verifies offline.
 
 Demonstrates:
-- Submitting a run that requires human approval (background=True + approvers).
-- Polling the run status until it is paused.
-- Approving the run via the resume endpoint.
-- Verifying the run completes after approval.
+- Submitting a request that trips a `require_approval` residency guardrail.
+- Listing pending runs and denying one as a named principal (not "anonymous").
+- `aegis explain` rendering the verdict trail with the approver attached.
+- `aegis audit export` + `aegis audit verify` on just that route.
 
 Prerequisites:
-    - Aegis server running with a checkpointer-enabled route that uses
-      require_approval (e.g. aegis dev with an approval-gated config).
-    - Set AEGIS_SERVER_URL and AEGIS_API_KEY as appropriate.
+    aegis keys create svc-underwriting --keys-file examples/fintech-keys.json
+    aegis keys create jane             --keys-file examples/fintech-keys.json
+    aegis serve --config examples/fintech.yaml \\
+        --keys-file examples/fintech-keys.json \\
+        --ledger-db /tmp/fintech-ledger.db \\
+        --checkpoint-db /tmp/fintech-checkpoints.db
+
+    Then set AEGIS_UNDERWRITING_KEY and AEGIS_JANE_KEY to the two printed keys.
 
 Note:
-    The default dev server route does not require approval.
-    This scenario illustrates the SDK call pattern used with a
-    properly configured approval-gated route.
+    The route's PII guardrail loads a spaCy model on its first real request
+    (Presidio's `AnalyzerEngine`) — the first call to `create_run()` below
+    can take ~20-30s. Subsequent calls are fast. If recording a timed demo
+    cast, send one throwaway request first so that cost doesn't show on camera.
 """
 
 from __future__ import annotations
 
 import os
-import time
+import subprocess
+import sys
 
 from aegis_sdk import AegisClient
 
 SERVER_URL = os.environ.get("AEGIS_SERVER_URL", "http://localhost:8000")
-API_KEY = os.environ.get("AEGIS_API_KEY", "")
-APPROVER = os.environ.get("AEGIS_APPROVER", "")
+UNDERWRITING_KEY = os.environ.get("AEGIS_UNDERWRITING_KEY", "")
+JANE_KEY = os.environ.get("AEGIS_JANE_KEY", "")
+ROUTE = os.environ.get("AEGIS_ROUTE", "underwriting")
+
+
+def _run_aegis_cli(*args: str, api_key: str) -> str:
+    """Invoke the real `aegis` CLI as a subprocess so this script's output
+    matches exactly what a terminal (and the asciinema cast) would show.
+    """
+    env = {**os.environ, "AEGIS_SERVER_URL": SERVER_URL, "AEGIS_API_KEY": api_key}
+    result = subprocess.run(
+        ["aegis", *args],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    print(result.stdout, end="")
+    if result.returncode != 0:
+        print(result.stderr, end="", file=sys.stderr)
+    return result.stdout
 
 
 def main() -> None:
-    with AegisClient(base_url=SERVER_URL, api_key=API_KEY) as client:
-        print("── Scenario 02: Approval Flow ──────────────────────")
+    if not UNDERWRITING_KEY or not JANE_KEY:
+        print("Set AEGIS_UNDERWRITING_KEY and AEGIS_JANE_KEY first — see this file's docstring.")
+        raise SystemExit(1)
 
-        # Submit a background run that requires approval.
-        print("\n[1] Submitting run (background, requires approval):")
+    print("── Scenario 02: Vendor-Diligence Approval Flow ─────────────")
+
+    print("\n[1] Submitting an underwriting request containing a SIN, to a US-region model:")
+    with AegisClient(base_url=SERVER_URL, api_key=UNDERWRITING_KEY) as client:
         run = client.create_run(
-            [{"role": "user", "content": "Draft a contract clause for data retention."}],
-            route="default",
-            background=True,
-            approvers=[APPROVER] if APPROVER else [],
+            [
+                {
+                    "role": "user",
+                    "content": "Applicant SIN is 046-454-286, please assess underwriting risk.",
+                }
+            ],
+            route=ROUTE,
+            approvers=["jane"],
         )
-        run_id = run.run_id
-        print(f"  run_id : {run_id}")
-        print(f"  status : {run.status}")
+    print(f"  run_id : {run.run_id}")
+    print(f"  status : {run.status}")
 
-        # Poll until paused (or completed if approval is not required on this route).
-        print("\n[2] Polling for paused status …")
-        for _ in range(10):
-            status_resp = client.get_run(run_id)
-            print(f"  status : {status_resp.status}")
-            if status_resp.status in ("paused", "completed", "blocked", "denied", "error"):
-                break
-            time.sleep(1)
+    if run.status != "paused":
+        print(f"\n  Expected 'paused' (require_approval residency guard); got {run.status!r}.")
+        print("  Is the server running examples/fintech.yaml?")
+        raise SystemExit(1)
 
-        if status_resp.status != "paused":
-            print(f"\n  Route not configured for approval (status={status_resp.status}).")
-            print("  Point this scenario at an approval-gated route to see the full flow.")
-            return
+    print("\n[2] Pending runs:")
+    _run_aegis_cli("runs", "list", "--pending", api_key=JANE_KEY)
 
-        # Approve the run.
-        print("\n[3] Approving run …")
-        resume = client.resume_run(run_id, "approved")
-        print(f"  status   : {resume.status}")
-        print(f"  response : {resume.response}")
+    print("\n[3] jane denies it:")
+    _run_aegis_cli("runs", "deny", run.run_id, api_key=JANE_KEY)
+
+    print("\n[4] The full verdict trail, with the approver attached:")
+    _run_aegis_cli("explain", run.run_id, api_key=JANE_KEY)
+
+    print(f"\n[5] Export the evidence for route={ROUTE!r} and verify the chain offline:")
+    export_path = "/tmp/fintech-evidence.jsonl"
+    _run_aegis_cli("audit", "export", "--route", ROUTE, "--output", export_path, api_key=JANE_KEY)
+    _run_aegis_cli("audit", "verify", export_path, api_key=JANE_KEY)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,12 @@ import httpx
 
 from aegis_sdk.models import ResumeResponse, RunCreateResponse, RunStatusResponse
 
+#: httpx defaults to a 5-second timeout on every phase (connect/read/write/pool).
+#: A real model completion — or a guardrail doing first-call model loading,
+#: e.g. Presidio's spaCy pipeline — routinely takes longer than that, so the
+#: default here is deliberately generous. Pass `timeout=` to override.
+_DEFAULT_TIMEOUT = 60.0
+
 
 class AegisClient:
     """Synchronous Aegis API client."""
@@ -20,11 +26,12 @@ class AegisClient:
         api_key: str = "",
         *,
         transport: httpx.BaseTransport | None = None,
+        timeout: float | httpx.Timeout = _DEFAULT_TIMEOUT,
     ) -> None:
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers}
+        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers, "timeout": timeout}
         if transport is not None:
             kwargs["transport"] = transport
         self._client = httpx.Client(**kwargs)
@@ -76,6 +83,33 @@ class AegisClient:
         result: list[dict[str, Any]] = resp.json()["runs"]
         return result
 
+    def list_ledger(
+        self,
+        *,
+        since_seq: int = 0,
+        route: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"since_seq": since_seq}
+        if route is not None:
+            params["route"] = route
+        resp = self._client.get("/v1/audit/ledger", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    def inventory_records(self, *, route: str | None = None) -> list[dict[str, Any]]:
+        params: dict[str, str] = {}
+        if route is not None:
+            params["route"] = route
+        resp = self._client.get("/v1/audit/inventory", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    def audit_report(self) -> dict[str, Any]:
+        resp = self._client.get("/v1/audit/report")
+        resp.raise_for_status()
+        result: dict[str, Any] = resp.json()
+        return result
+
     def chat(
         self,
         messages: list[dict[str, str]],
@@ -123,11 +157,12 @@ class AsyncAegisClient:
         api_key: str = "",
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        timeout: float | httpx.Timeout = _DEFAULT_TIMEOUT,
     ) -> None:
         headers: dict[str, str] = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers}
+        kwargs: dict[str, Any] = {"base_url": base_url, "headers": headers, "timeout": timeout}
         if transport is not None:
             kwargs["transport"] = transport
         self._client = httpx.AsyncClient(**kwargs)
@@ -177,6 +212,33 @@ class AsyncAegisClient:
         resp = await self._client.get("/v1/audit", params=params)
         resp.raise_for_status()
         result: list[dict[str, Any]] = resp.json()["runs"]
+        return result
+
+    async def list_ledger(
+        self,
+        *,
+        since_seq: int = 0,
+        route: str | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"since_seq": since_seq}
+        if route is not None:
+            params["route"] = route
+        resp = await self._client.get("/v1/audit/ledger", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    async def inventory_records(self, *, route: str | None = None) -> list[dict[str, Any]]:
+        params: dict[str, str] = {}
+        if route is not None:
+            params["route"] = route
+        resp = await self._client.get("/v1/audit/inventory", params=params)
+        resp.raise_for_status()
+        return resp.json()["records"]
+
+    async def audit_report(self) -> dict[str, Any]:
+        resp = await self._client.get("/v1/audit/report")
+        resp.raise_for_status()
+        result: dict[str, Any] = resp.json()
         return result
 
     async def chat(

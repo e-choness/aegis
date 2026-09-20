@@ -85,6 +85,10 @@ class PiiMaskNode:
 
     name: str = "pii_mask_node"
 
+    def __init__(self, name: str | None = None) -> None:
+        if name is not None:
+            self.name = name
+
     async def run(self, state: RunState) -> RunStateDelta:
         """Mask PII in all messages; return updated messages and mask_map."""
         type_counts: dict[str, int] = {}

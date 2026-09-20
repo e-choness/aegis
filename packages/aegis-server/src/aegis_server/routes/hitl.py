@@ -28,6 +28,8 @@ class RunStatusResponse(BaseModel):
     principal_id: str
     status: str
     approvers: list[str]
+    events: list[dict[str, Any]] = []
+    config_digest: str | None = None
 
 
 class ResumeResponse(BaseModel):
@@ -49,6 +51,8 @@ async def get_run(run_id: str, request: Request) -> RunStatusResponse:
         principal_id=record.principal_id,
         status=record.status,
         approvers=record.approvers,
+        events=record.events,
+        config_digest=record.config_digest,
     )
 
 
@@ -86,10 +90,39 @@ async def resume_run(run_id: str, body: ResumeRequest, request: Request) -> Resu
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    events_dicts = [e.to_dict() for e in result.events]
     await run_store.update_status(run_id, result.status)
+    await run_store.update_events(run_id, events_dicts, record.config_digest)
+
+    ledger_store = getattr(request.app.state, "ledger_store", None)
+    if ledger_store is not None:
+        import types
+        from datetime import UTC, datetime
+
+        from aegis_server.store.ledger import make_run_evidence
+
+        ev_ns = types.SimpleNamespace(
+            run_id=run_id,
+            route=record.route,
+            principal_id=record.principal_id,
+            config_digest=record.config_digest,
+            created_at=record.created_at,
+            status=result.status,
+            events=events_dicts,
+        )
+        approver = {
+            "principal_id": principal.id,
+            "decision": body.decision,
+            "at": datetime.now(tz=UTC).isoformat(),
+        }
+        ev_body = make_run_evidence(
+            ev_ns, datetime.now(tz=UTC).isoformat(), approver=approver
+        )
+        await ledger_store.append(run_id, ev_body)
+
     return ResumeResponse(
         run_id=result.run_id,
         status=result.status,
         response=result.response,
-        events=[e.to_dict() for e in result.events],
+        events=events_dicts,
     )

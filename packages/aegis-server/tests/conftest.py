@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -10,6 +12,7 @@ from aegis_core.testing.providers import FakeProvider
 from aegis_server.app import create_app
 from aegis_server.auth import ApiKeyAuthenticator
 from aegis_server.keys import KeyStore
+from aegis_server.store.ledger import InMemoryLedgerStore
 
 
 @pytest.fixture
@@ -47,6 +50,21 @@ def client(executor: PipelineExecutor, key_store: KeyStore, valid_key: str) -> T
 def client_no_auth(executor: PipelineExecutor) -> TestClient:
     app = create_app(executor, no_auth=True)
     return TestClient(app, raise_server_exceptions=True)
+
+
+@pytest.fixture
+def client_with_ledger(executor: PipelineExecutor) -> Generator[TestClient, None, None]:
+    """Client with InMemoryLedgerStore wired; uses generator form so lifespan fires."""
+    ledger = InMemoryLedgerStore()
+    app = create_app(
+        executor,
+        no_auth=True,
+        ledger_store=ledger,
+        config_digest="sha256:test",
+        route_metadata={"default": {"description": "test route", "risk_rating": "low"}},
+    )
+    with TestClient(app, raise_server_exceptions=True) as client:
+        yield client
 
 
 @pytest.fixture

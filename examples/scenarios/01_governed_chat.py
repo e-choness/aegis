@@ -6,7 +6,7 @@ Demonstrates:
 - A blocked request when injection patterns are detected.
 
 Prerequisites:
-    - Aegis server running (aegis dev or aegis serve)
+    - Aegis server running (aegis serve --config examples/dev.yaml --no-auth)
     - Set AEGIS_SERVER_URL (default: http://localhost:8000)
     - Set AEGIS_API_KEY if auth is enabled
 """

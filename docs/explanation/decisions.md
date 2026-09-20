@@ -84,7 +84,7 @@ Tiered extras — `aegis-gateway` (slim), `[pii]`, `[llm-guard]`, `[rag]`, `[all
 
 ## D17 — Identity (L2)
 
-`Authenticator` contract resolves credentials → `Principal{id, team, labels}`. Default impls: `none` (dev) and `api_key` (Aegis-issued virtual keys, SHA-256 hashed, `Authorization: Bearer aeg-...`, managed via `aegis keys create|list|revoke`; plaintext shown once). Auth runs as FastAPI middleware before the graph. Policy-per-principal via existing packs (budgets per team, allowed routes per key, residency per principal label). `runs approve` checks approver principal against an `approvers:` policy. `aegis serve` refuses to start without an authenticator unless `--no-auth` is explicit; `aegis dev` binds localhost with auth off. L3 multi-tenancy is explicitly out of scope; seams left: `Principal.labels`, RAG namespaces, per-principal policy.
+`Authenticator` contract resolves credentials → `Principal{id, team, labels}`. Default impls: `none` (dev) and `api_key` (Aegis-issued virtual keys, SHA-256 hashed, `Authorization: Bearer aeg-...`, managed via `aegis keys create|list|revoke`; plaintext shown once). Auth runs as FastAPI middleware before the graph. Policy-per-principal via existing packs (budgets per team, allowed routes per key, residency per principal label). `runs approve` checks approver principal against an `approvers:` policy. `aegis serve` refuses to start without an authenticator unless `--no-auth` is explicit (the removed `aegis dev` command used to bind localhost with auth off by default — Phase 0 folded that into `aegis serve --no-auth` plus a `type: fake` provider, one code path instead of two). L3 multi-tenancy is explicitly out of scope; seams left: `Principal.labels`, RAG namespaces, per-principal policy.
 
 ## D18 — DX
 

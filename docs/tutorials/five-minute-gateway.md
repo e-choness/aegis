@@ -20,31 +20,40 @@ pip install aegis-gateway
 aegis init          # writes aegis.yaml in the current directory
 ```
 
-The generated `aegis.yaml` enables PII masking and leaves everything else as
-commented examples. For this tutorial, replace its contents with the minimal
-working config below:
+The generated `aegis.yaml` already wires a `fake` provider — a safe in-memory
+provider that returns a canned response without making any real model calls
+— plus PII masking, so it works with zero credentials as-is:
 
 ```yaml
 providers:
-  demo:
-    type: openai_compatible
-    base_url: http://localhost:8000/v1
-    api_key: demo
+  default:
+    type: fake
+    complete_response: "[aegis] hello — replace this provider with a real one"
+
+guardrails:
+  pii:
+    pack: aegis.pii
+    mode: mask
+
+pipeline:
+  ingress: [pii]
+  egress: [pii]
 
 routes:
   default:
-    provider: demo
+    provider: default
+
+auth:
+  type: none
 ```
 
-## 3. Start the dev server
+## 3. Start the server
 
 ```bash
-aegis dev           # binds localhost:8000, no auth, FakeProvider
+aegis serve --config aegis.yaml --no-auth   # binds localhost:8000, no auth
 ```
 
-The `dev` command always uses `FakeProvider` — a safe in-memory provider that
-returns a canned response without making any real model calls. Leave this
-terminal running.
+Leave this terminal running.
 
 ## 4. Send a governed chat request
 

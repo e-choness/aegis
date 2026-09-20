@@ -36,3 +36,20 @@ def test_run_unknown_route_returns_404(client: TestClient, valid_key: str) -> No
         json={"messages": [{"role": "user", "content": "hi"}], "route": "no-such-route"},
     )
     assert resp.status_code == 404
+
+
+def test_run_record_persists_events_and_digest(client_with_digest: TestClient) -> None:
+    """POST /v1/runs then GET /v1/runs/{id} must include events and config_digest (Phase 1)."""
+    post_resp = client_with_digest.post(
+        "/v1/runs",
+        json={"messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert post_resp.status_code == 200
+    run_id = post_resp.json()["run_id"]
+
+    get_resp = client_with_digest.get(f"/v1/runs/{run_id}")
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert isinstance(data["events"], list)
+    assert "config_digest" in data
+    assert data["config_digest"] == "sha256:abc123"

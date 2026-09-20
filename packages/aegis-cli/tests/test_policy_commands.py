@@ -21,16 +21,24 @@ class TestPolicyLint:
         return p
 
     def test_valid_config_importable_pack_no_pol002(self, tmp_path: Path) -> None:
+        """A pack name registered under the aegis.packs entry-point group lints clean.
+
+        Regression: this used to check `importlib.util.find_spec(pack)` — but
+        a pack name (`"aegis.pii"`) is an entry-point key, not a Python module
+        path, so that check reported every correctly-configured pack as "not
+        installed." `pack: aegis_core` (a real importable module, but not a
+        registered pack) used to pass this test for the wrong reason.
+        """
         cfg = self._write_config(tmp_path, """
             guardrails:
               injection:
-                pack: aegis_core
+                pack: aegis.pii
             pipeline:
               ingress: [injection]
         """)
         issues = lint_policy(cfg)
         pol002 = [i for i in issues if i.code == "AEG-POL-002"]
-        assert not pol002
+        assert not pol002, pol002
 
     def test_valid_pipeline_refs_no_pol001(self, tmp_path: Path) -> None:
         cfg = self._write_config(tmp_path, """

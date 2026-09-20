@@ -7,6 +7,35 @@ Everything with an opinion — which providers exist, what the guardrails check,
 where vectors live, how credentials resolve, who a request belongs to — is a
 plugin implementing one of seven published contracts:
 
+```mermaid
+flowchart TD
+    subgraph IF[Interfaces]
+        CLI[CLI · Typer + Rich]
+        REST[REST API · native + OpenAI-compat]
+        MCPS[MCP server]
+        SDK[SDKs · Python + TypeScript]
+    end
+    AUTH[Auth middleware — Authenticator resolves Principal]
+    subgraph PR[Pipeline runtime — LangGraph StateGraph]
+        IN[Ingress guards] --> RX[Route + execute] --> EG[Egress guards]
+    end
+    subgraph K[Plugin kernel]
+        REG[Plugin registry — entry points]
+        CFG[Typed config + secret resolution]
+        ASM[Per-route graph assembler]
+        HK[Hooks + events — pluggy]
+    end
+    subgraph C[Seven plugin contracts]
+        MP[ModelProvider] & GR[Guardrail] & VS[VectorStoreProvider]
+        EB[EmbeddingProvider] & SP[SecretProvider]
+        PN[PipelineNode] & AU[Authenticator - aegis-server]
+    end
+    subgraph PP[Optional policy packs — public contracts only]
+        CL[Classification] & RES[Residency] & BUD[Budgets] & PII[PII mask]
+    end
+    IF --> AUTH --> PR --> K --> C --> PP
+```
+
 | Contract | Job |
 |---|---|
 | `ModelProvider` | complete / stream / embed against any model backend |

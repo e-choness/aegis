@@ -57,7 +57,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    print("NOTE: This example requires `aegis dev` running on http://127.0.0.1:8000")
-    print("      Start it with:  uv run aegis dev")
+    print("NOTE: This example requires `aegis serve` running on http://127.0.0.1:8000")
+    print("      Start it with:  uv run aegis serve --config examples/dev.yaml --no-auth")
     print()
     asyncio.run(main())

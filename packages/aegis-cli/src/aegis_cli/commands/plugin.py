@@ -105,15 +105,15 @@ def info(
     _console.print(f"[bold]Entry Point:[/bold] {found.value}")
 
 
-@app.command("scaffold")
-def scaffold(
-    kind: Annotated[
-        str,
-        typer.Argument(help=f"Plugin kind: {', '.join(_VALID_KINDS)}."),
-    ],
+@app.command("new")
+def new(
     name: Annotated[
         str,
         typer.Argument(help="Plugin name (kebab-case, e.g. my-guard)."),
+    ],
+    kind: Annotated[
+        str,
+        typer.Option("--kind", "-k", help=f"Plugin kind: {', '.join(_VALID_KINDS)}."),
     ],
     output_dir: Annotated[
         Path,
@@ -128,4 +128,28 @@ def scaffold(
         raise typer.Exit(1) from exc
 
     _console.print(f"[green]Scaffolded {kind} plugin '{name}'[/green] at {pkg_root}")
-    _console.print(f"  Run tests: [cyan]pytest {pkg_root} -v[/cyan]")
+    _console.print(f"  Run tests: [cyan]aegis plugin test {pkg_root}[/cyan]")
+
+
+@app.command("test")
+def test(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Path to a scaffolded plugin package (as returned by `aegis plugin new`)."),
+    ],
+) -> None:
+    """Run pytest plus an independent conformance suite against a plugin package."""
+    from aegis_cli.commands.conformance import run_plugin_tests
+
+    if not path.exists():
+        _err_console.print(f"No such path: {path}")
+        raise typer.Exit(1)
+
+    ok, messages = run_plugin_tests(path)
+    for msg in messages:
+        if msg:
+            _console.print(msg)
+
+    if not ok:
+        raise typer.Exit(1)
+    _console.print("[green]All checks passed.[/green]")
