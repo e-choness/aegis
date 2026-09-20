@@ -6,8 +6,8 @@ dedicated guardrail stages (``tool_call`` and ``tool_result`` in the
 pipeline config).
 
 This script runs entirely in-process using a FakeProvider.  For a live
-demo with a real MCP server, start ``aegis dev`` and point an MCP client
-at ``http://127.0.0.1:8000/mcp``.
+demo with a real MCP server, start ``aegis serve --config examples/dev.yaml
+--no-auth`` and point an MCP client at ``http://127.0.0.1:8000/mcp``.
 
 Run::
 

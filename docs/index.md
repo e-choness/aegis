@@ -56,8 +56,8 @@ flowchart TD
 
 ```bash
 pip install aegis-gateway
-aegis init            # writes starter aegis.yaml
-aegis dev             # localhost gateway, no auth, FakeProvider
+aegis init                                 # writes starter aegis.yaml
+aegis serve --config aegis.yaml --no-auth  # localhost gateway, no auth, fake provider
 ```
 
 Then point any OpenAI client at `http://localhost:8000/v1`:

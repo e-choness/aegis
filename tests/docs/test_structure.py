@@ -1,4 +1,4 @@
-"""Structural docs checks: diagram count, front-matter files, §2b verbatim."""
+"""Structural docs checks: diagram count, front-matter files."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
 DOCS_ROOT = ROOT / "docs"
-SPEC_FILE = ROOT / "PROJECT_SPEC.md"
 
 REQUIRED_FRONT_MATTER = [
     ROOT / "docs" / "CONTRIBUTING.md",
@@ -40,28 +39,14 @@ def test_front_matter_files_exist() -> None:
     assert not missing, f"Missing front-matter files: {missing}"
 
 
-def test_section_2b_verbatim() -> None:
-    """The §2b request lifecycle diagram in pipeline-and-verdicts.md must match PROJECT_SPEC verbatim."""
-    # Extract §2b block from PROJECT_SPEC
-    spec_text = SPEC_FILE.read_text(encoding="utf-8")
-    # Find the mermaid block that follows "### 2b. Request lifecycle"
-    match = re.search(
-        r"### 2b\. Request lifecycle.*?```mermaid\n(.*?)```",
-        spec_text,
-        re.DOTALL,
-    )
-    assert match, "Could not find §2b mermaid block in PROJECT_SPEC.md"
-    spec_diagram = match.group(1)
+def test_pipeline_doc_has_request_lifecycle_diagram() -> None:
+    """pipeline-and-verdicts.md must carry the request-lifecycle diagram.
 
-    # Extract first mermaid block from pipeline-and-verdicts.md
+    This repo has no PROJECT_SPEC.md to compare against (it was never
+    committed) — docs/explanation/ is the single source of truth for this
+    diagram now, not a byte-identical mirror of an external spec.
+    """
     pipeline_file = DOCS_ROOT / "explanation" / "pipeline-and-verdicts.md"
     assert pipeline_file.exists(), f"{pipeline_file} does not exist"
-    pipeline_text = pipeline_file.read_text(encoding="utf-8")
-    blocks = _extract_mermaid_blocks(pipeline_text)
+    blocks = _extract_mermaid_blocks(pipeline_file.read_text(encoding="utf-8"))
     assert blocks, "No mermaid block found in pipeline-and-verdicts.md"
-    doc_diagram = blocks[0]
-
-    assert doc_diagram == spec_diagram, (
-        "pipeline-and-verdicts.md §2b diagram differs from PROJECT_SPEC.md §2b.\n"
-        "These must be byte-identical (single source of truth)."
-    )

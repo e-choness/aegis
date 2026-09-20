@@ -17,8 +17,8 @@ All endpoints except `/metrics` require a bearer token:
 Authorization: Bearer aeg-<64-hex-chars>
 ```
 
-Create keys with `aegis keys create`. The `dev` server (`aegis dev`) runs
-without auth.
+Create keys with `aegis keys create`. `aegis serve --no-auth` runs without
+requiring one.
 
 ## Native endpoints
 

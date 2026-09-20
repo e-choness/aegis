@@ -1,4 +1,14 @@
-"""README.md structural and content checks."""
+"""README.md structural and content checks.
+
+Phase 5 rewrote the README's order deliberately: one-sentence pitch, the
+demo scenario, install, the config that produces it, `aegis explain`
+output, the four verdicts, then "why this exists" — see
+reference/aegis-roadmap.md's Phase 5 section. The two mermaid diagrams that
+used to live in the README (architecture, request lifecycle) moved to
+docs/explanation/ so the README stays demo-first; see
+test_diagrams_moved_to_explanation_docs below instead of a README-vs-spec
+byte comparison (PROJECT_SPEC.md does not exist in this repo).
+"""
 
 from __future__ import annotations
 
@@ -7,7 +17,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
 README = ROOT / "README.md"
-SPEC_FILE = ROOT / "PROJECT_SPEC.md"
 
 # Required sections in README, in this order
 REQUIRED_SECTIONS = [
@@ -18,11 +27,12 @@ REQUIRED_SECTIONS = [
     "[![Python versions]",
     "[![License: MIT]",
     "[![Code style: ruff + pyright]",
-    "## What Aegis is",
-    "## Architecture",
-    "```mermaid",                        # first mermaid = §2
-    "## Quick start",
-    "## Request lifecycle",
+    "## See it work",
+    "## Install",
+    "## The config that produces the scenario above",
+    "## `aegis explain` on the denied run",
+    "## Four verdicts, nothing else",
+    "## Why this exists",
     "## Documentation",
 ]
 
@@ -48,18 +58,6 @@ REQUIRED_LINKS = [
 
 def _extract_mermaid_blocks(text: str) -> list[str]:
     return re.findall(r"```mermaid\n(.*?)```", text, re.DOTALL)
-
-
-def _spec_diagram(heading_pattern: str) -> str:
-    """Extract a mermaid block from PROJECT_SPEC.md following a heading."""
-    spec_text = SPEC_FILE.read_text(encoding="utf-8")
-    match = re.search(
-        heading_pattern + r".*?```mermaid\n(.*?)```",
-        spec_text,
-        re.DOTALL,
-    )
-    assert match, f"Could not find mermaid block after {heading_pattern!r} in PROJECT_SPEC.md"
-    return match.group(1)
 
 
 def test_readme_exists() -> None:
@@ -106,29 +104,31 @@ def test_relative_links_resolve() -> None:
         assert (ROOT / rel).exists(), f"Relative link target does not exist: {rel}"
 
 
-def test_architecture_diagram_verbatim() -> None:
-    """The §2 architecture diagram in README must be byte-identical to PROJECT_SPEC.md §2."""
-    spec_diag = _spec_diagram(r"## 2\. Architecture")
+def test_readme_names_no_regulation() -> None:
+    """Phase 5: name no regulation in the README, not even E-23 — docs only."""
+    text = README.read_text(encoding="utf-8")
+    for name in ("E-23", "OSFI", "GDPR", "CCPA", "HIPAA", "PIPEDA", "SOC 2", "SOC2"):
+        assert name not in text, f"README names a regulation ({name!r}) — keep that in docs/ only"
+
+
+def test_readme_has_no_mermaid_diagrams() -> None:
+    """Phase 5: both diagrams moved to docs/explanation/ so the README stays demo-first."""
     readme_text = README.read_text(encoding="utf-8")
-    readme_blocks = _extract_mermaid_blocks(readme_text)
-    assert readme_blocks, "No mermaid blocks found in README.md"
-    # First mermaid block must be the architecture diagram
-    assert readme_blocks[0] == spec_diag, (
-        "README architecture diagram (first mermaid block) differs from PROJECT_SPEC.md §2.\n"
-        "These must be byte-identical (single source of truth)."
+    assert not _extract_mermaid_blocks(readme_text), (
+        "README.md should not contain mermaid diagrams — "
+        "the architecture and request-lifecycle diagrams live in docs/explanation/ now."
     )
 
 
-def test_lifecycle_diagram_verbatim() -> None:
-    """The §2b lifecycle diagram in README must be byte-identical to PROJECT_SPEC.md §2b."""
-    spec_diag = _spec_diagram(r"### 2b\. Request lifecycle")
-    readme_text = README.read_text(encoding="utf-8")
-    readme_blocks = _extract_mermaid_blocks(readme_text)
-    assert len(readme_blocks) >= 2, (
-        f"Expected >= 2 mermaid blocks in README.md (architecture + lifecycle), found {len(readme_blocks)}"
+def test_diagrams_moved_to_explanation_docs() -> None:
+    """The architecture and request-lifecycle diagrams the README used to carry
+    must actually exist in docs/explanation/, not just be deleted.
+    """
+    architecture = ROOT / "docs" / "explanation" / "architecture.md"
+    pipeline = ROOT / "docs" / "explanation" / "pipeline-and-verdicts.md"
+    assert _extract_mermaid_blocks(architecture.read_text(encoding="utf-8")), (
+        f"Expected a mermaid diagram in {architecture}"
     )
-    # Second mermaid block must be the lifecycle diagram
-    assert readme_blocks[1] == spec_diag, (
-        "README lifecycle diagram (second mermaid block) differs from PROJECT_SPEC.md §2b.\n"
-        "These must be byte-identical (single source of truth)."
+    assert _extract_mermaid_blocks(pipeline.read_text(encoding="utf-8")), (
+        f"Expected a mermaid diagram in {pipeline}"
     )

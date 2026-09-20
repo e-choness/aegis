@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -13,11 +12,13 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 
+from aegis_core.errors import AegisPluginNotFoundError
 from aegis_core.guardrails import GuardNode, RegexGuard
 from aegis_core.guardrails.protocol import Guardrail
 from aegis_core.pipeline.assembler import PipelineAssembler
 from aegis_core.pipeline.state import RunState
 from aegis_core.providers.models import Message
+from aegis_core.registry import PluginRegistry
 from aegis_core.testing.providers import FakeProvider
 
 app = typer.Typer(name="policy", help="Lint and test Aegis policy configurations.")
@@ -64,16 +65,21 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
 
     guardrails_section: dict = raw.get("guardrails") or {}
 
-    # AEG-POL-002: each guardrail pack must be importable
+    # AEG-POL-002: each guardrail pack must be discoverable under the
+    # aegis.packs entry-point group (the same lookup build_executor() does —
+    # a pack name like "aegis.pii" is a registry key, not a Python module
+    # path, so importlib.util.find_spec() would never find it).
+    registry = PluginRegistry()
+    registry.discover(groups=("aegis.packs",))
     for guard_name, guard_cfg in guardrails_section.items():
         if not isinstance(guard_cfg, dict):
             continue
         pack: str | None = guard_cfg.get("pack")
+        if not pack:
+            continue
         try:
-            spec = importlib.util.find_spec(pack) if pack else None
-        except ModuleNotFoundError:
-            spec = None
-        if pack and spec is None:
+            registry.get(pack, "aegis.packs")
+        except AegisPluginNotFoundError:
             issues.append(LintIssue(
                 code="AEG-POL-002",
                 message=f"Guardrail pack {pack!r} is not installed.",

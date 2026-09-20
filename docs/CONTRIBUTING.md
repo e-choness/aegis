@@ -30,7 +30,7 @@ alias DC="docker compose run --rm dev"
 DC uv run pytest -q          # run tests
 DC uv run ruff check .       # lint
 DC uv run pyright            # type-check
-DC uv run aegis dev          # start dev server
+DC uv run aegis serve --config examples/dev.yaml --no-auth   # start dev server
 ```
 
 **Never** run `pip`, `uv`, `pytest`, or `npm` directly on your host. Every
