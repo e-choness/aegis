@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" role="img" aria-labelledby="t d">
+<title id="t">Aegis approval-flow replay</title>
+<desc id="d">A loan-underwriting request carrying a Canadian SIN is routed to a US-region model. The residency guardrail pauses it for approval, reviewer jane denies it, aegis explain shows the verdict trail, and the exported audit ledger verifies offline.</desc>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-size:14px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.cursor{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+.l0{animation:l0 18s linear infinite}@keyframes l0{0%,2.22%{opacity:0}2.28%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.t0{animation:t0 18s infinite}@keyframes t0{0%,2.22%{transform:translateX(0);animation-timing-function:steps(82,end)}11.11%,100%{transform:translateX(721.8px)}}
+.l1{animation:l1 18s linear infinite}@keyframes l1{0%,12.78%{opacity:0}12.83%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l2{animation:l2 18s linear infinite}@keyframes l2{0%,13.89%{opacity:0}13.94%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l3{animation:l3 18s linear infinite}@keyframes l3{0%,18.89%{opacity:0}18.94%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.t3{animation:t3 18s infinite}@keyframes t3{0%,18.89%{transform:translateX(0);animation-timing-function:steps(48,end)}25.00%,100%{transform:translateX(434.49999999999994px)}}
+.l4{animation:l4 18s linear infinite}@keyframes l4{0%,26.67%{opacity:0}26.72%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l5{animation:l5 18s linear infinite}@keyframes l5{0%,32.22%{opacity:0}32.28%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.t5{animation:t5 18s infinite}@keyframes t5{0%,32.22%{transform:translateX(0);animation-timing-function:steps(22,end)}35.56%,100%{transform:translateX(214.79999999999998px)}}
+.l6{animation:l6 18s linear infinite}@keyframes l6{0%,37.78%{opacity:0}37.83%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l7{animation:l7 18s linear infinite}@keyframes l7{0%,38.33%{opacity:0}38.39%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l8{animation:l8 18s linear infinite}@keyframes l8{0%,39.44%{opacity:0}39.50%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l9{animation:l9 18s linear infinite}@keyframes l9{0%,40.56%{opacity:0}40.61%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l10{animation:l10 18s linear infinite}@keyframes l10{0%,41.11%{opacity:0}41.17%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l11{animation:l11 18s linear infinite}@keyframes l11{0%,42.22%{opacity:0}42.28%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.l12{animation:l12 18s linear infinite}@keyframes l12{0%,48.89%{opacity:0}48.94%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+.t12{animation:t12 18s infinite}@keyframes t12{0%,48.89%{transform:translateX(0);animation-timing-function:steps(69,end)}58.33%,100%{transform:translateX(611.9499999999999px)}}
+.l13{animation:l13 18s linear infinite}@keyframes l13{0%,61.11%{opacity:0}61.17%,92.22%{opacity:1}96.67%,100%{opacity:0}}
+</style>
+<rect width="1000" height="430" rx="12" fill="#0b1220" stroke="#1e2d45"/>
+<rect width="1000" height="36" rx="12" fill="#111b2e"/><rect y="24" width="1000" height="12" fill="#111b2e"/>
+<circle cx="22" cy="18" r="6" fill="#ff5f57"/><circle cx="42" cy="18" r="6" fill="#febc2e"/><circle cx="62" cy="18" r="6" fill="#28c840"/>
+<text x="500" y="23" fill="#6f86ab" text-anchor="middle" style="font-size:13px">aegis — examples/scenarios/02_approval_flow.py</text>
+<g class="l0"><text x="24" y="64" fill="#ff7a2e">$</text><text x="40.9" y="64" fill="#e6edf3">aegis runs create "Applicant SIN is 046-454-286, assess risk" --route underwriting</text><rect class="t0" transform="translate(721.8 0)" x="40.9" y="48" width="721.8" height="22" fill="#0b1220"/></g>
+<text class="l1" x="24" y="88" fill="#9fb0c8" xml:space="preserve">run_id: 13cdfd49</text>
+<text class="l2" x="24" y="112" fill="#fbbf24" xml:space="preserve">status: paused</text>
+<g class="l3"><text x="24" y="136" fill="#ff7a2e">$</text><text x="40.9" y="136" fill="#e6edf3">AEGIS_API_KEY=$JANE_KEY aegis runs deny 13cdfd49</text><rect class="t3" transform="translate(434.49999999999994 0)" x="40.9" y="120" width="434.49999999999994" height="22" fill="#0b1220"/></g>
+<text class="l4" x="24" y="160" fill="#9fb0c8" xml:space="preserve">Run 13cdfd49 denied: status=denied</text>
+<g class="l5"><text x="24" y="184" fill="#ff7a2e">$</text><text x="40.9" y="184" fill="#e6edf3">aegis explain 13cdfd49</text><rect class="t5" transform="translate(214.79999999999998 0)" x="40.9" y="168" width="214.79999999999998" height="22" fill="#0b1220"/></g>
+<text class="l6" x="24" y="208" fill="#e6edf3" xml:space="preserve">run 13cdfd49  route=underwriting  principal=svc-underwriting  status=denied</text>
+<line class="l7" x1="24" x2="976" y1="227" y2="227" stroke="#2a3a55" stroke-dasharray="2 3"/>
+<text class="l8" x="24" y="256" fill="#fbbf24" xml:space="preserve">  guard     residency_ca   REQUIRE_APPROVAL  region 'us-east-1' not in allowed ['ca-central-1']</text>
+<text class="l9" x="24" y="280" fill="#f87171" xml:space="preserve">  ingress   residency_ca   DENIED            run denied by reviewer</text>
+<line class="l10" x1="24" x2="976" y1="299" y2="299" stroke="#2a3a55" stroke-dasharray="2 3"/>
+<text class="l11" x="24" y="328" fill="#5f7190" xml:space="preserve">  short-circuited at ingress/residency_ca · provider never called</text>
+<g class="l12"><text x="24" y="352" fill="#ff7a2e">$</text><text x="40.9" y="352" fill="#e6edf3">aegis audit export -o ledger.jsonl &amp;&amp; aegis audit verify ledger.jsonl</text><rect class="t12" transform="translate(611.9499999999999 0)" x="40.9" y="336" width="611.9499999999999" height="22" fill="#0b1220"/></g>
+<text class="l13" x="24" y="376" fill="#4ade80" xml:space="preserve">OK  7 record(s) verified — chain is intact.</text>
+<text x="24" y="400" fill="#ff7a2e">$ <tspan class="cursor" fill="#e6edf3">▍</tspan></text>
+</svg>

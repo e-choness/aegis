@@ -28,8 +28,11 @@ jobs:
       - name: Run tests
         run: docker compose run --rm dev uv run pytest -q
 
-      - name: Build docs (strict)
-        run: docker compose run --rm dev uv run mkdocs build --strict
+      - name: Docs snippet and README checks
+        run: docker compose run --rm dev uv run pytest tests/docs -q
+
+      - name: Build docs (VitePress — fails on dead internal links)
+        run: docker compose run --rm dev bash -c "npm ci && npm run docs:build"
 
       - name: Link-check docs (lychee)
         uses: lycheeverse/lychee-action@v2
@@ -39,8 +42,8 @@ jobs:
             --no-progress
             --base https://e-choness.github.io
             --exclude 'https://e-choness\.github\.io'
-            --exclude-path site/assets/stylesheets/swagger-ui.css
-            site/
+            --exclude 'localhost'
+            docs/.vitepress/dist/
 
       - name: Run demo smoke test
         run: docker compose run --rm dev bash scripts/demo.sh --ci

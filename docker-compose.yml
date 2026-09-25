@@ -30,6 +30,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # ── Docs profile ──────────────────────────────────────────────────────────
+  # Live-reloading VitePress preview:  docker compose --profile docs up docs
+  # Then open http://localhost:5173/aegis/
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    profiles: [docs]
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: bash -c "npm ci && npm run docs:dev -- --port 5173"
+    ports:
+      - "5173:5173"
+
   # ── Observability profile ─────────────────────────────────────────────────
   # Activate with:  docker compose --profile observability up
   prometheus:

@@ -20,10 +20,7 @@ dev-dependencies = [
     "aegis-gateway-pack-residency",
     "aegis-gateway-pack-budgets",
     "aegis-gateway-sdk",
-    # Docs
-    "mkdocs-material>=9.5",
-    "mkdocstrings[python]>=0.27",
-    "mkdocs-swagger-ui-tag>=0.6",
+    # Docs — the site itself is VitePress (see package.json); this lints its Python snippets.
     "pytest-examples>=0.0.13",
     # Changelog
     "git-cliff>=2.0",

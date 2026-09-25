@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 62 200 258" role="img" aria-label="Aegis shield">
+  <defs>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2563eb" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#0b1a36" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="s" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#93c5fd" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#bfdbfe" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#93c5fd" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="c"><path d="M200 70 L292 104 V186 C292 250 252 290 200 312 C148 290 108 250 108 186 V104 Z"/></clipPath>
+  </defs>
+  <style>
+    .scan { animation: scan 4.5s linear infinite; }
+    @keyframes scan { 0% { transform: translateY(-40px); } 100% { transform: translateY(260px); } }
+    .core { transform-origin: 200px 190px; animation: pulse 3s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: .7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.18); } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+  </style>
+  <path d="M200 70 L292 104 V186 C292 250 252 290 200 312 C148 290 108 250 108 186 V104 Z" fill="url(#f)"/>
+  <g clip-path="url(#c)">
+    <path d="M200 70 V312 M108 180 H292" stroke="#60a5fa" stroke-width="2" opacity=".5"/>
+    <rect class="scan" x="100" y="60" width="200" height="18" fill="url(#s)" opacity=".6"/>
+  </g>
+  <path d="M200 70 L292 104 V186 C292 250 252 290 200 312 C148 290 108 250 108 186 V104 Z" fill="none" stroke="#93c5fd" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M184 122 L216 122 L200 150 Z" fill="#ff7a2e"/>
+  <circle class="core" cx="200" cy="190" r="12" fill="#dbeafe"/>
+</svg>

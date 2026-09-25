@@ -1,4 +1,4 @@
-"""Structural docs checks: diagram count, front-matter files."""
+"""Structural docs checks: diagram count, front-matter files, sidebar integrity."""
 
 from __future__ import annotations
 
@@ -39,14 +39,24 @@ def test_front_matter_files_exist() -> None:
     assert not missing, f"Missing front-matter files: {missing}"
 
 
-def test_pipeline_doc_has_request_lifecycle_diagram() -> None:
-    """pipeline-and-verdicts.md must carry the request-lifecycle diagram.
+def test_concepts_doc_has_request_lifecycle_diagram() -> None:
+    """guide/concepts.md is the single source of truth for the request lifecycle."""
+    concepts = DOCS_ROOT / "guide" / "concepts.md"
+    assert concepts.exists(), f"{concepts} does not exist"
+    blocks = _extract_mermaid_blocks(concepts.read_text(encoding="utf-8"))
+    assert blocks, "No mermaid block found in guide/concepts.md"
 
-    This repo has no PROJECT_SPEC.md to compare against (it was never
-    committed) — docs/explanation/ is the single source of truth for this
-    diagram now, not a byte-identical mirror of an external spec.
-    """
-    pipeline_file = DOCS_ROOT / "explanation" / "pipeline-and-verdicts.md"
-    assert pipeline_file.exists(), f"{pipeline_file} does not exist"
-    blocks = _extract_mermaid_blocks(pipeline_file.read_text(encoding="utf-8"))
-    assert blocks, "No mermaid block found in pipeline-and-verdicts.md"
+
+def test_no_legacy_or_internal_pages() -> None:
+    """Docs are for users and plugin authors — no v1 migration or internal decision logs."""
+    for rel in ("how-to/migrating-from-v1.md", "explanation/decisions.md"):
+        assert not (DOCS_ROOT / rel).exists(), f"docs/{rel} should not be published"
+
+
+def test_sidebar_links_resolve() -> None:
+    """Every internal link in the VitePress sidebar/nav points at an existing page."""
+    config = (DOCS_ROOT / ".vitepress" / "config.mts").read_text(encoding="utf-8")
+    for link in re.findall(r"link: '(/[^']*)'", config):
+        path = link.split("#")[0].rstrip("/")
+        candidates = [DOCS_ROOT / f"{path.lstrip('/')}.md", DOCS_ROOT / path.lstrip("/") / "index.md"]
+        assert any(c.exists() for c in candidates), f"sidebar link {link!r} has no page"

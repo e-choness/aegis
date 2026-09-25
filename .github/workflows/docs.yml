@@ -4,10 +4,20 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "docs/**"
+      - "images/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -15,17 +25,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # lastUpdated timestamps come from git history
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: uv sync --all-packages
+        run: npm ci
 
-      - name: Build and deploy docs
-        run: uv run mkdocs gh-deploy --force
+      - name: Build VitePress site
+        run: npm run docs:build
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/.vitepress/dist
+          force_orphan: true

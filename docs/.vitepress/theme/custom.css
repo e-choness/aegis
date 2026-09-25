@@ -1,0 +1,115 @@
+/* Aegis brand layer over the VitePress default theme.
+ * Orange = the wordmark / "ledger" accent; blue = the shield / pipeline. */
+
+:root {
+  --vp-c-brand-1: #e2561b;
+  --vp-c-brand-2: #f26b21;
+  --vp-c-brand-3: #ff7a2e;
+  --vp-c-brand-soft: rgba(255, 122, 46, 0.14);
+
+  --aegis-blue: #2563eb;
+  --aegis-allow: #15803d;
+  --aegis-allow-soft: rgba(34, 197, 94, 0.12);
+  --aegis-sanitize: #1d4ed8;
+  --aegis-sanitize-soft: rgba(96, 165, 250, 0.14);
+  --aegis-block: #b91c1c;
+  --aegis-block-soft: rgba(239, 68, 68, 0.12);
+  --aegis-approval: #b45309;
+  --aegis-approval-soft: rgba(245, 158, 11, 0.14);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #ffb070 0%, #ff7a2e 45%, #e2561b 100%);
+  --vp-home-hero-image-background-image: radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(59, 130, 246, 0) 68%);
+  --vp-home-hero-image-filter: blur(56px);
+
+  --vp-button-brand-bg: #f26b21;
+  --vp-button-brand-hover-bg: #e2561b;
+  --vp-button-brand-active-bg: #c9480f;
+}
+
+.dark {
+  --vp-c-brand-1: #ff9a57;
+  --vp-c-brand-2: #ff7a2e;
+  --vp-c-brand-3: #f26b21;
+  --vp-c-brand-soft: rgba(255, 122, 46, 0.16);
+
+  --vp-c-bg: #0b1220;
+  --vp-c-bg-alt: #080e1a;
+  --vp-c-bg-soft: #111b2e;
+  --vp-c-bg-elv: #111b2e;
+  --vp-c-divider: #1e2d45;
+  --vp-c-gutter: #080e1a;
+
+  --aegis-allow: #4ade80;
+  --aegis-sanitize: #93c5fd;
+  --aegis-block: #f87171;
+  --aegis-approval: #fbbf24;
+}
+
+/* Hero */
+.VPHero .name {
+  letter-spacing: 0.04em;
+  font-weight: 800;
+}
+.VPHero .image-src {
+  max-width: 300px;
+  max-height: 300px;
+}
+
+/* Feature cards: subtle lift and brand edge on hover */
+.VPFeature {
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px -12px rgba(255, 122, 46, 0.45);
+}
+
+/* Home-page sections below the features */
+.home-section {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+@media (min-width: 640px) {
+  .home-section { padding: 0 48px 56px; }
+}
+@media (min-width: 960px) {
+  .home-section { padding: 0 64px 64px; }
+}
+.home-section h2 {
+  border-top: none;
+  margin-top: 8px;
+}
+.terminal-demo {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -24px rgba(8, 14, 26, 0.6);
+}
+
+/* Mermaid diagrams: center and give them room */
+.mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+/* Tables read better slightly tighter */
+.vp-doc table { font-size: 0.92em; }
+.vp-doc td code, .vp-doc th code { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .VPFeature, .VPFeature:hover { transition: none; transform: none; }
+}
+
+/* Mermaid edge labels: blend into the page in both themes */
+.mermaid .edgeLabel,
+.mermaid .edgeLabel p,
+.mermaid .edgeLabel rect,
+.mermaid .labelBkg {
+  background-color: var(--vp-c-bg) !important;
+  fill: var(--vp-c-bg) !important;
+  color: var(--vp-c-text-2) !important;
+}

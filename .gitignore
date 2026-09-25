@@ -103,3 +103,6 @@ repo-seed/
 site/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
+# VitePress docs build output
+docs/.vitepress/cache/
+docs/.vitepress/dist/

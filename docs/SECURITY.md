@@ -43,7 +43,8 @@ coordinate).
 
 ## Hardening guidance
 
-See the deployment how-to and the explanation docs — in particular the
-[residency model](explanation/residency-model.md) (what is enforced vs
-declared, and why network egress controls are the last line) and
-[identity levels](explanation/identity-levels.md) (secure defaults).
+See [Deploying](/guide/deployment) for the production checklist, and the
+[residency pack](/packs/residency#what-can-and-can-t-be-verified) for what is
+enforced versus declared — and why network egress controls are the last
+line. Known limitations are called out on the page they affect, e.g.
+[streaming](/guide/streaming#known-limitation).
