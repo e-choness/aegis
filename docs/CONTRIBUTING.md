@@ -34,6 +34,7 @@ and native wheels are built for the container.
 dc uv run ruff check .
 dc uv run pyright
 dc uv run lint-imports                  # packs may only use public aegis_core APIs
+dc bash scripts/audit-deps.sh           # known vulnerabilities in uv.lock and the docs toolchain
 dc uv run pytest -q                     # all packages + Python SDK
 dc uv run pytest tests/docs -q          # README + every snippet in docs/
 dc bash -c "npm ci && npm run docs:build"
@@ -47,6 +48,21 @@ dc bash -c "npm ci && npm run docs:build"
 - User-visible changes update the docs in the same PR.
 - **Don't weaken a test to make it pass.** If a gate can't go green, open an
   issue describing why.
+
+## Dependencies and security
+
+- `uv.lock` pins every Python dependency; `uv lock --upgrade` refreshes it.
+  Dependabot opens grouped weekly PRs for Python, npm, GitHub Actions and base
+  images.
+- `scripts/audit-deps.sh` runs in CI and fails on any known advisory. The few
+  accepted ones are listed in the script with the reason they don't reach
+  Aegis — remove an entry as soon as a fixed release is usable.
+- LLM Guard's extra is resolved separately in `uv.lock` (`[tool.uv] conflicts`
+  in the root `pyproject.toml`) so its exact pins can't hold back the rest of
+  the workspace; its tests stub the library.
+- `package.json` overrides Vite to a patched 7.x: VitePress 1.6 still pins
+  Vite 5, whose dev server has unfixed advisories. Drop the override once
+  VitePress 2 is stable.
 
 ## Working on the docs
 

@@ -28,6 +28,10 @@ Everything since the first public alpha. Upgrading from 2.0.0a0? Read
 - **`aegis serve` refuses to start** if `pipeline.tool_call` or
   `pipeline.tool_result` is set — those stages were never enforced. Govern
   MCP tools in Python with `McpExecuteNode`.
+- **`pip install aegis-gateway` no longer installs LLM Guard** (or PyTorch).
+  The pack is still included; install its model library with
+  `pip install "aegis-gateway-pack-llm-guard[llm-guard]"`. LLM Guard's pinned
+  dependencies carry known advisories, so this keeps them out of default installs.
 - **Budgets** must be listed in both stages (`ingress: [budget]`,
   `egress: [budget]`) — the egress half is what records spend.
 - **Chroma collections** created by `ChromaVectorStore` / `aegis rag` are now
@@ -43,6 +47,13 @@ Everything since the first public alpha. Upgrading from 2.0.0a0? Read
 
 ### Security
 
+- Dependencies upgraded across the board. Known advisories in a default
+  install went from 115 (14 packages) to 7 accepted ones that don't reach
+  Aegis (Chroma server endpoints; cryptography X.509/PKCS#7 APIs, pending a
+  Presidio release). CI now fails on any new advisory (`scripts/audit-deps.sh`),
+  and Dependabot proposes weekly updates.
+- Docs toolchain: Vite upgraded to 7.x under VitePress (dev-server advisories).
+- GitHub Actions moved to Node 24 releases; the dev image uses Node 24 LTS.
 - Streamed `/v1/chat/completions` requests on true-streaming routes skipped
   every ingress node (PII masking, residency, budgets) and were never
   recorded. Ingress now always runs first and streamed runs are recorded.

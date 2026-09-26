@@ -5,14 +5,14 @@
 [tool.uv.workspace]
 members = ["packages/*", "sdk/python"]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8",
-    "pytest-asyncio>=0.24",
-    "ruff>=0.8",
-    "pyright>=1.1",
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.14",
+    "pyright>=1.1.400",
     "pre-commit>=4",
-    "import-linter>=2.0",
+    "import-linter>=2.15",
     "aegis-gateway-pack-pii[pii]",
     "aegis-gateway-pack-llm-guard",
     "aegis-gateway-core[rag]",
@@ -22,8 +22,32 @@ dev-dependencies = [
     "aegis-gateway-sdk",
     # Docs — the site itself is VitePress (see package.json); this lints its Python snippets.
     "pytest-examples>=0.0.13",
-    # Changelog
+    # Changelog drafting
     "git-cliff>=2.0",
+]
+
+[tool.uv]
+# LLM Guard (last released May 2025) pins exact, vulnerable versions of
+# transformers and json-repair, and an old Presidio that caps cryptography.
+# Resolving its extra separately keeps those pins from holding back the rest of
+# the workspace. Its tests stub the library, so the dev env doesn't install it.
+conflicts = [
+    [
+        { package = "aegis-gateway-pack-llm-guard", extra = "llm-guard" },
+        { package = "aegis-gateway-pack-pii", extra = "pii" },
+    ],
+    [
+        { package = "aegis-gateway-pack-llm-guard", extra = "all" },
+        { package = "aegis-gateway-pack-pii", extra = "pii" },
+    ],
+    [
+        { package = "aegis-gateway-pack-llm-guard", extra = "llm-guard" },
+        { package = "aegis-gateway-pack-pii", extra = "all" },
+    ],
+    [
+        { package = "aegis-gateway-pack-llm-guard", extra = "all" },
+        { package = "aegis-gateway-pack-pii", extra = "all" },
+    ],
 ]
 
 [tool.uv.sources]

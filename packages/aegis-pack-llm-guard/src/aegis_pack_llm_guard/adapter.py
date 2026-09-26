@@ -10,7 +10,7 @@ from aegis_core.pipeline.verdict import Verdict
 
 class LlmGuardAdapter:
     """A :class:`~aegis_core.guardrails.protocol.Guardrail` that delegates to an
-    `llm-guard <https://llm-guard.com/>`_ input scanner.
+    `llm-guard <https://protectai.github.io/llm-guard/>`_ input scanner.
 
     The scanner is loaded lazily from ``llm_guard.input_scanners`` so that the
     ``[llm-guard]`` optional extra is only required at runtime, not at import

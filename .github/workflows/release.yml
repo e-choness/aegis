@@ -26,11 +26,11 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v10
 
       - name: Tag matches package versions
         id: version
@@ -48,7 +48,7 @@ jobs:
       - name: Check metadata renders on PyPI
         run: uvx twine check --strict dist/*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -63,7 +63,7 @@ jobs:
     permissions:
       id-token: write # Trusted Publishing — no API token stored in GitHub
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -82,11 +82,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v10
 
       - name: Release notes from docs/changelog.md
         run: |
@@ -97,12 +97,12 @@ jobs:
             echo "\`pip install aegis-gateway==${{ needs.build.outputs.version }}\` · [Documentation](https://e-choness.github.io/aegis/) · [Full changelog](https://e-choness.github.io/aegis/changelog)"
           } > notes.md
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.TAG }}
           body_path: notes.md
@@ -117,7 +117,7 @@ jobs:
     # secret HF_TOKEN (write access) to enable; otherwise this job is skipped.
     if: vars.HF_SPACE_ID != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
@@ -136,7 +136,7 @@ jobs:
       - name: Pin the Space to this release
         run: sed -i "s/__AEGIS_VERSION__/${{ needs.build.outputs.version }}/" deploy/huggingface/Dockerfile
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v10
 
       - name: Upload to the Space
         env:

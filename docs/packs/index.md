@@ -5,7 +5,8 @@ First-party packs use exactly the same entry-point contract as third-party
 ones — an import-linter rule in CI stops them from reaching into Aegis
 internals — so anything they do, your plugin can do too.
 
-All five ship with `pip install aegis-gateway`.
+All five ship with `pip install aegis-gateway`. LLM Guard's model library is
+opt-in — see [LLM Guard](./llm-guard).
 
 | Pack | `pack:` | Adds | Kind | Options |
 |---|---|---|---|---|

@@ -24,7 +24,7 @@ dependencies = [
     "aegis-gateway-core==2.0.0a0",
     "aegis-gateway-server==2.0.0a0",
     "aegis-gateway-pack-pii[pii]==2.0.0a0",
-    "aegis-gateway-pack-llm-guard[llm-guard]==2.0.0a0",
+    "aegis-gateway-pack-llm-guard==2.0.0a0",
     "aegis-gateway-pack-classification==2.0.0a0",
     "aegis-gateway-pack-residency==2.0.0a0",
     "aegis-gateway-pack-budgets==2.0.0a0",

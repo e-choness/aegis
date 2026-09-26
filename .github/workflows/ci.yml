@@ -11,10 +11,13 @@ jobs:
     name: Test (Python 3.12)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install workspace dependencies
         run: docker compose run --rm dev uv sync --all-packages
+
+      - name: Dependency vulnerabilities (pip-audit + npm audit)
+        run: docker compose run --rm dev bash scripts/audit-deps.sh
 
       - name: Lint (ruff)
         run: docker compose run --rm dev uv run ruff check .
@@ -43,7 +46,7 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --base https://e-choness.github.io
+            --base-url https://e-choness.github.io
             --exclude 'https://e-choness\.github\.io'
             --exclude 'localhost'
             docs/.vitepress/dist/

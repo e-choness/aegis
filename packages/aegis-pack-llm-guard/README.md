@@ -1,7 +1,14 @@
 # aegis-gateway-pack-llm-guard
 
-Runs [LLM Guard](https://llm-guard.com/) input scanners (prompt injection,
+Runs [LLM Guard](https://protectai.github.io/llm-guard/) input scanners (prompt injection,
 toxicity, secrets, …) as Aegis guardrails.
+
+```bash
+pip install "aegis-gateway-pack-llm-guard[llm-guard]"   # installs LLM Guard and PyTorch
+```
+
+LLM Guard 0.3.16 pins `transformers` and `json-repair` versions with known
+advisories; only install it if you need its model-based scanners.
 
 ```yaml
 guardrails:
