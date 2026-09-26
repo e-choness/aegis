@@ -37,6 +37,11 @@ jobs:
       - name: Docs snippet and README checks
         run: docker compose run --rm dev uv run pytest tests/docs -q
 
+      - name: Guard evals (rule packs must not drop below evals/baseline.json)
+        run: |
+          docker compose run --rm dev uv run pytest tests/evals -q
+          docker compose run --rm dev uv run python scripts/eval_guards.py pii classification --check
+
       - name: Build docs (VitePress — fails on dead internal links)
         run: docker compose run --rm dev bash -c "npm ci && npm run docs:build"
 
