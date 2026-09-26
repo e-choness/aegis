@@ -38,6 +38,8 @@ def _to_snake(name: str) -> str:
 
 
 def _pyproject(kind: str, pkg_name: str, module_name: str, name_lower: str) -> str:
+    from aegis_core import __version__ as core_version
+
     group = _ENTRY_POINT_GROUP[kind]
     class_name = _to_pascal(name_lower)
     body = dedent(f"""\
@@ -47,7 +49,7 @@ def _pyproject(kind: str, pkg_name: str, module_name: str, name_lower: str) -> s
         description = "Aegis {kind} plugin — {class_name}."
         license = {{ text = "MIT" }}
         requires-python = ">=3.12"
-        dependencies = ["aegis-gateway-core>=2.0.0a0"]
+        dependencies = ["aegis-gateway-core>={core_version}"]
 
         [build-system]
         requires = ["hatchling"]
@@ -269,7 +271,7 @@ def _guardrail_factory(module_name: str, class_name: str, name_lower: str) -> st
 
         from __future__ import annotations
 
-        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.packs import GuardrailConfig
         from aegis_core.guardrails.spine import GuardNode
         from aegis_core.pipeline.protocol import PipelineNode
 
@@ -293,7 +295,7 @@ def _node_factory(module_name: str, class_name: str, name_lower: str) -> str:
 
         from __future__ import annotations
 
-        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.packs import GuardrailConfig
         from aegis_core.pipeline.protocol import PipelineNode
 
         from {module_name} import {class_name}
@@ -312,7 +314,7 @@ def _factory_test(module_name: str, name_lower: str) -> str:
         Run with:  pytest tests/test_factory.py -v
         \"\"\"
 
-        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.packs import GuardrailConfig
         from aegis_core.pipeline.protocol import PipelineNode
 
         from {module_name}.factory import from_config

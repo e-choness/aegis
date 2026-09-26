@@ -1,15 +1,31 @@
 [project]
 name = "aegis-gateway-pack-classification"
 version = "2.0.0a0"
-description = "Aegis v2 — content classification policy pack (regex labeler)."
-license = { text = "MIT" }
+description = "Aegis policy pack: request content classification labels."
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
+readme = "README.md"
+authors = [{ name = "Aegis contributors" }]
+keywords = ["llm", "ai-gateway", "guardrails", "openai", "governance", "audit", "pii"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
 
-dependencies = ["aegis-gateway-core"]
+dependencies = ["aegis-gateway-core==2.0.0a0"]
 
 [project.urls]
-Homepage = "https://github.com/e-choness/aegis"
+Homepage = "https://e-choness.github.io/aegis/"
+Documentation = "https://e-choness.github.io/aegis/"
 Repository = "https://github.com/e-choness/aegis"
+Changelog = "https://e-choness.github.io/aegis/changelog"
 Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]

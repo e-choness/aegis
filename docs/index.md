@@ -60,7 +60,7 @@ A loan-underwriting request carrying a Canadian SIN is routed to a US-region mod
 
 <img class="terminal-demo" src="../images/terminal-demo.svg" alt="Terminal replay: aegis runs create pauses for approval, aegis runs deny, aegis explain shows the verdict trail, aegis audit verify confirms the chain is intact">
 
-Run it yourself with [`examples/scenarios/02_approval_flow.py`](https://github.com/e-choness/aegis/blob/main/examples/scenarios/02_approval_flow.py).
+Run it yourself from a clone with `docker compose run --rm dev bash scripts/approval-scenario.sh` — see [`examples/02_approval_flow.py`](https://github.com/e-choness/aegis/blob/main/examples/02_approval_flow.py).
 
 ## Sixty seconds to a governed endpoint
 

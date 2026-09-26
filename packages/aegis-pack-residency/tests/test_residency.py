@@ -287,15 +287,19 @@ class TestResidencyGuardRouting:
 
 class TestResidencyFactory:
     def _cfg(self, **extra: object) -> GuardrailConfig:
-        return GuardrailConfig(pack="aegis.residency", region="ca-central-1", jurisdiction="CA", **extra)
+        return GuardrailConfig.model_validate(
+            {"pack": "aegis.residency", "region": "ca-central-1", "jurisdiction": "CA", **extra}
+        )
 
     def test_missing_region_raises_config_error(self) -> None:
+        cfg = GuardrailConfig.model_validate({"pack": "aegis.residency", "jurisdiction": "CA"})
         with pytest.raises(AegisConfigValidationError, match="region"):
-            from_config("residency", GuardrailConfig(pack="aegis.residency", jurisdiction="CA"))
+            from_config("residency", cfg)
 
     def test_missing_jurisdiction_raises_config_error(self) -> None:
+        cfg = GuardrailConfig.model_validate({"pack": "aegis.residency", "region": "ca-central-1"})
         with pytest.raises(AegisConfigValidationError, match="jurisdiction"):
-            from_config("residency", GuardrailConfig(pack="aegis.residency", region="ca-central-1"))
+            from_config("residency", cfg)
 
     def test_returns_ingress_guard_node(self) -> None:
         result = from_config("residency", self._cfg())

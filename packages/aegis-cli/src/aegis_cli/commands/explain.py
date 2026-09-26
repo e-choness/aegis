@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Optional
 
 import httpx
 import typer
@@ -38,13 +37,18 @@ def _make_client() -> AegisClient:
     return AegisClient(base_url=_base_url(), api_key=_api_key())
 
 
+def _event_data(event: dict[str, object]) -> dict[str, object]:
+    data = event.get("data")
+    return data if isinstance(data, dict) else {}
+
+
 def _colour_kind(kind: str) -> str:
     colour = _COLOUR.get(kind.lower(), "white")
     return typer.style(kind.upper(), fg=colour, bold=True)
 
 
 def explain(
-    run_id: Optional[str] = typer.Argument(None, help="Run ID to explain."),
+    run_id: str | None = typer.Argument(None, help="Run ID to explain."),
     last: bool = typer.Option(False, "--last", help="Use the most recent run."),
     json_output: bool = typer.Option(False, "--json", help="Output raw events as JSON."),
 ) -> None:
@@ -93,7 +97,7 @@ def explain(
         for ev in verdict_events:
             stage = ev.get("stage", "?")
             node = ev.get("node", "?")
-            ev_data = ev.get("data") or {}
+            ev_data = _event_data(ev)
             # Every real verdict-emitting node (GuardNode, MCP tool guards,
             # RAG retrieval guards, the HITL resume path) keys the verdict
             # kind as "verdict" — "kind"/"status" are kept as fallbacks only.
@@ -114,7 +118,7 @@ def explain(
     if data.status in ("blocked", "denied") and not execute_completed:
         blocked_at = None
         for ev in verdict_events:
-            ev_data = ev.get("data") or {}
+            ev_data = _event_data(ev)
             kind = str(ev_data.get("verdict", ev_data.get("kind", ""))).lower()
             if kind in ("block", "blocked", "denied"):
                 blocked_at = f"{ev.get('stage')}/{ev.get('node')}"

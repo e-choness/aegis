@@ -89,6 +89,20 @@ class AuthConfig(_StrictModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
+# ── Exporters ─────────────────────────────────────────────────────────────────
+
+
+class ExporterConfig(_StrictModel):
+    """Where to forward evidence-ledger records.
+
+    ``type`` names an ``aegis.exporters`` entry point (``jsonl``, ``webhook``,
+    or a plugin); every other key is passed to the exporter.
+    """
+
+    type: str
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
 # ── Top-level AegisConfig ─────────────────────────────────────────────────────
 
 
@@ -100,6 +114,7 @@ class AegisConfig(_StrictModel):
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     routes: dict[str, RouteConfig] = Field(default_factory=dict)
     auth: AuthConfig = Field(default_factory=AuthConfig)
+    exporters: dict[str, ExporterConfig] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate_route_providers(self) -> AegisConfig:

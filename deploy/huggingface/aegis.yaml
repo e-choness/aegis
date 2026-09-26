@@ -1,0 +1,44 @@
+# Public demo configuration — no credentials, no real model calls.
+# Every provider is `fake`; the guardrails are real.
+
+providers:
+  assistant:
+    type: fake
+    complete_response: "[demo] Governed reply — this Space runs a mock model, not a real LLM."
+  us_underwriting_llm:
+    type: fake
+    complete_response: "[underwriting] synthetic risk assessment — not a real model"
+    residency:
+      region: us-east-1
+      jurisdiction: US
+
+guardrails:
+  pii:
+    pack: aegis.pii
+    mode: mask
+  classify:
+    pack: aegis.classification
+  residency_ca:
+    pack: aegis.residency
+    region: us-east-1
+    jurisdiction: US
+    allowed_regions: [ca-central-1]
+    require_approval: true   # pause for a human instead of blocking
+
+pipeline:
+  ingress: [classify, pii]
+  egress: [pii]
+
+routes:
+  default:
+    provider: assistant
+    owner: demo@aegis
+    risk_rating: low
+  underwriting:
+    provider: us_underwriting_llm
+    owner: risk-team@example.com
+    risk_rating: high
+    review_interval_days: 180
+    pipeline:
+      ingress: [pii, residency_ca]
+      egress: [pii]

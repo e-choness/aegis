@@ -72,6 +72,41 @@ The README's animated terminal is generated from
 dc node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
 ```
 
+## Releasing
+
+Every published package shares one version. To release `2.0.0a1`:
+
+```bash
+dc uv run python scripts/release.py bump 2.0.0a1   # all pyproject.toml files + internal pins + TS SDK
+dc uv lock
+# in docs/changelog.md, rename "## [Unreleased]" to "## [2.0.0a1] - <date>" and add a fresh Unreleased
+git commit -am "chore(release): 2.0.0a1"
+git tag v2.0.0a1 && git push origin main v2.0.0a1
+```
+
+The tag triggers `.github/workflows/release.yml`, which:
+
+1. checks the tag matches every package version (`release.py check`);
+2. builds the ten published packages (never the test fixture plugin) and runs
+   `twine check --strict`, so a README that PyPI can't render fails the build;
+3. publishes them to PyPI with Trusted Publishing — no API token is stored in
+   GitHub, and files that already exist are skipped, so re-running is safe;
+4. creates a GitHub Release whose notes are that version's section of ;
+5. waits until the version is installable, then uploads `deploy/huggingface/`
+   to the demo Space pinned to that version.
+
+**One-time setup.** On PyPI, add a *trusted publisher* to each of the ten
+projects: owner `e-choness`, repository `aegis`, workflow `release.yml`,
+environment `pypi`. In the GitHub repo, create an environment named `pypi`,
+and for the demo Space set the variable `HF_SPACE_ID` (e.g. `e-choness/aegis-demo`)
+and the secret `HF_TOKEN` (a Hugging Face token with write access). Without
+`HF_SPACE_ID` the Space job is skipped.
+
+PyPI only limits how quickly *new projects* can be created; new versions of
+existing projects upload in one step. If you ever add a new package, create
+its project first (a manual upload or a pending trusted publisher) before
+tagging.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org/), scoped by
@@ -84,7 +119,8 @@ docs(guide): document background runs
 ```
 
 Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`.
-`CHANGELOG.md` is generated from these by git-cliff.
+Add user-visible changes to the *Unreleased* section of [](/changelog) in the same PR
+(`uv run git-cliff --unreleased` drafts entries from these commits).
 
 ## Plugins live outside this repo
 
@@ -92,6 +128,12 @@ You don't need a PR here to add a guardrail, node or provider — publish an
 `aegis-<kind>-<name>` package. See [Write a plugin](/develop/plugins). PRs
 that make a new kind of plugin *possible* (a contract, a wiring point) are
 very welcome.
+
+## License
+
+Aegis is licensed under the [GNU AGPL-3.0-or-later](https://github.com/e-choness/aegis/blob/main/LICENSE).
+By submitting a contribution you agree that it is licensed under the same
+terms.
 
 ## Code of conduct
 

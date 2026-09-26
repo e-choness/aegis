@@ -13,6 +13,7 @@ from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.pipeline.state import RunState
 from aegis_core.providers.models import Message
 from aegis_server.auth.protocol import Principal
+from aegis_server.store.ledger import LedgerStore
 from aegis_server.store.run_store import RunRecord, RunStore
 from aegis_server.telemetry import run_span
 
@@ -147,7 +148,7 @@ async def _run_background(
     run_store: RunStore,
     tracer: object | None,
     config_digest: str | None = None,
-    ledger_store: object | None = None,
+    ledger_store: LedgerStore | None = None,
     principal_id: str = "",
     created_at: str = "",
 ) -> None:

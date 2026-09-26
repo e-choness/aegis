@@ -5,6 +5,8 @@ Gate: DC uv run pytest packages/aegis-core packages/aegis-server -q -k rag
 
 from __future__ import annotations
 
+import pytest
+
 from aegis_core.mcp.guards import ToolResultInjectionGuard
 from aegis_core.pipeline.state import RunState
 from aegis_core.providers.models import Message
@@ -329,3 +331,30 @@ class TestRetrievalNode:
         await node.run(state)
         # Embedder should have been called with the last user message
         assert embedder.embed_calls[-1] == ["second query"]
+
+
+class TestChromaSimilarity:
+    """Regression: query() must rank by the query vector, not return insertion order."""
+
+    async def test_query_returns_nearest_document_first(self) -> None:
+        pytest.importorskip("chromadb")
+        from aegis_core.rag.protocol import Doc
+
+        embedder = FakeEmbeddingProvider(dimensions=16)
+        store = ChromaVectorStore(embedder=embedder)
+        texts = ["alpha document", "beta document", "gamma document"]
+        await store.add([Doc(id=f"d{i}", text=t) for i, t in enumerate(texts)], namespace="kb")
+
+        [vector] = await embedder.embed(["gamma document"])
+        results = await store.query(vector, namespace="kb", k=3)
+
+        assert results[0].id == "d2"
+        assert [d.id for d in results] != ["d0", "d1", "d2"]
+
+    async def test_short_namespace_is_accepted(self) -> None:
+        pytest.importorskip("chromadb")
+        from aegis_core.rag.protocol import Doc
+
+        store = ChromaVectorStore(embedder=FakeEmbeddingProvider(dimensions=4))
+        await store.add([Doc(id="x", text="hello")], namespace="hr")
+        assert len(await store.query([0.0, 0.0, 0.0, 0.0], namespace="hr", k=1)) == 1

@@ -30,7 +30,7 @@ flowchart LR
 | `aegis.guardrails` | `Guardrail` | Discovery and conformance (`aegis plugin list/info/test`). Wrap in a `GuardNode` from your pack factory. |
 | `aegis.nodes` | `PipelineNode` | Discovery and conformance. Return from your pack factory. |
 | `aegis.providers` | `ModelProvider` | **Loaded by `aegis serve`** when a provider's `type:` isn't built in — the entry-point name is the type. |
-| `aegis.exporters` | `Exporter` | Discovery and conformance; no runtime consumer yet. |
+| `aegis.exporters` | `Exporter` | **Loaded by `aegis serve`** for each entry under `exporters:` — the entry-point name is the `type`. |
 | `aegis.secrets` | `SecretProvider` | Register with a `SecretResolver` when loading config yourself. |
 
 ## 1. Scaffold
@@ -88,12 +88,11 @@ from the YAML entry (extra keys are allowed on `GuardrailConfig`):
 ```python
 from aegis_guardrail_my_guard.guard import MyGuard
 
-from aegis_core.config.models import GuardrailConfig
 from aegis_core.guardrails.spine import GuardNode
-from aegis_core.pipeline.protocol import PipelineNode
+from aegis_core.packs import GuardrailConfig, PackNodes
 
 
-def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]]:
+def from_config(name: str, cfg: GuardrailConfig) -> PackNodes:
     guard = MyGuard()
     guard.name = name
     return {"ingress": [GuardNode([guard], name=name)]}
@@ -191,7 +190,7 @@ constructed with no arguments.
 ```python
 from pydantic import SecretStr
 
-from aegis_core.config.models import ProviderConfig
+from aegis_core.packs import ProviderConfig
 from aegis_core.testing import FakeProvider
 
 
@@ -220,6 +219,54 @@ providers:
 
 Often you don't need one at all: any OpenAI-compatible server (vLLM,
 Ollama, LM Studio, Azure OpenAI…) works with `type: openai_compatible`.
+
+## Exporters
+
+An exporter receives evidence-ledger records — already hash-chained and
+redacted — and delivers them somewhere else: a SIEM, a queue, object storage.
+It needs a `name` and an async `export(records)`:
+
+```python
+from aegis_core.packs import ExporterConfig
+
+
+class StdoutExporter:
+    def __init__(self, name: str, prefix: str) -> None:
+        self.name = name
+        self._prefix = prefix
+
+    @classmethod
+    def from_config(cls, name: str, cfg: ExporterConfig) -> "StdoutExporter":
+        return cls(name, prefix=getattr(cfg, "prefix", "[aegis]"))
+
+    async def export(self, records: list[dict]) -> None:
+        for record in records:
+            print(self._prefix, record["seq"], record["record_type"])
+```
+
+```toml
+[project.entry-points."aegis.exporters"]
+stdout = "aegis_exporter_stdout:StdoutExporter"
+```
+
+```yaml
+exporters:
+  console:
+    type: stdout
+    prefix: "[evidence]"
+```
+
+Raise on failure: the server logs it, counts it in
+`aegis_exporter_failures_total`, and carries on — the ledger remains the
+source of truth for backfilling. `aegis plugin new my-sink --kind exporter`
+scaffolds one with contract tests.
+
+## Licensing your plugin
+
+Aegis is licensed under AGPL-3.0-or-later. Your plugin can use any
+AGPL-compatible license — MIT (the scaffold's default), Apache-2.0, BSD,
+GPL-3.0 and others. When a plugin is distributed or served together with
+Aegis, the combined work is subject to the AGPL.
 
 ## Secret backends
 

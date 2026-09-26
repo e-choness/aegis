@@ -15,6 +15,7 @@ _DEFAULT_CONFIG = Path("aegis.yaml")
 
 _DEFAULT_LEDGER_DB = Path("aegis_ledger.db")
 _DEFAULT_CHECKPOINT_DB = Path("aegis_checkpoints.db")
+_DEFAULT_RUNS_DB = Path("aegis_runs.db")
 
 
 def serve(
@@ -40,20 +41,36 @@ def serve(
         Path,
         typer.Option("--checkpoint-db", help="Path to SQLite HITL checkpoint store."),
     ] = _DEFAULT_CHECKPOINT_DB,
+    runs_db: Annotated[
+        Path,
+        typer.Option(
+            "--runs-db",
+            help="Path to SQLite run store (keeps paused runs resumable across restarts).",
+        ),
+    ] = _DEFAULT_RUNS_DB,
+    demo: Annotated[
+        bool,
+        typer.Option(
+            "--demo",
+            help="Public-demo mode: rate-limit API traffic per visitor (trusts X-Forwarded-For).",
+        ),
+    ] = False,
 ) -> None:
     """Start the Aegis server (loads aegis.yaml, builds pipeline from config)."""
     import asyncio
 
     import uvicorn
 
-    from aegis_core.config.build import build_executor, config_digest
+    from aegis_core.config.build import build_executor, build_exporters, config_digest
     from aegis_core.config.loader import load_config
     from aegis_core.errors import AegisConfigNotFoundError, AegisConfigValidationError
     from aegis_core.pipeline.checkpointer import sqlite_checkpointer
     from aegis_server.app import AEGServError, create_app
     from aegis_server.auth import ApiKeyAuthenticator
     from aegis_server.keys import KeyStore
-    from aegis_server.store.ledger import SqliteLedgerStore
+    from aegis_server.store.exporting import ExportingLedgerStore
+    from aegis_server.store.ledger import LedgerStore, SqliteLedgerStore
+    from aegis_server.store.run_store import SqliteRunStore
 
     # 1. Load and validate config
     try:
@@ -86,8 +103,15 @@ def serve(
             meta["review_interval_days"] = route_cfg.review_interval_days
         route_metadata[route_name] = meta
 
-    # 4. Create ledger store
-    ledger_store = SqliteLedgerStore(path=str(ledger_db))
+    # 4. Create ledger store (forwarding to any configured exporters)
+    try:
+        exporters = build_exporters(cfg)
+    except AegisConfigValidationError as exc:
+        _console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    ledger_store: LedgerStore = SqliteLedgerStore(path=str(ledger_db))
+    if exporters:
+        ledger_store = ExportingLedgerStore(ledger_store, exporters)
 
     route_count = len(cfg.routes)
 
@@ -113,9 +137,11 @@ def serve(
                     executor,
                     authenticator=authenticator,
                     no_auth=no_auth,
+                    demo_mode=demo,
                     config_digest=digest,
                     config_path=str(config.resolve()),
                     ledger_store=ledger_store,
+                    run_store=SqliteRunStore(str(runs_db)),
                     route_metadata=route_metadata,
                 )
             except AEGServError as exc:
@@ -125,7 +151,7 @@ def serve(
             _console.print(
                 f"[green]Starting Aegis server on {host}:{port}[/green] "
                 f"({route_count} route{'s' if route_count != 1 else ''}, "
-                f"digest={digest[:16]}…, ledger={ledger_db}, checkpoints={checkpoint_db})"
+                f"digest={digest[:16]}…, ledger={ledger_db}, runs={runs_db}, checkpoints={checkpoint_db})"
             )
             server = uvicorn.Server(uvicorn.Config(app, host=host, port=port))
             await server.serve()

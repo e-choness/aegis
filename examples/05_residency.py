@@ -1,13 +1,16 @@
-"""Example 05 — Residency enforcement.
+"""Example 05 — Residency: fail-closed, or pause for a human.
 
-Shows how Aegis surfaces provider residency information so you can build
-policies that keep data in the right region.  A ``FakeProvider`` that
-claims to be in ``eu-west`` is queried and its ``ProviderInfo.residency``
-field is inspected — the same information the residency policy node uses.
+The same request goes to three routes whose endpoints are in different
+regions, all governed by the `aegis.residency` pack with Canada as the only
+allowed region:
+
+* ``ca``        — endpoint in ca-central-1 → allowed
+* ``us_strict`` — endpoint in us-east-1, block mode → blocked, provider never called
+* ``us_review`` — endpoint in us-east-1, ``require_approval: true`` → paused for review
 
 Run::
 
-    uv run python examples/05_residency.py
+    docker compose run --rm dev uv run python examples/05_residency.py
 """
 
 from __future__ import annotations
@@ -15,53 +18,52 @@ from __future__ import annotations
 import asyncio
 import uuid
 
-from aegis_core.pipeline import PipelineAssembler, RunState
-from aegis_core.providers.models import Message, ProviderInfo, ResidencyInfo
+from aegis_pack_residency.factory import from_config as residency_pack
+
+from aegis_core.packs import GuardrailConfig
+from aegis_core.pipeline import PipelineExecutor, RunState
+from aegis_core.pipeline.checkpointer import make_memory_checkpointer
+from aegis_core.providers.models import Message
 from aegis_core.testing import FakeProvider
 
-
-class _EUResidentFakeProvider(FakeProvider):
-    """FakeProvider pinned to the eu-west region."""
-
-    def info(self) -> ProviderInfo:
-        base = super().info()
-        return ProviderInfo(
-            name=base.name,
-            provider_type=base.provider_type,
-            models=base.models,
-            residency=ResidencyInfo(region="eu-west"),
-            supports_streaming=base.supports_streaming,
-            supports_embeddings=base.supports_embeddings,
-        )
-
-
-async def run_and_show(label: str, provider: FakeProvider) -> None:
-    info = provider.info()
-    print(f"\n[{label}]")
-    print(f"  provider region : {info.residency.region or 'global (no constraint)'}")
-
-    assembler = PipelineAssembler()
-    pipeline = assembler.compile(provider=provider, route="default")
-
-    state = RunState(
-        run_id=str(uuid.uuid4()),
-        route="default",
-        messages=[Message(role="user", content="Summarise GDPR article 17.")],
-        principal="demo-user",
-        # Label the request with the required region — a residency policy node
-        # would compare this against provider.info().residency.region.
-        labels={"required_region": "eu-west"},
-    )
-
-    result = await pipeline.run(state)
-    print(f"  status          : {result.status}")
-    print(f"  response        : {result.response!r:.60}")
+ROUTES = {
+    #  route        endpoint region  pause instead of block?
+    "ca": ("ca-central-1", False),
+    "us_strict": ("us-east-1", False),
+    "us_review": ("us-east-1", True),
+}
 
 
 async def main() -> None:
-    print("=== Residency example ===")
-    await run_and_show("EU-resident provider", _EUResidentFakeProvider(name="eu-fake"))
-    await run_and_show("Global provider (no region)", FakeProvider(name="global-fake"))
+    executor = PipelineExecutor(checkpointer=make_memory_checkpointer())
+    providers: dict[str, FakeProvider] = {}
+    for route, (region, pause) in ROUTES.items():
+        cfg = GuardrailConfig.model_validate(
+            {
+                "pack": "aegis.residency",
+                "region": region,
+                "jurisdiction": region.split("-")[0].upper(),
+                "allowed_regions": ["ca-central-1"],
+                "require_approval": pause,
+            }
+        )
+        providers[route] = FakeProvider(complete_response=f"answered from {region}")
+        executor.register(route, provider=providers[route], ingress=residency_pack(route, cfg)["ingress"])
+
+    for route in ROUTES:
+        result = await executor.run(
+            route,
+            RunState(
+                run_id=str(uuid.uuid4()),
+                route=route,
+                messages=[Message(role="user", content="Assess this Canadian applicant")],
+            ),
+        )
+        verdict = next(e.data for e in result.events if e.event_type == "verdict")
+        called = "yes" if providers[route].complete_calls else "no"
+        print(f"{route:<10} status={result.status:<9} verdict={verdict['verdict']:<17} provider called: {called}")
+        if verdict.get("reason"):
+            print(f"{'':<10} reason: {verdict['reason']}")
 
 
 if __name__ == "__main__":

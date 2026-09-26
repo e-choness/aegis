@@ -271,3 +271,122 @@ class TestPiiFactory:
 
         with pytest.raises(AegisConfigValidationError):
             from_config("pii", GuardrailConfig(pack="aegis.pii", mode="nope"))
+
+
+# ---------------------------------------------------------------------------
+# Detection accuracy: curated entities, threshold, allow-list, Canadian SIN
+# ---------------------------------------------------------------------------
+
+
+def _types(text: str, **options: object) -> list[str]:
+    from aegis_pack_pii import PiiDetector
+
+    detector = PiiDetector.from_options(**options)  # type: ignore[arg-type]
+    return sorted(r.entity_type for r in detector.find(text))
+
+
+class TestDetectionAccuracy:
+    def test_common_words_are_not_masked_by_default(self) -> None:
+        assert _types("Please send the quarterly summary on Monday for vendor 7731.") == []
+
+    def test_identifying_entities_still_masked(self) -> None:
+        found = _types("Mail jane.doe@example.com, call 416-555-0199, card 4111 1111 1111 1111.")
+        assert found == ["CREDIT_CARD", "EMAIL_ADDRESS", "PHONE_NUMBER"]
+
+    def test_email_is_not_split_into_url_fragments(self) -> None:
+        assert _types("Reply to jane.doe@example.com") == ["EMAIL_ADDRESS"]
+
+    def test_canadian_sin_detected_and_luhn_checked(self) -> None:
+        assert _types("Applicant SIN is 046-454-286.") == ["CA_SIN"]
+        assert "CA_SIN" not in _types("Applicant SIN is 046-454-287.")
+
+    def test_date_time_is_opt_in(self) -> None:
+        text = "Born on 1984-03-12."
+        assert "DATE_TIME" not in _types(text)
+        assert "DATE_TIME" in _types(text, entities=["DATE_TIME"])
+
+    def test_all_entities(self) -> None:
+        assert "DATE_TIME" in _types("See you on Monday.", entities="ALL")
+
+    def test_allow_list(self) -> None:
+        assert _types("Ask Claude about it.", allow_list=["Claude"]) == []
+
+    def test_threshold_filters_low_confidence(self) -> None:
+        # Phone numbers without context score 0.40.
+        assert _types("416-555-0199", threshold=0.5) == []
+        assert _types("416-555-0199", threshold=0.4) == ["PHONE_NUMBER"]
+
+    def test_unknown_entity_rejected(self) -> None:
+        from aegis_pack_pii import PiiDetector
+
+        with pytest.raises(ValueError, match="unknown PII entities"):
+            PiiDetector.from_options(entities=["NOT_A_THING"])
+
+    def test_threshold_out_of_range_rejected(self) -> None:
+        from aegis_pack_pii import PiiDetector
+
+        with pytest.raises(ValueError, match="between 0 and 1"):
+            PiiDetector.from_options(threshold=1.5)
+
+
+class TestFactoryDetectionOptions:
+    def _cfg(self, **options: object):  # type: ignore[no-untyped-def]
+        from aegis_core.config.models import GuardrailConfig
+
+        return GuardrailConfig.model_validate({"pack": "aegis.pii", **options})
+
+    async def test_options_reach_the_mask_node(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        nodes = from_config("pii", self._cfg(entities=["EMAIL_ADDRESS"], allow_list=["ops@example.com"]))
+        state = RunState(
+            run_id="r",
+            route="default",
+            messages=[Message(role="user", content="ops@example.com and jane@example.com, 416-555-0199")],
+        )
+        delta = await nodes["ingress"][0].run(state)
+        assert delta.messages is not None
+        assert delta.messages[0].content == "ops@example.com and <EMAIL_ADDRESS_0>, 416-555-0199"
+
+    def test_bad_options_raise_config_error(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.errors import AegisConfigValidationError
+
+        with pytest.raises(AegisConfigValidationError, match="unknown PII entities"):
+            from_config("pii", self._cfg(entities=["NOPE"]))
+
+
+class TestPlaceholderConsistency:
+    async def test_same_value_gets_same_placeholder_across_messages(self) -> None:
+        state = RunState(
+            run_id="r",
+            route="default",
+            messages=[
+                Message(role="user", content="Please write to jane@example.com and bob@example.com."),
+                Message(role="user", content="Did jane@example.com reply?"),
+            ],
+        )
+        delta = await PiiMaskNode().run(state)
+        assert delta.messages is not None
+        assert delta.messages[0].content == "Please write to <EMAIL_ADDRESS_0> and <EMAIL_ADDRESS_1>."
+        assert delta.messages[1].content == "Did <EMAIL_ADDRESS_0> reply?"
+        assert delta.mask_map == {
+            "<EMAIL_ADDRESS_0>": "jane@example.com",
+            "<EMAIL_ADDRESS_1>": "bob@example.com",
+        }
+
+    async def test_existing_mask_map_is_never_overwritten(self) -> None:
+        state = RunState(
+            run_id="r",
+            route="default",
+            messages=[Message(role="user", content="Also cc carol@example.com and jane@example.com.")],
+            mask_map={"<EMAIL_ADDRESS_0>": "jane@example.com"},
+        )
+        delta = await PiiMaskNode().run(state)
+        assert delta.messages is not None
+        assert delta.messages[0].content == "Also cc <EMAIL_ADDRESS_1> and <EMAIL_ADDRESS_0>."
+        assert delta.mask_map == {
+            "<EMAIL_ADDRESS_0>": "jane@example.com",
+            "<EMAIL_ADDRESS_1>": "carol@example.com",
+        }

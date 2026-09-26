@@ -2,25 +2,29 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from opentelemetry import trace
 
+from aegis_server import __version__
 from aegis_server.auth import NoneAuthenticator
 from aegis_server.middleware import AuthMiddleware
 from aegis_server.routes.approvals import router as approvals_router
 from aegis_server.routes.audit import router as audit_router
 from aegis_server.routes.chat import router as chat_router
+from aegis_server.routes.health import router as health_router
 from aegis_server.routes.hitl import router as hitl_router
 from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
-from aegis_server.routes.health import router as health_router
 from aegis_server.routes.showcase import DemoRateLimitMiddleware
 from aegis_server.routes.showcase import router as showcase_router
+from aegis_server.store.exporting import ExportingLedgerStore
+from aegis_server.store.ledger import LedgerStore
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
 
@@ -41,7 +45,7 @@ def create_app(
     tracer: trace.Tracer | None = None,
     config_digest: str | None = None,
     config_path: str | None = None,
-    ledger_store: object | None = None,
+    ledger_store: LedgerStore | None = None,
     route_metadata: dict[str, dict] | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
@@ -92,7 +96,7 @@ def create_app(
             from aegis_server.store.ledger import make_inventory_record
 
             routes_fn = getattr(executor, "routes", None)
-            routes_list: list[str] = routes_fn() if callable(routes_fn) else []
+            routes_list = cast("list[str]", routes_fn()) if callable(routes_fn) else []
             deployed_at = datetime.now(tz=UTC).isoformat()
             for route in routes_list:
                 meta = _route_metadata.get(route, {})
@@ -105,8 +109,19 @@ def create_app(
                 )
                 await ledger_store.append(None, body)
         yield
+        # Flush evidence still queued for exporters before the process exits.
+        if isinstance(ledger_store, ExportingLedgerStore):
+            await ledger_store.aclose()
 
-    app = FastAPI(title="Aegis AI Gateway", version="2.0.0a0", lifespan=_lifespan)
+    app = FastAPI(
+        title="Aegis AI Gateway",
+        version=__version__,
+        license_info={
+            "name": "AGPL-3.0-or-later",
+            "url": "https://github.com/e-choness/aegis/blob/main/LICENSE",
+        },
+        lifespan=_lifespan,
+    )
     app.state.executor = executor
     app.state.run_store = run_store if run_store is not None else InMemoryRunStore()
     app.state.rag_store = rag_store

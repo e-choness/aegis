@@ -1,6 +1,6 @@
 // Usage: node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
 // Generates images/terminal-demo.svg — an animated, looping terminal replay of
-// examples/scenarios/02_approval_flow.py. Pure SVG + CSS (no script) so it
+// examples/02_approval_flow.py. Pure SVG + CSS (no script) so it
 // animates inside a GitHub README <img>.
 const fs = require('fs');
 
@@ -68,7 +68,7 @@ ${css}</style>
 <rect width="${W}" height="${H}" rx="12" fill="#0b1220" stroke="#1e2d45"/>
 <rect width="${W}" height="36" rx="12" fill="#111b2e"/><rect y="24" width="${W}" height="12" fill="#111b2e"/>
 <circle cx="22" cy="18" r="6" fill="#ff5f57"/><circle cx="42" cy="18" r="6" fill="#febc2e"/><circle cx="62" cy="18" r="6" fill="#28c840"/>
-<text x="${W / 2}" y="23" fill="#6f86ab" text-anchor="middle" style="font-size:13px">aegis — examples/scenarios/02_approval_flow.py</text>
+<text x="${W / 2}" y="23" fill="#6f86ab" text-anchor="middle" style="font-size:13px">aegis — examples/02_approval_flow.py</text>
 ${body}<text x="${PAD}" y="${TOP + lines.length * LH}" fill="${C.prompt}">$ <tspan class="cursor" fill="${C.cmd}">▍</tspan></text>
 </svg>
 `;

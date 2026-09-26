@@ -6,6 +6,7 @@ from typing import ClassVar, Literal
 
 from aegis_core.pipeline.state import RunState
 from aegis_core.pipeline.verdict import Verdict
+from aegis_pack_pii.detection import PiiDetector
 
 
 class PiiMaskGuard:
@@ -24,13 +25,15 @@ class PiiMaskGuard:
     name: str = "pii_mask"
     streaming: ClassVar[Literal["none", "incremental"]] = "none"
 
+    def __init__(self, detector: PiiDetector | None = None, name: str | None = None) -> None:
+        self._detector = detector or PiiDetector()
+        if name is not None:
+            self.name = name
+
     async def scan(self, state: RunState) -> Verdict:
         """Scan all messages; block if any PII entity is found."""
-        from aegis_pack_pii._engine import get_analyzer
-
-        analyzer = get_analyzer()
         for msg in state.messages:
-            results = analyzer.analyze(text=msg.content, language="en")
+            results = self._detector.find(msg.content)
             if results:
                 types = sorted({r.entity_type for r in results})
                 return Verdict.block(f"PII detected: {', '.join(types)}")

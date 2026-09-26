@@ -5,17 +5,17 @@ from __future__ import annotations
 import typer
 
 from aegis_cli import __version__
+from aegis_cli.commands.audit import app as audit_app
 from aegis_cli.commands.chat import chat
 from aegis_cli.commands.config import app as config_app
 from aegis_cli.commands.doctor import app as doctor_app
+from aegis_cli.commands.explain import explain
 from aegis_cli.commands.init import app as init_app
 from aegis_cli.commands.keys import app as keys_app
 from aegis_cli.commands.plugin import app as plugin_app
 from aegis_cli.commands.policy import app as policy_app
 from aegis_cli.commands.provider import app as provider_app
 from aegis_cli.commands.rag import app as rag_app
-from aegis_cli.commands.audit import app as audit_app
-from aegis_cli.commands.explain import explain
 from aegis_cli.commands.report import app as report_app
 from aegis_cli.commands.runs import app as runs_app
 from aegis_cli.commands.serve import serve

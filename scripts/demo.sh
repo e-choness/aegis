@@ -6,7 +6,8 @@
 #   bash scripts/demo.sh --ci     CI smoke test — starts dev server, runs checks, exits
 #
 # CI test order:
-#   1. Start `aegis dev` (FakeProvider, no auth, demo safety rails) on port 8765
+#   1. Start `aegis serve --demo` with the Hugging Face Space config
+#      (deploy/huggingface/aegis.yaml — fake providers, no auth) on port 8765
 #   2. Wait for the server to be ready
 #   3. POST /v1/chat/completions  — governed chat check
 #   4. POST /v1/runs              — run record created + audited
@@ -82,12 +83,16 @@ fi
 
 trap cleanup EXIT
 
-info "Starting aegis dev server on port ${DEMO_PORT}…"
-uv run aegis dev --host 127.0.0.1 --port "${DEMO_PORT}" &
+STATE_DIR=$(mktemp -d)
+info "Starting aegis serve --demo (Space config) on port ${DEMO_PORT}…"
+uv run aegis serve --config deploy/huggingface/aegis.yaml --no-auth --demo \
+  --host 127.0.0.1 --port "${DEMO_PORT}" \
+  --ledger-db "${STATE_DIR}/ledger.db" --runs-db "${STATE_DIR}/runs.db" \
+  --checkpoint-db "${STATE_DIR}/checkpoints.db" &
 SERVER_PID=$!
 
 info "Waiting for server…"
-wait_for_server "${BASE}/openapi.json"
+wait_for_server "${BASE}/v1/health"
 pass "Server is up."
 
 # ── 1. Governed chat ──────────────────────────────────────────────────────────
@@ -150,14 +155,12 @@ pass "Showcase page OK"
 
 # ── 6. Rate limit check ───────────────────────────────────────────────────────
 check "Rate limit returns 429 on burst"
-# Reset rate limit state by waiting
-sleep 2
-# Burst 15 requests rapidly - should hit per-IP rate limit (10 req/min)
+# Burst requests — the per-visitor limit is 10 API requests per minute.
 RATE_LIMIT_HIT=false
 for i in $(seq 1 15); do
-    HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" -X POST "${BASE}/showcase/api/invoke" \
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE}/showcase/api/invoke" \
         -H "Content-Type: application/json" \
-        -d '{"prompt":"test","route":"default"}' 2>/dev/null || echo "000")
+        -d '{"prompt":"test","route":"default"}')
     if [[ "$HTTP_CODE" == "429" ]]; then
         RATE_LIMIT_HIT=true
         info "Rate limit triggered at request $i (got 429)"
@@ -167,8 +170,7 @@ done
 if [[ "$RATE_LIMIT_HIT" == "true" ]]; then
     pass "Rate limit returns 429 as expected"
 else
-    # For CI, we still want to verify rate limiting works - burst enough to hit cap
-    pass "Rate limit check completed (may need more requests to trigger in low-traffic CI)"
+    fail "No 429 after 15 rapid requests — demo rate limiting is not active"
 fi
 
 # ── Done ─────────────────────────────────────────────────────────────────────

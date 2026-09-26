@@ -22,7 +22,6 @@ packages/
   aegis-fixture-plugin/  test-only plugin for registry tests
 sdk/
   python/                aegis-gateway-sdk (httpx; sync + async clients)
-  typescript/            @aegis/sdk (fetch + zod)
 examples/                runnable scripts and example configs
 tests/docs/              checks on README.md and every snippet in docs/
 docs/                    this site (VitePress)
@@ -49,8 +48,10 @@ flowchart BT
 
 Packs may import only public `aegis_core` modules. `.importlinter` forbids
 them from importing `aegis_server`, `aegis_cli`, `aegis_core.config`,
-`aegis_core.secrets`, `aegis_core.registry` and `aegis_core.hooks`, and CI
-runs `lint-imports`. Heavy third-party libraries (LiteLLM, Presidio, LLM
+`aegis_core.secrets` and `aegis_core.registry`, and CI
+runs `lint-imports`. Types a plugin factory needs (`GuardrailConfig`,
+`PackNodes`, `ProviderConfig`, `ExporterConfig`) are re-exported from the public `aegis_core.packs` module for
+exactly this reason. Heavy third-party libraries (LiteLLM, Presidio, LLM
 Guard) are each imported in exactly one adapter module, so swapping or
 upgrading one is a one-file change.
 
@@ -60,7 +61,7 @@ upgrading one is a one-file change.
 |---|---|
 | `config/models.py` | Pydantic models for `aegis.yaml` (`AegisConfig`, `ProviderConfig`, `GuardrailConfig`, `PipelineConfig`, `RouteConfig`, `AuthConfig`). Unknown top-level keys are errors. |
 | `config/loader.py` | `load_config(path)` — YAML → `secret://` resolution → `AEGIS__*` env overrides → validation. |
-| `config/build.py` | `build_executor(cfg)` — calls each pack's factory, builds providers (built-in or `aegis.providers` plugins), compiles one pipeline per route; refuses stages it can't enforce. `config_digest(cfg)`. |
+| `config/build.py` | `build_executor(cfg)` — calls each pack's factory, builds providers (built-in or `aegis.providers` plugins), compiles one pipeline per route; refuses stages it can't enforce. `build_exporters(cfg)`, `config_digest(cfg)`. |
 | `registry/` | `PluginRegistry` — entry-point discovery across the `aegis.*` groups. |
 | `pipeline/state.py` | `RunState`, `RunStateDelta`, `RunEvent`. |
 | `pipeline/verdict.py` | `Verdict` and its four constructors. |
@@ -72,7 +73,8 @@ upgrading one is a one-file change.
 | `mcp/` | Tool-call/tool-result guard protocols, `McpExecuteNode`, shipped tool guards. |
 | `rag/` | `VectorStoreProvider`, `EmbeddingProvider`, `RetrievalNode`, Chroma/pgvector stores. |
 | `secrets/` | `SecretRef`, `SecretResolver`, `env` and `keyring` backends. |
-| `exporters/`, `hooks/` | `Exporter` protocol; pluggy hook specs (`on_run_start`, `on_verdict`, …). |
+| `exporters/` | `Exporter` protocol — where evidence-ledger records are forwarded. |
+| `packs.py` | Public API for plugin factories: `GuardrailConfig`, `ProviderConfig`, `ExporterConfig`, `PackNodes`, `PackFactory`. |
 | `testing/` | Contract kits and fakes for plugin authors. |
 | `errors.py` | Every `AEG-*` error class. |
 

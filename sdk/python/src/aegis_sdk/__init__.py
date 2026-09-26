@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version as _dist_version
+
 from aegis_sdk.client import AegisClient, AsyncAegisClient
 from aegis_sdk.models import ResumeResponse, RunCreateResponse, RunStatusResponse
 
@@ -13,4 +15,4 @@ __all__ = [
     "RunStatusResponse",
 ]
 
-__version__ = "2.0.0a0"
+__version__ = _dist_version("aegis-gateway-sdk")

@@ -72,6 +72,12 @@ aegis_runs_total: Counter = Counter(
     ["route", "status"],
 )
 
+aegis_exporter_failures_total: Counter = Counter(
+    "aegis_exporter_failures_total",
+    "Evidence records an exporter failed to deliver",
+    ["exporter"],
+)
+
 aegis_run_duration_seconds: Histogram = Histogram(
     "aegis_run_duration_seconds",
     "Pipeline run duration in seconds",

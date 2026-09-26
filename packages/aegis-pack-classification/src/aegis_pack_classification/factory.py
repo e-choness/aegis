@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aegis_core.config.models import GuardrailConfig
+from aegis_core.packs import GuardrailConfig
 from aegis_core.pipeline.protocol import PipelineNode
 
 

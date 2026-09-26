@@ -172,8 +172,15 @@ def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
         if delta.status == "paused":
             # interrupt() raises GraphInterrupt on first call (state saved by checkpointer).
             # On resume, it returns the decision dict passed via Command(resume=...).
+            # interrupt() raises before this node's partial update is saved, so the
+            # verdict that caused the pause travels in the interrupt payload —
+            # otherwise a paused run would carry no record of *why* it paused.
             decision: object = interrupt(
-                {"requires_approval": True, "run_id": state["run_id"]}
+                {
+                    "requires_approval": True,
+                    "run_id": state["run_id"],
+                    "events": partial["events"],
+                }
             )
             # ── Reached only after resume ──────────────────────────────────
             if isinstance(decision, dict) and decision.get("decision") == "denied":
@@ -253,12 +260,16 @@ class CompiledPipeline:
         interrupt_value: dict[str, object] | None = None
         status = final.get("status") or "completed"
 
+        events: list[dict[str, Any]] = list(final.get("events") or [])
         interrupts = final.get("__interrupt__")
         if interrupts:
             status = "paused"
             first = interrupts[0]
             raw = first.value if hasattr(first, "value") else {}
             interrupt_value = dict(raw) if isinstance(raw, dict) else {"value": raw}
+            paused_events = interrupt_value.pop("events", None)
+            if isinstance(paused_events, list):
+                events.extend(paused_events)
 
         return RunState(
             run_id=final.get("run_id", run_id),
@@ -277,7 +288,7 @@ class CompiledPipeline:
                     event_type=e["event_type"],
                     data=e.get("data") or {},
                 )
-                for e in final.get("events") or []
+                for e in events
             ],
             usage=UsageInfo(
                 prompt_tokens=final.get("prompt_tokens") or 0,

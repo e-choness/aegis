@@ -1,12 +1,26 @@
 [project]
 name = "aegis-gateway-server"
 version = "2.0.0a0"
-description = "Aegis v2 — FastAPI server: auth middleware, REST API, SSE streaming."
-license = { text = "MIT" }
+description = "Aegis HTTP server: OpenAI-compatible and native APIs, auth, approvals and evidence ledger."
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
+readme = "README.md"
+authors = [{ name = "Aegis contributors" }]
+keywords = ["llm", "ai-gateway", "guardrails", "openai", "governance", "audit", "pii"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
 
 dependencies = [
-    "aegis-gateway-core",
+    "aegis-gateway-core==2.0.0a0",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sse-starlette>=2.1",
@@ -16,9 +30,15 @@ dependencies = [
     "prometheus-client>=0.21",
 ]
 
+[project.entry-points."aegis.exporters"]
+jsonl = "aegis_server.exporters:JsonlExporter"
+webhook = "aegis_server.exporters:WebhookExporter"
+
 [project.urls]
-Homepage = "https://github.com/e-choness/aegis"
+Homepage = "https://e-choness.github.io/aegis/"
+Documentation = "https://e-choness.github.io/aegis/"
 Repository = "https://github.com/e-choness/aegis"
+Changelog = "https://e-choness.github.io/aegis/changelog"
 Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
