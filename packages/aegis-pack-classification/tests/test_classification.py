@@ -5,6 +5,7 @@ Gate: DC uv run pytest packages/aegis-pack-classification -q
 
 from __future__ import annotations
 
+import pytest
 from aegis_pack_classification import ClassificationNode
 
 from aegis_core.pipeline.state import RunState
@@ -103,10 +104,12 @@ class TestClassificationNode:
         assert delta.labels is None
 
     async def test_custom_patterns_first_match_wins(self) -> None:
-        node = ClassificationNode(patterns=[
-            ("top_secret", r"classified"),
-            ("public", r".*"),
-        ])
+        node = ClassificationNode(
+            patterns=[
+                ("top_secret", r"classified"),
+                ("public", r".*"),
+            ]
+        )
         delta = await node.run(_state("This document is classified"))
         assert delta.labels is not None
         assert delta.labels["classification"] == "top_secret"
@@ -123,3 +126,58 @@ class TestClassificationNode:
     def test_node_name_custom(self) -> None:
         node = ClassificationNode(name="my_classifier")
         assert node.name == "my_classifier"
+
+
+# ---------------------------------------------------------------------------
+# Secret rules — examples written apart from evals/probes.jsonl
+# ---------------------------------------------------------------------------
+
+_SECRETS = [
+    'curl -H "Authorization: Bearer 9f8e7d6c5b4a39281706f5e4d3c2b1a0ffeeddcc" https://api.example.com',
+    '{"client_secret": "Zx9-QwErTy-12345-AbCdE"}',
+    "export OPENAI_API_KEY=sk-proj-abc123def456ghi789",
+    "mysql://root:toor123@10.0.0.5/prod",
+    "Here's the service account key: -----BEGIN PRIVATE KEY----- MIIEvQIBADANBg...",
+    "my pwd = Summer2026#",
+    "The wifi passphrase is Blue-Falcon-77",
+    "SLACK_BOT=xoxb-2203948-11022-AbCdEfGhIjKl",
+    "the new password: CorrectHorse9!",
+    "creds are admin / P@ssw0rd123",
+    "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+    "**Authorization Token:** `AUTH-TOK-88902-X-SEC`",
+]
+
+_NOT_SECRETS = [
+    "The error says: invalid_token, please log in again.",
+    "Form validation: password: required, email: required.",
+    "Set the TOKEN environment variable before running the tests.",
+    "Our password policy: minimum 12 characters, no reuse.",
+    "Commit a94a8fe5ccb19ba61c4c0873d391e987982fbbd3 fixed the token refresh bug.",
+    'The API returns {"token": null} when the session expires.',
+    "Bearer tokens should be sent in the Authorization header.",
+    "Use secret: ${{ secrets.NPM_TOKEN }} in the workflow file.",
+    "The password is too short, it needs a number.",
+    "What does the error 'credentials: not found' mean in the AWS CLI?",
+    "Connect with postgres://localhost:5432/app for local dev.",
+    "The secret to good bread is patience.",
+    "Rotate the api key every 90 days and store it in the vault.",
+    "The token count for this prompt is 1,204.",
+    "Keys: secret_santa: assigned, gift budget: $30.",
+]
+
+
+@pytest.mark.parametrize("text", _SECRETS)
+async def test_secret_shapes_are_labelled_secret(text: str) -> None:
+    delta = await ClassificationNode().run(_state(text))
+    assert delta.labels == {"classification": "secret"}
+
+
+@pytest.mark.parametrize("text", _NOT_SECRETS)
+async def test_mentions_of_secrets_are_not_secrets(text: str) -> None:
+    delta = await ClassificationNode().run(_state(text))
+    assert (delta.labels or {}).get("classification") != "secret"
+
+
+async def test_secret_outranks_pii() -> None:
+    delta = await ClassificationNode().run(_state("jane@example.com, password: Winter2026!"))
+    assert delta.labels == {"classification": "secret"}

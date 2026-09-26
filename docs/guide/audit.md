@@ -85,6 +85,11 @@ mismatch — it trusts nothing the server says. Verify a **complete** export:
 a `--route`-filtered export only chains if that route's records are
 contiguous.
 
+To check the live ledger in place, `GET /v1/audit/verify` returns
+`{"intact": true, "records": 42, "head": "sha256:…", "errors": []}`. Keep the
+`head` hash somewhere else (a ticket, a log line): if the whole chain is ever
+rewritten, the old head won't be in it.
+
 ## Forward evidence to other systems
 
 Every ledger record can also be sent to other destinations — a SIEM, a log

@@ -7,6 +7,7 @@ from typing import Any
 from aegis_core.pipeline.assembler import CompiledPipeline, PipelineAssembler
 from aegis_core.pipeline.protocol import PipelineNode
 from aegis_core.pipeline.state import RunState
+from aegis_core.pipeline.warmup import warm_up
 from aegis_core.providers.protocol import ModelProvider
 
 
@@ -20,6 +21,7 @@ class PipelineExecutor:
 
     def __init__(self, checkpointer: Any | None = None) -> None:
         self._pipelines: dict[str, CompiledPipeline] = {}
+        self._nodes: dict[str, list[PipelineNode]] = {}
         self._assembler = PipelineAssembler()
         self._checkpointer = checkpointer
 
@@ -46,7 +48,12 @@ class PipelineExecutor:
             checkpointer=self._checkpointer,
         )
         self._pipelines[route] = pipeline
+        self._nodes[route] = [*(ingress or []), *([execute] if execute else []), *(egress or [])]
         return pipeline
+
+    async def warmup(self) -> list[str]:
+        """Warm every registered route's nodes (see :mod:`aegis_core.pipeline.warmup`)."""
+        return await warm_up(node for nodes in self._nodes.values() for node in nodes)
 
     def get(self, route: str) -> CompiledPipeline:
         """Return the compiled pipeline for *route*.

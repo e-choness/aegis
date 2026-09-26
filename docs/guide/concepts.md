@@ -125,7 +125,7 @@ Nodes never import each other; they communicate only through `RunState`:
 | `messages` | The conversation, as the next node will see it. |
 | `labels` | Free-form `dict[str, str]` for cross-pack signals — the classification pack writes `labels["classification"]`. |
 | `mask_map` | Placeholder → original value. Never sent to the model. |
-| `events` | Append-only audit log (`stage`, `node`, `event_type`, `data`). |
+| `events` | Append-only audit log (`stage`, `node`, `event_type`, `data`). Every `node_end` carries `duration_ms`, so a run shows where its time went. |
 | `usage` | Token and cost accounting. |
 | `response`, `status` | Output and one of `running`, `completed`, `blocked`, `paused`, `denied`. |
 

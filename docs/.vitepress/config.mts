@@ -90,6 +90,7 @@ export default withMermaid(
               { text: 'PII masking', link: '/packs/pii' },
               { text: 'Residency', link: '/packs/residency' },
               { text: 'Classification', link: '/packs/classification' },
+              { text: 'Label policy', link: '/packs/policy' },
               { text: 'Budgets', link: '/packs/budgets' },
               { text: 'LLM Guard', link: '/packs/llm-guard' },
             ],

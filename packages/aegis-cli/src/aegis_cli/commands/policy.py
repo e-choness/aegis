@@ -168,9 +168,9 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
                 issues.append(LintIssue(
                     code="AEG-POL-004",
                     message=(
-                        f"{stage} stage is not enforced by aegis serve yet; the server "
-                        "will refuse to start. Configure tool governance in Python "
-                        "(aegis_core.mcp.McpExecuteNode) and remove this key."
+                        f"{stage} stage is not enforced by aegis serve; the server "
+                        "will refuse to start. Remove this key and govern tools with "
+                        "the route's tools: and tool_guards:."
                     ),
                     location=f"{location}.{stage}",
                 ))

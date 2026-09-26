@@ -37,6 +37,7 @@ dc uv run lint-imports                  # packs may only use public aegis_core A
 dc bash scripts/audit-deps.sh           # known vulnerabilities in uv.lock and the docs toolchain
 dc uv run pytest -q                     # all packages + Python SDK
 dc uv run pytest tests/docs -q          # README + every snippet in docs/
+dc uv run python scripts/eval_guards.py pii classification --check
 dc bash -c "npm ci && npm run docs:build"
 ```
 
@@ -48,6 +49,25 @@ dc bash -c "npm ci && npm run docs:build"
 - User-visible changes update the docs in the same PR.
 - **Don't weaken a test to make it pass.** If a gate can't go green, open an
   issue describing why.
+
+## Guard evals
+
+`evals/probes.jsonl` is a labelled set of prompts: personal data, secrets,
+internal and confidential text, prompt attacks, and hard negatives that
+*look* risky but aren't (timestamps, "forget what I said…", questions about
+injection). `scripts/eval_guards.py` scores each detector on what it claims
+to detect — precision and recall per entity and per axis, sensitivity
+accuracy, latency — and `--check` fails CI when a score drops below its floor
+in `evals/baseline.json`.
+
+- Changing a pack's detection? Run with `-v` to see every miss.
+- Improved a score? `--update-baseline` raises the floors (rounded down); commit
+  `baseline.json` with the change so it can't regress. It never lowers one: if
+  new probes legitimately lower a score (they cover something that detector
+  doesn't handle), edit `baseline.json` by hand and say why in the PR.
+- Adding probes: synthetic data only, and documented example values for
+  secrets (e.g. AWS's `AKIAIOSFODNN7EXAMPLE`) so push protection doesn't
+  block the commit.
 
 ## Dependencies and security
 

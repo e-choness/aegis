@@ -55,7 +55,7 @@ In code they are subclasses of `aegis_core.errors.AegisError`.
 | `AEG-POL-001` | Pipeline references an undeclared guardrail | Declare it under `guardrails:` or remove the reference. |
 | `AEG-POL-002` | A guardrail's `pack:` isn't installed | Install the package that provides it. |
 | `AEG-POL-003` | Egress guard is non-incremental; route will buffer | Informational — use an incremental guard if you need true streaming. |
-| `AEG-POL-004` | `tool_call` / `tool_result` is set; `aegis serve` would refuse to start | Remove the key; govern tools in Python with `McpExecuteNode`. |
+| `AEG-POL-004` | `tool_call` / `tool_result` is set; `aegis serve` would refuse to start | Remove the key; govern tools with the route's `tools:` and `tool_guards:`. |
 | `AEG-POL-005` | A provider's endpoint URL encodes a region that contradicts its `residency.region` | Fix the declaration or point at the right regional endpoint. |
 | `AEG-POL-006` | An `exporters:` entry names a type that isn't installed | Install the exporter's package or fix `type`. |
 

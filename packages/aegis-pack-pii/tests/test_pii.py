@@ -60,9 +60,7 @@ async def test_guard_allows_clean_text() -> None:
 
 async def test_guard_blocks_first_message_with_pii() -> None:
     guard = PiiMaskGuard()
-    verdict = await guard.scan(
-        _state("Hello world", "My email is user@example.com", "Goodbye")
-    )
+    verdict = await guard.scan(_state("Hello world", "My email is user@example.com", "Goodbye"))
     assert verdict.is_block
 
 
@@ -182,9 +180,7 @@ async def test_round_trip_pii_never_reaches_provider() -> None:
     probe_delta = await probe_node.run(probe_state)
     assert probe_delta.mask_map, "Expected PII to be detected in probe"
     # Pick the EMAIL_ADDRESS placeholder specifically (deduplication keeps it).
-    placeholder = next(
-        k for k in probe_delta.mask_map if "EMAIL" in k
-    )
+    placeholder = next(k for k in probe_delta.mask_map if "EMAIL" in k)
 
     # FakeProvider echoes back a response containing the placeholder
     fake = FakeProvider(complete_response=f"Got it, {placeholder}")
@@ -305,6 +301,20 @@ class TestDetectionAccuracy:
         assert "DATE_TIME" not in _types(text)
         assert "DATE_TIME" in _types(text, entities=["DATE_TIME"])
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "**TIMESTAMP:** 2026-09-26 // 11:35:00 UTC",
+            "Filed 2026/09/26 at 11",
+            "Due 26/09/2026 14",
+        ],
+    )
+    def test_timestamps_are_not_phone_numbers(self, text: str) -> None:
+        assert "PHONE_NUMBER" not in _types(text)
+
+    def test_phone_numbers_next_to_dates_still_masked(self) -> None:
+        assert _types("On 2026-09-26 call 416-555-0199.") == ["PHONE_NUMBER"]
+
     def test_all_entities(self) -> None:
         assert "DATE_TIME" in _types("See you on Monday.", entities="ALL")
 
@@ -329,6 +339,53 @@ class TestDetectionAccuracy:
             PiiDetector.from_options(threshold=1.5)
 
 
+_ADDRESS_KINDS = {"STREET_ADDRESS", "POSTAL_CODE"}
+
+
+class TestAddresses:
+    """Examples written apart from evals/probes.jsonl."""
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("Deliver to 221B Baker Street, London NW1 6XE.", _ADDRESS_KINDS),
+            ("I live at 1600 Pennsylvania Avenue NW, Washington, DC 20500.", _ADDRESS_KINDS),
+            ("Unit 12, 45 Rue Sainte-Catherine, Montreal H2X 1K4", _ADDRESS_KINDS),
+            ("Ship it to 77 Massachusetts Ave, Cambridge, MA 02139-4307.", _ADDRESS_KINDS),
+            ("Our home address is 8 Maple Crescent, Ottawa.", {"STREET_ADDRESS"}),
+            ("Forward mail to P.O. Box 1234, Halifax.", {"STREET_ADDRESS"}),
+            ("The tenant at 12-300 King St W, Suite 400 hasn't paid.", {"STREET_ADDRESS"}),
+            ("My postcode is EC1A 1BB.", {"POSTAL_CODE"}),
+        ],
+    )
+    def test_addresses_are_pii(self, text: str, expected: set[str]) -> None:
+        assert set(_types(text)) & _ADDRESS_KINDS == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Chapter 11 filings rose 12% in the third quarter.",
+            "Read chapter 3 of the Main Street economics book.",
+            "The meeting is in Room 204, Building 5.",
+            "Take Highway 401 east for 20 minutes.",
+            "We need 3 Senior Engineers by March.",
+            "Version 4 of the Stripe API drops the old Way endpoints.",
+            "Our 2 Toronto offices and 1 Vancouver office are hiring.",
+            "Order 12345 was shipped yesterday.",
+            "Batch A1B 2C3D failed QA.",
+            "We drove 300 km down the Trans-Canada Highway.",
+        ],
+    )
+    def test_look_alikes_are_not_addresses(self, text: str) -> None:
+        assert not set(_types(text)) & _ADDRESS_KINDS
+
+    def test_cities_and_countries_are_not_masked(self) -> None:
+        assert _types("We're flying from Toronto to London, then on to France.") == []
+
+    def test_location_is_opt_in(self) -> None:
+        assert "LOCATION" in _types("We're flying to Toronto.", entities=["LOCATION"])
+
+
 class TestFactoryDetectionOptions:
     def _cfg(self, **options: object):  # type: ignore[no-untyped-def]
         from aegis_core.config.models import GuardrailConfig
@@ -338,11 +395,15 @@ class TestFactoryDetectionOptions:
     async def test_options_reach_the_mask_node(self) -> None:
         from aegis_pack_pii.factory import from_config
 
-        nodes = from_config("pii", self._cfg(entities=["EMAIL_ADDRESS"], allow_list=["ops@example.com"]))
+        nodes = from_config(
+            "pii", self._cfg(entities=["EMAIL_ADDRESS"], allow_list=["ops@example.com"])
+        )
         state = RunState(
             run_id="r",
             route="default",
-            messages=[Message(role="user", content="ops@example.com and jane@example.com, 416-555-0199")],
+            messages=[
+                Message(role="user", content="ops@example.com and jane@example.com, 416-555-0199")
+            ],
         )
         delta = await nodes["ingress"][0].run(state)
         assert delta.messages is not None
@@ -363,13 +424,17 @@ class TestPlaceholderConsistency:
             run_id="r",
             route="default",
             messages=[
-                Message(role="user", content="Please write to jane@example.com and bob@example.com."),
+                Message(
+                    role="user", content="Please write to jane@example.com and bob@example.com."
+                ),
                 Message(role="user", content="Did jane@example.com reply?"),
             ],
         )
         delta = await PiiMaskNode().run(state)
         assert delta.messages is not None
-        assert delta.messages[0].content == "Please write to <EMAIL_ADDRESS_0> and <EMAIL_ADDRESS_1>."
+        assert (
+            delta.messages[0].content == "Please write to <EMAIL_ADDRESS_0> and <EMAIL_ADDRESS_1>."
+        )
         assert delta.messages[1].content == "Did <EMAIL_ADDRESS_0> reply?"
         assert delta.mask_map == {
             "<EMAIL_ADDRESS_0>": "jane@example.com",
@@ -380,7 +445,9 @@ class TestPlaceholderConsistency:
         state = RunState(
             run_id="r",
             route="default",
-            messages=[Message(role="user", content="Also cc carol@example.com and jane@example.com.")],
+            messages=[
+                Message(role="user", content="Also cc carol@example.com and jane@example.com.")
+            ],
             mask_map={"<EMAIL_ADDRESS_0>": "jane@example.com"},
         )
         delta = await PiiMaskNode().run(state)
@@ -422,3 +489,21 @@ class TestSpacyModel:
         cfg = GuardrailConfig.model_validate({"pack": "aegis.pii", "spacy_model": "xx_not_a_model"})
         with pytest.raises(AegisConfigValidationError, match="not installed"):
             from_config("pii", cfg)
+
+
+def test_mask_node_and_guard_warm_up_their_detector() -> None:
+    from aegis_pack_pii import PiiDetector
+
+    from aegis_core.pipeline import Warmable
+
+    calls: list[str] = []
+
+    class _Detector(PiiDetector):
+        def warmup(self) -> None:
+            calls.append("warm")
+
+    detector = _Detector()
+    for obj in (PiiMaskNode(detector=detector), PiiMaskGuard(detector=detector)):
+        assert isinstance(obj, Warmable)
+        obj.warmup()
+    assert calls == ["warm", "warm"]

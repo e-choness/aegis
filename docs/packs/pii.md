@@ -64,14 +64,27 @@ guardrails:
 | `allow_list` | none | Product names, your company, public contacts. |
 | `spacy_model` | `en_core_web_sm` | spaCy model for names and locations. Must be installed (`python -m spacy download <model>`) — Aegis never downloads one at runtime, and a missing model fails at startup. `en_core_web_lg` (~560 MB) rarely finds more for the default entities. |
 
-**Default entities:** `PERSON`, `EMAIL_ADDRESS`, `PHONE_NUMBER`, `LOCATION`,
-`IP_ADDRESS`, `CREDIT_CARD`, `IBAN_CODE`, `CRYPTO`, `US_SSN`, `US_ITIN`,
+**Default entities:** `PERSON`, `EMAIL_ADDRESS`, `PHONE_NUMBER`,
+`STREET_ADDRESS`, `POSTAL_CODE`, `IP_ADDRESS`, `CREDIT_CARD`, `IBAN_CODE`, `CRYPTO`, `US_SSN`, `US_ITIN`,
 `US_PASSPORT`, `US_BANK_NUMBER`, `UK_NHS`, `CA_SIN`,
 `MEDICAL_LICENSE`.
 
-**Opt-in:** `DATE_TIME` (dates of birth — also weekdays and "quarterly"),
+**Opt-in:** `LOCATION` (addresses — also every city in a travel or weather
+question), `DATE_TIME` (dates of birth — also weekdays and "quarterly"),
 `URL`, `NRP`, `US_DRIVER_LICENSE`, and region-specific IDs (`AU_*`, `IN_*`,
 `SG_NRIC_FIN`).
+
+**Places.** A city or country identifies no one, so `LOCATION` is opt-in. What
+pinpoints a household is masked by default:
+
+| Entity | Matches |
+|---|---|
+| `STREET_ADDRESS` | a house number on a named street — `42 Wellington Street West`, `Apt 4B, 1187 Queen St E`, `45 rue Sainte-Catherine` — and `PO Box 4410` |
+| `POSTAL_CODE` | Canadian (`M4M 1K8`), UK (`SW1A 2AA`), US ZIP+4 (`02139-4307`) or state + ZIP (`NY 10118`) |
+
+Street words must be capitalised, so "drove 300 km down the highway" or
+"chapter 3" isn't an address. A bare five-digit number isn't treated as a ZIP
+code — too many things are five digits.
 
 `CA_SIN` is added by Aegis — Presidio has no Canadian recognizer. It matches
 nine digits (optionally grouped `123-456-789`) and keeps only numbers that

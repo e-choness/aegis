@@ -284,3 +284,43 @@ class TestBudgetPackWiring:
 
         pipeline, _ = _budget_pipeline(cap=1.0, cost=0.1)
         assert pipeline.stream_capability == StreamCapability.BUFFERED
+
+
+async def test_budget_trips_with_metered_fake_provider(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A fake provider with cost_per_request exercises a budget with no real model."""
+    import textwrap
+    import uuid
+
+    from aegis_core.config.build import build_executor
+    from aegis_core.config.loader import load_config
+    from aegis_core.pipeline.state import RunState
+    from aegis_core.providers.models import Message
+
+    path = tmp_path / "aegis.yaml"
+    path.write_text(
+        textwrap.dedent(
+            """
+            providers:
+              metered: {type: fake, cost_per_request: 0.4}
+            guardrails:
+              budget: {pack: aegis.budgets, default_cap: 1.0}
+            routes:
+              default:
+                provider: metered
+                pipeline: {ingress: [budget], egress: [budget]}
+            """
+        )
+    )
+    executor = build_executor(load_config(path))
+
+    async def run(principal: str) -> str:
+        state = RunState(
+            run_id=str(uuid.uuid4()),
+            route="default",
+            messages=[Message(role="user", content="hi")],
+            principal=principal,
+        )
+        return (await executor.run("default", state)).status
+
+    assert [await run("alice") for _ in range(4)] == ["completed"] * 3 + ["blocked"]
+    assert await run("bob") == "completed"  # caps are per principal

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query, Request
 
+from aegis_server.store.ledger import verify_chain
 from aegis_server.store.run_store import RunRecord, RunStore
 
 router = APIRouter()
@@ -41,6 +42,27 @@ async def audit_inventory(
     records = await ledger_store.list_records(route=route)
     inventory = [r for r in records if r.get("record_type") == "model_inventory"]
     return {"records": inventory}
+
+
+@router.get("/v1/audit/verify")
+async def audit_verify(request: Request) -> dict[str, object]:
+    """Check the evidence ledger's hash chain end to end.
+
+    ``intact`` is true when every record's hash matches its content and links
+    to the one before it — i.e. nothing was edited, removed or reordered.
+    ``head`` is the latest hash: record it elsewhere to detect a rewrite of
+    the whole chain later. ``aegis audit verify`` checks an exported copy
+    offline the same way.
+    """
+    ledger_store = getattr(request.app.state, "ledger_store", None)
+    records = await ledger_store.list_records(since_seq=0) if ledger_store is not None else []
+    errors = verify_chain(records)
+    return {
+        "intact": not errors,
+        "records": len(records),
+        "head": records[-1]["hash"] if records else None,
+        "errors": errors,
+    }
 
 
 @router.get("/v1/audit/report")

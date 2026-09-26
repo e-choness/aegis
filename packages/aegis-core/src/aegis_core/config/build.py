@@ -10,13 +10,74 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
-from aegis_core.config.models import AegisConfig, ProviderConfig
+from aegis_core.config.models import AegisConfig, ProviderConfig, RouteConfig
 from aegis_core.errors import AegisConfigValidationError, AegisPluginNotFoundError
 from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.pipeline.protocol import PipelineNode
+from aegis_core.providers.models import ToolCall
 
 if TYPE_CHECKING:
     from aegis_core.registry.discovery import PluginRegistry
+
+
+def _tool_script(raw: Any, provider: str) -> list[list[ToolCall]]:
+    """Parse a fake provider's ``tool_calls:`` — a list of turns, each a list of calls.
+
+    ``[[{name: search, arguments: {query: refunds}}], [{name: send_email, …}]]``
+    """
+    if not raw:
+        return []
+    error = (
+        f"providers.{provider}.tool_calls must be a list of turns, each a list of "
+        "{name, arguments} calls"
+    )
+    if not isinstance(raw, list):
+        raise AegisConfigValidationError(error)
+    script: list[list[ToolCall]] = []
+    for t, turn in enumerate(raw):
+        if not isinstance(turn, list):
+            raise AegisConfigValidationError(error)
+        calls = []
+        for c, call in enumerate(turn):
+            if not isinstance(call, dict) or not isinstance(call.get("name"), str):
+                raise AegisConfigValidationError(error)
+            args = call.get("arguments") or {}
+            if not isinstance(args, dict):
+                raise AegisConfigValidationError(error)
+            calls.append(ToolCall(id=f"call_{t}_{c}", name=call["name"], arguments=args))
+        script.append(calls)
+    return script
+
+
+def _tool_node(route_name: str, route: RouteConfig, provider: Any) -> PipelineNode:
+    """The governed tool loop for a route that declares ``tools:``."""
+    from aegis_core.mcp import (
+        ExfiltrationGuard,
+        McpExecuteNode,
+        ToolPolicy,
+        ToolResultInjectionGuard,
+    )
+    from aegis_core.mcp.static import StaticTool, StaticToolSession
+
+    session = StaticToolSession(
+        [
+            StaticTool(name=n, description=t.description, result=t.result, parameters=t.parameters)
+            for n, t in route.tools.items()
+        ]
+    )
+    return McpExecuteNode(
+        provider=provider,
+        session=session,
+        tool_call_guards=[ExfiltrationGuard()] if "exfiltration" in route.tool_guards else [],
+        tool_result_guards=(
+            [ToolResultInjectionGuard()] if "injection" in route.tool_guards else []
+        ),
+        tool_policies={
+            n: ToolPolicy(name=n, require_approval=t.require_approval, deny=t.deny)
+            for n, t in route.tools.items()
+        },
+        name="execute",
+    )
 
 
 def _discovered() -> PluginRegistry:
@@ -30,8 +91,8 @@ def _discovered() -> PluginRegistry:
 #: Built-in provider types; any other ``type:`` is looked up as a plugin.
 BUILTIN_PROVIDER_TYPES: tuple[str, ...] = ("fake", "anthropic", "openai_compatible")
 
-#: Pipeline stages ``aegis.yaml`` accepts but ``build_executor`` cannot wire yet.
-#: Tool governance is configured in Python (``aegis_core.mcp.McpExecuteNode``).
+#: Pipeline stages ``aegis.yaml`` reserves but ``build_executor`` doesn't wire.
+#: Tools are governed per route instead (``routes.<name>.tools`` / ``tool_guards``).
 UNWIRED_STAGES: tuple[str, ...] = ("tool_call", "tool_result")
 
 
@@ -55,6 +116,8 @@ def build_provider(
 
         return FakeProvider(
             complete_response=getattr(pcfg, "complete_response", "[fake] hello from Aegis"),
+            cost_per_request=float(getattr(pcfg, "cost_per_request", 0.0) or 0.0),
+            tool_script=_tool_script(getattr(pcfg, "tool_calls", None), name),
         )
 
     if ptype == "anthropic":
@@ -186,8 +249,8 @@ def _check_unwired_stages(cfg: AegisConfig) -> None:
                 raise AegisConfigValidationError(
                     f"{location}.{stage} is set, but aegis serve cannot enforce the "
                     f"{stage} stage yet — refusing to start rather than skip that policy. "
-                    "Remove it from aegis.yaml and configure tool governance in Python "
-                    "with aegis_core.mcp.McpExecuteNode.",
+                    "Remove it and govern tools with the route's `tools:` and "
+                    "`tool_guards:` instead.",
                     stage=stage,
                 )
 
@@ -252,9 +315,15 @@ def build_executor(
     ex = PipelineExecutor(checkpointer=checkpointer)
     for rname, route in cfg.routes.items():
         stages = route.pipeline if route.pipeline is not None else cfg.pipeline
+        provider = providers[route.provider]
+        if route.tool_guards and not route.tools:
+            raise AegisConfigValidationError(
+                f"routes.{rname}.tool_guards is set but the route declares no tools."
+            )
         ex.register(
             rname,
-            provider=providers[route.provider],
+            provider=provider,
+            execute=_tool_node(rname, route, provider) if route.tools else None,
             ingress=_collect(stages.ingress, contributions, "ingress") or None,
             egress=_collect(stages.egress, contributions, "egress") or None,
         )

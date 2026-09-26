@@ -15,13 +15,50 @@ flowchart LR
     TRG -- block --> STOP
 ```
 
-::: info Current state
-Tool governance is a Python API today: an `McpExecuteNode` placed in the
-execute position of a pipeline. The `tool_call` and `tool_result` keys in
-`aegis.yaml` can't be enforced by `aegis serve` yet, so it **refuses to
-start** if they're set rather than silently skipping that policy
-(`aegis policy lint` reports them as `AEG-POL-004`).
-:::
+## Tools in `aegis.yaml`
+
+Declare a route's tools and their policies; `aegis serve` runs the governed
+loop for that route.
+
+```yaml
+providers:
+  agent_model:
+    type: fake                      # or a real model that supports tool calls
+    complete_response: "Summary sent."
+    tool_calls:                     # fake only: what the model asks for, per turn
+      - [{name: search, arguments: {query: refund policy}}]
+      - [{name: send_email, arguments: {to: finance@example.com, body: "…"}}]
+
+routes:
+  agent:
+    provider: agent_model
+    tool_guards: [exfiltration, injection]
+    tools:
+      search:
+        description: Search the knowledge base
+        result: "Duplicate charges are refundable within 60 days."
+      send_email:
+        description: Send an email
+        result: sent
+        require_approval: true      # pause; approving runs the call
+      delete_records:
+        deny: true                  # any call blocks the run
+```
+
+What happens on this route:
+
+1. `search` runs; its result passes the `injection` guard and goes back to the model.
+2. `send_email` pauses the run. The approval shows the tool and its
+   arguments, so a reviewer sees *where* the email goes. Approving runs the
+   call and the run completes; denying ends it without calling the tool.
+3. A result containing "ignore all previous instructions" would block the
+   run before the model sees it.
+
+A tool's `result` is fixed text — a stand-in for a tool server, the way the
+`fake` provider stands in for a model — which is enough to configure, test
+and demonstrate policies. To call real tools, wire an MCP session in Python
+(below). The pipeline keys `tool_call` / `tool_result` are reserved: `aegis
+serve` refuses to start if they're set (`AEG-POL-004`).
 
 ## Guard contracts
 
@@ -85,7 +122,8 @@ every tool call it makes, and loops until the model answers or
 `max_iterations` is reached. Every guard verdict is written to the run's
 events, so `aegis explain` shows tool decisions alongside ingress and
 egress ones. A `ToolPolicy(require_approval=True)` pauses the run before
-that tool executes, using the same [approval flow](./approvals).
+that tool executes, using the same [approval flow](./approvals); approving
+runs the call and continues the loop.
 
 ## Exposing routes as MCP tools
 
@@ -96,6 +134,9 @@ run it from your own process.
 
 ## Testing without a model
 
-`FakeProvider(tool_calls_sequence=[[ToolCall(...)]])` returns the given tool
-calls on successive completions, then `complete_response` — enough to drive
-the whole loop in a unit test. See [Testing](/develop/testing).
+`FakeProvider(tool_script=[[ToolCall(...)]])` requests the given tool calls,
+one list per turn — chosen by how many tool results the conversation holds —
+then returns `complete_response`. Because it depends only on the request, a
+run that pauses for approval and is re-run gets the same answers.
+`aegis_core.mcp.static.StaticToolSession` serves canned tool results, so the
+whole loop runs without an MCP server. See [Testing](/develop/testing).

@@ -30,9 +30,7 @@ def fake_provider() -> FakeProvider:
 @pytest.fixture
 def executor(fake_provider: FakeProvider) -> PipelineExecutor:
     ex = PipelineExecutor()
-    ingress_nodes = (
-        cast("list[PipelineNode]", [PiiMaskNode()]) if PiiMaskNode is not None else []
-    )
+    ingress_nodes = cast("list[PipelineNode]", [PiiMaskNode()]) if PiiMaskNode is not None else []
     egress_nodes = (
         cast("list[PipelineNode]", [PiiUnmaskNode()]) if PiiUnmaskNode is not None else []
     )
@@ -109,9 +107,7 @@ def test_showcase_route_not_in_openapi_schema(client: TestClient) -> None:
     assert "/showcase/api/invoke" not in paths
 
 
-@pytest.mark.skipif(
-    PiiMaskNode is None, reason="PII pack not installed (requires [pii] extra)"
-)
+@pytest.mark.skipif(PiiMaskNode is None, reason="PII pack not installed (requires [pii] extra)")
 def test_showcase_pii_masking(client: TestClient) -> None:
     """Step 17 check: PII in prompt triggers mask_map populated (mask/unmask demo)."""
     r = client.post(
@@ -132,7 +128,9 @@ def test_showcase_pii_masking(client: TestClient) -> None:
 def test_showcase_rate_limit_returns_429(client: TestClient) -> None:
     """Demo mode: an 11th API request within a minute from one visitor gets 429."""
     statuses = [
-        client.post("/showcase/api/invoke", json={"prompt": f"r{i}", "route": "default"}).status_code
+        client.post(
+            "/showcase/api/invoke", json={"prompt": f"r{i}", "route": "default"}
+        ).status_code
         for i in range(11)
     ]
     assert statuses[:10] == [200] * 10
@@ -173,7 +171,13 @@ def test_demo_hourly_cap_is_rolling() -> None:
         calls.append(scope["path"])
 
     mw = sc.DemoRateLimitMiddleware(app, per_minute=100, per_hour=2)  # type: ignore[arg-type]
-    scope = {"type": "http", "method": "POST", "path": "/v1/runs", "headers": [], "client": ("1.2.3.4", 1)}
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/v1/runs",
+        "headers": [],
+        "client": ("1.2.3.4", 1),
+    }
     asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
     asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
     assert len(calls) == 2
@@ -181,3 +185,33 @@ def test_demo_hourly_cap_is_rolling() -> None:
     asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
     assert len(calls) == 3
 
+
+def test_demo_visitors_get_their_own_principal(client: TestClient) -> None:
+    def principal_of(ip: str) -> str:
+        run_id = client.post(
+            "/showcase/api/invoke",
+            json={"prompt": "hi", "route": "default"},
+            headers={"X-Forwarded-For": ip},
+        ).json()["run_id"]
+        runs = client.get("/showcase/api/runs").json()["runs"]
+        return next(r["principal_id"] for r in runs if r["run_id"] == run_id)
+
+    alice, bob, alice_again = (
+        principal_of("203.0.113.7"),
+        principal_of("198.51.100.9"),
+        principal_of("203.0.113.7"),
+    )
+    assert alice.startswith("visitor-")
+    assert alice != bob
+    assert alice == alice_again
+    assert "203.0.113.7" not in alice  # hashed, never stored
+
+
+def test_principal_unchanged_outside_demo_mode(executor: PipelineExecutor) -> None:
+    app = create_app(executor, no_auth=True, run_store=InMemoryRunStore())
+    with TestClient(app) as plain:
+        run_id = plain.post(
+            "/showcase/api/invoke", json={"prompt": "hi", "route": "default"}
+        ).json()["run_id"]
+        runs = plain.get("/showcase/api/runs").json()["runs"]
+    assert next(r["principal_id"] for r in runs if r["run_id"] == run_id) == "anonymous"

@@ -18,15 +18,22 @@ guardrails:
     mode: mask
   classify:
     pack: aegis.classification
+  content_policy:
+    pack: aegis.policy
+    rules:
+      - when: {label: classification, in: [secret]}
+        verdict: block
+        reason: credentials must not be sent to a model
   residency_ca:
     pack: aegis.residency
     region: us-east-1
     jurisdiction: US
     allowed_regions: [ca-central-1]
     require_approval: true   # pause for a human instead of blocking
+    apply_when: sensitive    # only when the request carries personal/sensitive data
 
 pipeline:
-  ingress: [classify, pii]
+  ingress: [classify, content_policy, pii]
   egress: [pii]
 
 routes:
@@ -40,5 +47,5 @@ routes:
     risk_rating: high
     review_interval_days: 180
     pipeline:
-      ingress: [pii, residency_ca]
+      ingress: [classify, content_policy, pii, residency_ca]
       egress: [pii]

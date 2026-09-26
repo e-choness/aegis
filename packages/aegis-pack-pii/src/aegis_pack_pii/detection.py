@@ -9,6 +9,7 @@ terms that must never be masked (product names, your own company).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -16,12 +17,18 @@ from typing import Any
 from aegis_pack_pii._engine import DEFAULT_SPACY_MODEL, ensure_model_installed, get_analyzer
 
 #: Entities that identify a person or account. Everything else Presidio knows
-#: (dates, URLs, nationalities, region-specific IDs) is opt-in via ``entities:``.
+#: (locations, dates, URLs, nationalities, region-specific IDs) is opt-in via
+#: ``entities:``. ``LOCATION`` is opt-in because a place name alone rarely
+#: identifies anyone, and spaCy's guesses ("Toronto" in a weather question,
+#: "DAN") made it the largest source of false alarms in ``evals/``. What does
+#: pinpoint a person — a street address or postal code — is masked by
+#: ``STREET_ADDRESS`` and ``POSTAL_CODE``.
 DEFAULT_ENTITIES: tuple[str, ...] = (
     "PERSON",
     "EMAIL_ADDRESS",
     "PHONE_NUMBER",
-    "LOCATION",
+    "STREET_ADDRESS",
+    "POSTAL_CODE",
     "IP_ADDRESS",
     "CREDIT_CARD",
     "IBAN_CODE",
@@ -40,6 +47,20 @@ DEFAULT_ENTITIES: tuple[str, ...] = (
 DEFAULT_THRESHOLD = 0.4
 
 ALL_ENTITIES = "ALL"
+
+#: A calendar date: 2026-09-26, 2026/09/26, 26/09/2026, 09-26-2026.
+_DATE = re.compile(
+    r"\b(?:(?:19|20)\d\d[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])"
+    r"|(?:0?[1-9]|[12]\d|3[01])[-/.](?:0?[1-9]|[12]\d|3[01])[-/.](?:19|20)\d\d)\b"
+)
+
+
+def _is_date_not_phone(result: Any, text: str) -> bool:
+    """The phone recognizer is lenient: "2026-09-26 // 11" (a timestamp) parses
+    as a dialable number. A phone number never contains a calendar date."""
+    return result.entity_type == "PHONE_NUMBER" and bool(
+        _DATE.search(text[result.start : result.end])
+    )
 
 
 def deduplicate(results: Iterable[Any]) -> list[Any]:
@@ -120,6 +141,10 @@ class PiiDetector:
             spacy_model=model,
         )
 
+    def warmup(self) -> None:
+        """Load spaCy and Presidio now (~9 s cold) rather than on the first request."""
+        self.find("Warm-up: Jane Doe, jane@example.com, 416-555-0199.")
+
     def find(self, text: str) -> list[Any]:
         """Return de-duplicated Presidio results for *text*."""
         results = get_analyzer(self.spacy_model).analyze(
@@ -129,4 +154,4 @@ class PiiDetector:
             score_threshold=self.threshold,
             allow_list=list(self.allow_list) or None,
         )
-        return deduplicate(results)
+        return deduplicate(r for r in results if not _is_date_not_phone(r, text))
