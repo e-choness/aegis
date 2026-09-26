@@ -40,6 +40,8 @@ PERSONAL = frozenset(
         "EMAIL_ADDRESS",
         "PHONE_NUMBER",
         "LOCATION",
+        "STREET_ADDRESS",
+        "POSTAL_CODE",
         "IP_ADDRESS",
         "CREDIT_CARD",
         "IBAN_CODE",
@@ -223,7 +225,7 @@ def _classification() -> Detector:
         delta = asyncio.run(node.run(state))
         label = (delta.labels or {}).get("classification", "public")
         return Prediction(
-            pii=label == "pii",
+            pii=label in ("pii", "financial"),  # card numbers are personal data
             secret=label == "secret",
             sensitivity="public" if label == "public" else "confidential",
         )
@@ -276,12 +278,27 @@ def check(cards: list[Scorecard], baseline: dict[str, dict[str, float]]) -> list
     return failures
 
 
-def floors(cards: list[Scorecard], baseline: dict[str, dict[str, float]]) -> dict:
-    """Current scores rounded down to 2 places become the new floors."""
-    updated = dict(baseline)
+def floors(
+    cards: list[Scorecard], baseline: dict[str, dict[str, float]]
+) -> tuple[dict[str, dict[str, float]], list[str]]:
+    """Raise floors to the current scores (rounded down to 2 places); never lower one.
+
+    Returns the new baseline and one message per floor the current score is
+    below — accepting such a drop (e.g. new probes a detector can't handle)
+    means editing ``baseline.json`` by hand, so it shows up in review.
+    """
+    updated = {name: dict(metrics) for name, metrics in baseline.items()}
+    kept = []
     for card in cards:
-        updated[card.detector] = {k: math.floor(v * 100) / 100 for k, v in card.metrics.items()}
-    return updated
+        current = updated.setdefault(card.detector, {})
+        for metric, value in card.metrics.items():
+            new = math.floor(value * 100) / 100
+            old = current.get(metric)
+            if old is not None and new < old:
+                kept.append(f"{card.detector} {metric}: {new:.2f} < floor {old:.2f} (kept)")
+            else:
+                current[metric] = new
+    return updated, kept
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -303,8 +320,12 @@ def main(argv: list[str] | None = None) -> int:
         print(render(card, args.verbose or args.check))
 
     if args.update_baseline:
-        BASELINE.write_text(json.dumps(floors(cards, baseline), indent=2) + "\n", encoding="utf-8")
+        updated, kept = floors(cards, baseline)
+        BASELINE.write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
         print(f"Updated {BASELINE.relative_to(ROOT)}")
+        for message in kept:
+            print(f"NOT LOWERED {message} — edit the file to accept it", file=sys.stderr)
+        baseline = updated
     if args.check:
         failures = check(cards, baseline)
         for f in failures:

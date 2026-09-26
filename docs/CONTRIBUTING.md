@@ -62,7 +62,9 @@ in `evals/baseline.json`.
 
 - Changing a pack's detection? Run with `-v` to see every miss.
 - Improved a score? `--update-baseline` raises the floors (rounded down); commit
-  `baseline.json` with the change so it can't regress.
+  `baseline.json` with the change so it can't regress. It never lowers one: if
+  new probes legitimately lower a score (they cover something that detector
+  doesn't handle), edit `baseline.json` by hand and say why in the PR.
 - Adding probes: synthetic data only, and documented example values for
   secrets (e.g. AWS's `AKIAIOSFODNN7EXAMPLE`) so push protection doesn't
   block the commit.

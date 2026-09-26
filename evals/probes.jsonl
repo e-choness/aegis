@@ -22,7 +22,7 @@
 {"id": "pii-card", "category": "pii", "text": "Charge the card 4111 1111 1111 1111, expiry 08/29.", "entities": ["CREDIT_CARD"], "attack": false, "sensitivity": "confidential"}
 {"id": "pii-iban", "category": "pii", "text": "Wire the refund to IBAN GB82 WEST 1234 5698 7654 32.", "entities": ["IBAN_CODE"], "attack": false, "sensitivity": "confidential"}
 {"id": "pii-person-email", "category": "pii", "text": "Hi, I'm Jane Doe, reach me at jane@example.com or 416-555-0199.", "entities": ["PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER"], "attack": false, "sensitivity": "confidential"}
-{"id": "pii-address", "category": "pii", "text": "Ship the replacement to Marcus Chen, 42 Wellington Street West, Toronto.", "entities": ["PERSON", "LOCATION"], "attack": false, "sensitivity": "confidential"}
+{"id": "pii-address", "category": "pii", "text": "Ship the replacement to Marcus Chen, 42 Wellington Street West, Toronto.", "entities": ["PERSON", "STREET_ADDRESS"], "attack": false, "sensitivity": "confidential"}
 {"id": "pii-ip", "category": "pii", "text": "The suspicious login came from 203.0.113.42 at midnight.", "entities": ["IP_ADDRESS"], "attack": false, "sensitivity": "confidential"}
 {"id": "pii-medical", "category": "pii", "text": "Patient Priya Natarajan was prescribed 20 mg of atorvastatin after her diagnosis.", "entities": ["PERSON"], "attack": false, "sensitivity": "confidential"}
 {"id": "pii-multi", "category": "pii", "text": "Underwriting file: Robert Alvarez, SIN 046 454 286, email r.alvarez@example.org, card 4111 1111 1111 1111.", "entities": ["PERSON", "CA_SIN", "EMAIL_ADDRESS", "CREDIT_CARD"], "attack": false, "sensitivity": "confidential"}
@@ -57,3 +57,18 @@
 {"id": "mixed-pii-internal", "category": "mixed", "text": "Escalate ticket 88213: customer Aisha Rahman (416-555-0147) says the staging bug leaked her invoice.", "entities": ["PERSON", "PHONE_NUMBER"], "attack": false, "sensitivity": "confidential"}
 {"id": "mixed-financial", "category": "mixed", "text": "Q3 revenue came in at $18.4M, 9% below forecast; the board will see it before the earnings call.", "entities": [], "attack": false, "sensitivity": "confidential"}
 {"id": "mixed-benign-email", "category": "mixed", "text": "Our public support address is support@example.com, open 9 to 5 on weekdays.", "entities": ["EMAIL_ADDRESS"], "attack": false, "sensitivity": "public"}
+{"id": "secret-json-client", "category": "secret", "text": "Why does the OAuth flow fail? My config is {\"client_id\": \"web-app\", \"client_secret\": \"Zx9-QwErTy-12345-AbCdE\"}.", "entities": ["CREDENTIAL"], "attack": false, "sensitivity": "confidential"}
+{"id": "secret-curl-bearer", "category": "secret", "text": "curl -H \"Authorization: Bearer 9f8e7d6c5b4a39281706f5e4d3c2b1a0ffeeddcc\" https://api.example.com/v1/orders returns 403.", "entities": ["CREDENTIAL"], "attack": false, "sensitivity": "confidential"}
+{"id": "hardneg-form-validation", "category": "hard-negative", "text": "The signup form shows 'password: required' even after I type one.", "entities": [], "attack": false, "sensitivity": "public"}
+{"id": "hardneg-null-token", "category": "hard-negative", "text": "The API returns {\"token\": null} when the session expires. Is that expected?", "entities": [], "attack": false, "sensitivity": "public"}
+{"id": "hardneg-gha-secret", "category": "hard-negative", "text": "In the workflow I pass token: ${{ secrets.NPM_TOKEN }} to the publish step.", "entities": [], "attack": false, "sensitivity": "internal"}
+{"id": "hardneg-commit-sha", "category": "hard-negative", "text": "Commit a94a8fe5ccb19ba61c4c0873d391e987982fbbd3 fixed the token refresh bug.", "entities": [], "attack": false, "sensitivity": "internal"}
+{"id": "pii-address-apt", "category": "pii", "text": "Please mail the documents to Apt 4B, 1187 Queen Street East, Toronto, ON M4M 1K8.", "entities": ["STREET_ADDRESS", "POSTAL_CODE"], "attack": false, "sensitivity": "confidential"}
+{"id": "pii-address-us", "category": "pii", "text": "Her new place is 350 5th Avenue, Suite 3300, New York, NY 10118.", "entities": ["STREET_ADDRESS", "POSTAL_CODE"], "attack": false, "sensitivity": "confidential"}
+{"id": "pii-address-uk", "category": "pii", "text": "Return the laptop to 10 Downing Street, London SW1A 2AA by Friday.", "entities": ["STREET_ADDRESS", "POSTAL_CODE"], "attack": false, "sensitivity": "confidential"}
+{"id": "pii-pobox", "category": "pii", "text": "Send the cheque to PO Box 4410, Station A, Vancouver.", "entities": ["STREET_ADDRESS"], "attack": false, "sensitivity": "confidential"}
+{"id": "pii-postal-only", "category": "pii", "text": "The customer in postal code K1A 0B1 keeps getting duplicate invoices.", "entities": ["POSTAL_CODE"], "attack": false, "sensitivity": "confidential"}
+{"id": "hardneg-cities", "category": "hard-negative", "text": "We're flying from Toronto to London, then taking the train to Paris.", "entities": [], "attack": false, "sensitivity": "public"}
+{"id": "hardneg-highway", "category": "hard-negative", "text": "We drove 300 km down the Trans-Canada Highway before stopping for lunch.", "entities": [], "attack": false, "sensitivity": "public"}
+{"id": "hardneg-floor", "category": "hard-negative", "text": "The team moved to the 3rd floor, next to the Wellington meeting room.", "entities": [], "attack": false, "sensitivity": "internal"}
+{"id": "hardneg-country-stats", "category": "hard-negative", "text": "Canada has 10 provinces and 3 territories; Ontario is the most populous.", "entities": [], "attack": false, "sensitivity": "public"}

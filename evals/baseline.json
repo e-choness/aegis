@@ -1,15 +1,15 @@
 {
   "pii": {
-    "entities.precision": 0.79,
+    "entities.precision": 0.93,
     "entities.recall": 1.0,
-    "pii.precision": 0.71,
+    "pii.precision": 0.9,
     "pii.recall": 1.0
   },
   "classification": {
     "pii.precision": 1.0,
-    "pii.recall": 0.53,
+    "pii.recall": 0.45,
     "secret.precision": 1.0,
-    "secret.recall": 0.22,
-    "sensitivity.accuracy": 0.62
+    "secret.recall": 1.0,
+    "sensitivity.accuracy": 0.68
   }
 }

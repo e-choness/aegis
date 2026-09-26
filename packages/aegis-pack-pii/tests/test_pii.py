@@ -339,6 +339,53 @@ class TestDetectionAccuracy:
             PiiDetector.from_options(threshold=1.5)
 
 
+_ADDRESS_KINDS = {"STREET_ADDRESS", "POSTAL_CODE"}
+
+
+class TestAddresses:
+    """Examples written apart from evals/probes.jsonl."""
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("Deliver to 221B Baker Street, London NW1 6XE.", _ADDRESS_KINDS),
+            ("I live at 1600 Pennsylvania Avenue NW, Washington, DC 20500.", _ADDRESS_KINDS),
+            ("Unit 12, 45 Rue Sainte-Catherine, Montreal H2X 1K4", _ADDRESS_KINDS),
+            ("Ship it to 77 Massachusetts Ave, Cambridge, MA 02139-4307.", _ADDRESS_KINDS),
+            ("Our home address is 8 Maple Crescent, Ottawa.", {"STREET_ADDRESS"}),
+            ("Forward mail to P.O. Box 1234, Halifax.", {"STREET_ADDRESS"}),
+            ("The tenant at 12-300 King St W, Suite 400 hasn't paid.", {"STREET_ADDRESS"}),
+            ("My postcode is EC1A 1BB.", {"POSTAL_CODE"}),
+        ],
+    )
+    def test_addresses_are_pii(self, text: str, expected: set[str]) -> None:
+        assert set(_types(text)) & _ADDRESS_KINDS == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Chapter 11 filings rose 12% in the third quarter.",
+            "Read chapter 3 of the Main Street economics book.",
+            "The meeting is in Room 204, Building 5.",
+            "Take Highway 401 east for 20 minutes.",
+            "We need 3 Senior Engineers by March.",
+            "Version 4 of the Stripe API drops the old Way endpoints.",
+            "Our 2 Toronto offices and 1 Vancouver office are hiring.",
+            "Order 12345 was shipped yesterday.",
+            "Batch A1B 2C3D failed QA.",
+            "We drove 300 km down the Trans-Canada Highway.",
+        ],
+    )
+    def test_look_alikes_are_not_addresses(self, text: str) -> None:
+        assert not set(_types(text)) & _ADDRESS_KINDS
+
+    def test_cities_and_countries_are_not_masked(self) -> None:
+        assert _types("We're flying from Toronto to London, then on to France.") == []
+
+    def test_location_is_opt_in(self) -> None:
+        assert "LOCATION" in _types("We're flying to Toronto.", entities=["LOCATION"])
+
+
 class TestFactoryDetectionOptions:
     def _cfg(self, **options: object):  # type: ignore[no-untyped-def]
         from aegis_core.config.models import GuardrailConfig

@@ -16,16 +16,36 @@ pipeline:
 
 ## Labels
 
-Rules are checked in this order; the first match wins.
+Rules are checked most severe first; the first match wins, so a message with
+an email address *and* a password is labelled `secret`.
 
 | Label | Matches |
 |---|---|
-| `pii` | email addresses, US-style phone numbers |
+| `secret` | credentials — see below |
 | `financial` | 16-digit card-number patterns |
-| `secret` | `api_key=…`, `password: …`, `token=…` and similar |
+| `pii` | email addresses, US-style phone numbers |
 | `medical` | *diagnosis*, *prescription*, *patient*, *HIPAA* |
 | `legal` | *attorney-client*, *privileged*, *confidential* |
 | `public` | anything else |
+
+### What counts as a secret
+
+A message is labelled `secret` when it contains a credential, not when it
+merely talks about one:
+
+| Shape | Example |
+|---|---|
+| Private keys | `-----BEGIN RSA PRIVATE KEY-----` |
+| Provider keys | AWS `AKIA…`, Google `AIza…`, GitHub `ghp_…`, Slack `xoxb-…`, Stripe `sk_live_…` |
+| Tokens | JWTs (`eyJ….eyJ….…`), `Authorization: Bearer …` |
+| Connection strings | `postgres://user:password@host` |
+| Key/value pairs | `api_key: …`, `DB_PASSWORD=…`, `"client_secret": "…"` — the value must be 6+ characters with a digit or symbol |
+| Phrases | "the password is Tr0ub4dor&3", "the login is ops / Hunter2-Prod" |
+
+"Rotate your password every 90 days", `password: required`, `"token": null`
+and GitHub Actions `secrets.NPM_TOKEN` references are not secrets. These rules are measured
+against the labelled prompts in `evals/` on every CI run (see
+[Contributing](/CONTRIBUTING#guard-evals)).
 
 The node never blocks — it only labels. The label is recorded in the run's
 events.

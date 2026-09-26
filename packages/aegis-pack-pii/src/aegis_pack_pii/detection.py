@@ -17,12 +17,18 @@ from typing import Any
 from aegis_pack_pii._engine import DEFAULT_SPACY_MODEL, ensure_model_installed, get_analyzer
 
 #: Entities that identify a person or account. Everything else Presidio knows
-#: (dates, URLs, nationalities, region-specific IDs) is opt-in via ``entities:``.
+#: (locations, dates, URLs, nationalities, region-specific IDs) is opt-in via
+#: ``entities:``. ``LOCATION`` is opt-in because a place name alone rarely
+#: identifies anyone, and spaCy's guesses ("Toronto" in a weather question,
+#: "DAN") made it the largest source of false alarms in ``evals/``. What does
+#: pinpoint a person — a street address or postal code — is masked by
+#: ``STREET_ADDRESS`` and ``POSTAL_CODE``.
 DEFAULT_ENTITIES: tuple[str, ...] = (
     "PERSON",
     "EMAIL_ADDRESS",
     "PHONE_NUMBER",
-    "LOCATION",
+    "STREET_ADDRESS",
+    "POSTAL_CODE",
     "IP_ADDRESS",
     "CREDIT_CARD",
     "IBAN_CODE",

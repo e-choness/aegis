@@ -9,6 +9,35 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- PII masking no longer masks `LOCATION` by default: a place name rarely
+  identifies anyone, and it caused most false alarms in the new guard evals.
+  Add it back with `entities: [..., LOCATION]`.
+- PII masking detects what does pinpoint a person: street addresses
+  (`STREET_ADDRESS`, including unit numbers, PO boxes and French-order
+  streets) and postal codes (`POSTAL_CODE`: Canadian, UK, US ZIP+4 or
+  state + ZIP), both on by default.
+- Classification labels are checked most severe first (`secret`, `financial`,
+  `pii`, …), so a message with an email address and a password is `secret`.
+- Classification recognises many more credential shapes — private keys,
+  AWS/Google/GitHub/Slack/Stripe keys, JWTs, bearer tokens, connection strings
+  with passwords, `DB_PASSWORD=…` — and no longer labels mentions such as
+  `password: required` or `"token": null` as secrets. Secret recall on the
+  guard evals rose from 22% to 100% with no false alarms.
+
+### Added
+
+- Guard evals: `evals/probes.jsonl` (labelled prompts) and
+  `scripts/eval_guards.py`, which scores each detector's precision, recall and
+  latency; CI fails when a score drops below `evals/baseline.json`.
+
+### Fixed
+
+- PII masking no longer reports timestamps such as `2026-09-26 // 11` as phone
+  numbers.
+- Showcase: "Refresh runs" shows the newest runs and visibly refreshes.
+
 ## [2.0.0a2] - 2026-09-26
 
 ### Changed

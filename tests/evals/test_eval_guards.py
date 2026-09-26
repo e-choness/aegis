@@ -130,8 +130,17 @@ class TestBaseline:
 
     def test_floors_round_down_and_keep_other_detectors(self) -> None:
         card = eg.Scorecard("pii", metrics={"pii.recall": 0.9375})
-        updated = eg.floors([card], {"classification": {"secret.recall": 0.2}})
+        updated, kept = eg.floors([card], {"classification": {"secret.recall": 0.2}})
         assert updated == {"classification": {"secret.recall": 0.2}, "pii": {"pii.recall": 0.93}}
+        assert kept == []
+
+    def test_floors_are_never_lowered(self) -> None:
+        card = eg.Scorecard("pii", metrics={"pii.recall": 0.5, "pii.precision": 0.99})
+        baseline = {"pii": {"pii.recall": 0.8, "pii.precision": 0.9}}
+        updated, kept = eg.floors([card], baseline)
+        assert updated == {"pii": {"pii.recall": 0.8, "pii.precision": 0.99}}
+        assert kept == ["pii pii.recall: 0.50 < floor 0.80 (kept)"]
+        assert baseline == {"pii": {"pii.recall": 0.8, "pii.precision": 0.9}}  # not mutated
 
     def test_committed_baseline_names_known_detectors(self) -> None:
         import json
