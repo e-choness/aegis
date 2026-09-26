@@ -30,7 +30,7 @@ jobs:
         with:
           ref: ${{ env.TAG }}
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
 
       - name: Tag matches package versions
         id: version
@@ -86,7 +86,7 @@ jobs:
         with:
           ref: ${{ env.TAG }}
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
 
       - name: Release notes from docs/changelog.md
         run: |
@@ -136,7 +136,7 @@ jobs:
       - name: Pin the Space to this release
         run: sed -i "s/__AEGIS_VERSION__/${{ needs.build.outputs.version }}/" deploy/huggingface/Dockerfile
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
 
       - name: Upload to the Space
         env:
