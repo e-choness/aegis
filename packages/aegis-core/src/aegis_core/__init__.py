@@ -2,4 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "2.0.0a0"
+from importlib.metadata import version as _dist_version
+
+#: Single source of truth is pyproject.toml (set by scripts/release.py bump).
+__version__ = _dist_version("aegis-gateway-core")

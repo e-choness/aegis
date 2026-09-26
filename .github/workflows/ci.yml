@@ -13,9 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system deps (spacy model)
-        run: docker compose run --rm dev python -m spacy download en_core_web_sm
-
       - name: Install workspace dependencies
         run: docker compose run --rm dev uv sync --all-packages
 
@@ -24,6 +21,12 @@ jobs:
 
       - name: Type-check (pyright)
         run: docker compose run --rm dev uv run pyright
+
+      - name: Import contracts (packs use public APIs only)
+        run: docker compose run --rm dev uv run lint-imports
+
+      - name: OpenAPI spec is up to date
+        run: docker compose run --rm dev uv run python scripts/export_openapi.py --check
 
       - name: Run tests
         run: docker compose run --rm dev uv run pytest -q
@@ -55,76 +58,9 @@ jobs:
           docker compose run --rm dev uv run python examples/04_rag.py
           docker compose run --rm dev uv run python examples/05_residency.py
 
-      - name: Run example 02 (approval flow - requires running server)
-        run: |
-          docker compose up -d dev
-          echo "Waiting for server to be fully ready..."
-          for i in {1..40}; do
-            response=$(curl -s -X POST http://localhost:8000/v1/chat/completions \
-              -H "Content-Type: application/json" \
-              -d '{"messages":[{"role":"user","content":"test"}],"route":"default"}' 2>/dev/null)
-            if echo "$response" | grep -q "response"; then
-              echo "Server ready"
-              break
-            fi
-            sleep 1
-          done
-          docker compose exec dev uv run python examples/02_approval_flow.py
-        continue-on-error: true
+      - name: Approval scenario (README demo, end to end)
+        run: docker compose run --rm dev bash scripts/approval-scenario.sh
 
       - name: Teardown
         if: always()
         run: docker compose down -v
-
-  publish:
-    name: Release to PyPI
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [test]
-    permissions:
-      # Required for Trusted Publishing (OIDC)
-      id-token: write
-      # Required to read repository content
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Build all packages
-        run: uv build --all-packages
-
-      - name: Sequential Publish (Avoid 429)
-        shell: bash
-        run: |
-          # Publish each package (sdist + matching wheel) one at a time with a
-          # delay to stay under PyPI's new-project creation rate limit (~1/min).
-          first=true
-          for sdist in dist/*.tar.gz; do
-            # Find the wheel that corresponds to this sdist (same stem).
-            stem=$(basename "${sdist%.tar.gz}")
-            wheel=$(ls dist/"${stem}"-*.whl 2>/dev/null | head -1)
-            if [[ -z "$wheel" ]]; then
-              echo "WARNING: no wheel found for $sdist, skipping"
-              continue
-            fi
-            # Wait before every package except the first.
-            if [[ "$first" != "true" ]]; then
-              echo "Waiting 90 seconds for PyPI project creation rate limit..."
-              sleep 90
-            fi
-            first=false
-            echo "Publishing $sdist + $wheel ..."
-            publish_output=$(uv publish "$sdist" "$wheel" 2>&1)
-            exit_code=$?
-            echo "$publish_output"
-            if echo "$publish_output" | grep -q "429\|Too Many Requests"; then
-              echo "::error::PyPI rate limit (429) hit — stopping immediately to avoid extending the lockout window."
-              exit 1
-            fi
-            if [[ $exit_code -ne 0 ]]; then
-              echo "::error::uv publish failed for $sdist (exit $exit_code)"
-              exit $exit_code
-            fi
-          done

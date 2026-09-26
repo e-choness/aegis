@@ -1,29 +1,39 @@
 # Examples
 
-Run any standalone example with Docker Compose (no server, no API keys —
-each uses an in-process `FakeProvider`):
+All examples run inside the dev container and need no API keys — every
+provider is a `FakeProvider` or a `type: fake` route.
 
-    docker compose run --rm dev uv run python examples/01_governed_chat.py
+## In-process (no server)
 
-Example index:
+Each script builds a pipeline in memory and runs a request through it.
 
-| # | Name | Command |
-|---|------|---------|
-| 01 | Governed chat | `docker compose run --rm dev uv run python examples/01_governed_chat.py` |
-| 02 | Vendor-diligence approval flow | `docker compose run --rm dev uv run python examples/scenarios/02_approval_flow.py` *(requires `aegis serve --config examples/fintech.yaml` running — see the script's docstring)* |
-| 03 | MCP tool call | `docker compose run --rm dev uv run python examples/03_mcp_tool.py` |
-| 04 | RAG | `docker compose run --rm dev uv run python examples/04_rag.py` |
-| 05 | Residency | `docker compose run --rm dev uv run python examples/05_residency.py` |
+| # | What it shows | Command |
+|---|---|---|
+| 01 | PII masking: what the user sent, what the model saw, what came back | `docker compose run --rm dev uv run python examples/01_governed_chat.py` |
+| 03 | Governed MCP tool calls: an injected tool result is blocked; a sensitive tool pauses for approval | `docker compose run --rm dev uv run python examples/03_mcp_tool.py` |
+| 04 | Governed RAG: a poisoned document is dropped before the model sees the context | `docker compose run --rm dev uv run python examples/04_rag.py` |
+| 05 | Residency: the same request allowed, blocked, or paused depending on the endpoint region | `docker compose run --rm dev uv run python examples/05_residency.py` |
 
-01, 03, 04, and 05 run entirely in-process — no server, no credentials.
-02 is the exception: it drives a real `aegis serve` process end to end
-(submit → pause → deny → explain → audit export/verify) and is what the
-README's demo scenario is built from. `examples/02_approval_flow.py` (no
-`scenarios/`) is an older, minimal version of the same idea against the
-generic `default` route — kept for reference, but
-`examples/scenarios/02_approval_flow.py` is the current, complete one.
+## Against a live server
 
-`examples/scenarios/` also has its own copies of 01/03/04/05, written
-against the SDK talking to a live server rather than an in-process
-pipeline — useful once you have `aegis serve` running and want to see the
-same requests go through the real HTTP path.
+**The approval scenario from the README** — a request is paused by the
+residency guardrail, reviewer `jane` denies it, `aegis explain` shows why, and
+the exported ledger verifies offline. One command sets up keys, starts
+`aegis serve` with [`fintech.yaml`](fintech.yaml), runs the scenario and cleans up:
+
+```bash
+docker compose run --rm dev bash scripts/approval-scenario.sh
+```
+
+The scenario itself is [`02_approval_flow.py`](02_approval_flow.py); it uses the
+Python SDK and the `aegis` CLI against the running server.
+
+## Configs and fixtures
+
+| File | Use |
+|---|---|
+| [`dev.yaml`](dev.yaml) | Zero-credential local config: fake provider, PII masking, budgets |
+| [`fintech.yaml`](fintech.yaml) | The README / approval-scenario config |
+| [`aegis.yaml`](aegis.yaml) | A real-provider example (Anthropic + a local OpenAI-compatible model) |
+| [`fixtures/`](fixtures/) | Policy fixtures for `aegis policy test examples/fixtures/` |
+| [`docs/`](docs/) | Sample documents for the RAG example and `aegis rag index` |

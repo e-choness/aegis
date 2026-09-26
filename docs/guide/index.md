@@ -52,7 +52,7 @@ some capabilities are available as Python APIs before they are reachable from
 | `tool_call` / `tool_result` stages | **Refused at startup** — not enforceable from YAML yet | ✅ `McpExecuteNode` |
 | RAG retrieval into the pipeline | CLI index/query only | ✅ retrieval node + stores |
 | Budget accounting (check on ingress, charge on egress) | ✅ | ✅ |
-| Run store (`/v1/runs`, `/v1/audit`) | In-memory (lost on restart) | Pluggable `RunStore` |
+| Run store (`/v1/runs`, `/v1/audit`) — survives restarts | ✅ SQLite | ✅ pluggable `RunStore` |
 | Secret backends | `env` | `env`, `keyring`, custom |
 
 Wiring the refused stages and the CLI-only features into `aegis serve` are good

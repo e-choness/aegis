@@ -23,7 +23,7 @@ AGENTS.md
 CLAUDE.md
 .claude
 .claude-flow
-reference/
+/reference/
 
 # MCP
 .mcp.json
@@ -106,3 +106,6 @@ site/
 # VitePress docs build output
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+
+# Runtime databases created by `aegis serve`
+aegis_*.db

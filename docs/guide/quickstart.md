@@ -75,7 +75,7 @@ aegis serve --config aegis.yaml --no-auth
 
 `--no-auth` is required when no keys exist yet — `aegis serve` refuses to
 start without an authenticator otherwise. The server listens on
-`http://localhost:8000` and creates `aegis_ledger.db` and
+`http://localhost:8000` and creates `aegis_ledger.db`, `aegis_runs.db` and
 `aegis_checkpoints.db` in the working directory.
 
 ## 4. Send a request

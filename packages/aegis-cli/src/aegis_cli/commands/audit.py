@@ -8,7 +8,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import typer
@@ -42,10 +41,10 @@ def _compute_hash(record_without_hash: dict) -> str:
 
 @app.command("export")
 def export_ledger(
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)."),
     fmt: str = typer.Option("jsonl", "--format", "-f", help="Output format: jsonl or csv."),
     since_seq: int = typer.Option(0, "--since-seq", help="Return records with seq > N."),
-    route: Optional[str] = typer.Option(None, "--route", help="Filter by route/model_id."),
+    route: str | None = typer.Option(None, "--route", help="Filter by route/model_id."),
 ) -> None:
     """Export evidence ledger records to JSONL or CSV."""
     try:
@@ -131,7 +130,7 @@ def verify_chain(
 
 @app.command("inventory")
 def list_inventory(
-    route: Optional[str] = typer.Option(None, "--route", help="Filter by route/model_id."),
+    route: str | None = typer.Option(None, "--route", help="Filter by route/model_id."),
     json_output: bool = typer.Option(False, "--json", help="Output raw records as JSON."),
 ) -> None:
     """List model inventory records from the evidence ledger."""

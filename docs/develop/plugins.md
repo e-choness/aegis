@@ -88,12 +88,11 @@ from the YAML entry (extra keys are allowed on `GuardrailConfig`):
 ```python
 from aegis_guardrail_my_guard.guard import MyGuard
 
-from aegis_core.config.models import GuardrailConfig
 from aegis_core.guardrails.spine import GuardNode
-from aegis_core.pipeline.protocol import PipelineNode
+from aegis_core.packs import GuardrailConfig, PackNodes
 
 
-def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]]:
+def from_config(name: str, cfg: GuardrailConfig) -> PackNodes:
     guard = MyGuard()
     guard.name = name
     return {"ingress": [GuardNode([guard], name=name)]}
@@ -191,7 +190,7 @@ constructed with no arguments.
 ```python
 from pydantic import SecretStr
 
-from aegis_core.config.models import ProviderConfig
+from aegis_core.packs import ProviderConfig
 from aegis_core.testing import FakeProvider
 
 

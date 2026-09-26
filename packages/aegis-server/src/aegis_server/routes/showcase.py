@@ -1,13 +1,13 @@
 """Showcase page — DEP-3 thin server-rendered pipeline visualizer.
 
-Step 19 adds demo safety rails: per-IP rate limit + hard request cap.
+Public-demo safety rails (`aegis serve --demo`): per-visitor rate limit + rolling cap.
 """
 
 from __future__ import annotations
 
 import time
 import uuid
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -24,67 +24,93 @@ from aegis_server.store.run_store import RunRecord, RunStore
 from aegis_server.telemetry import run_span
 
 # ---------------------------------------------------------------------------
-# Demo safety rails: per-IP rate limit + hard request cap
+# Demo safety rails (`aegis serve --demo`)
 # ---------------------------------------------------------------------------
 
-_RATE_LIMIT: int = 10  # Max requests per minute per IP
-_HARD_CAP: int = 100  # Max total requests across all IPs
-_rate_counts: dict[str, list[float]] = defaultdict(list)
-_total_requests: int = 0
+_RATE_LIMIT: int = 10  # pipeline runs (POSTs) per visitor per minute
+_HOURLY_CAP: int = 600  # pipeline runs across all visitors per rolling hour
+_UNLIMITED_PATHS: tuple[str, ...] = ("/v1/health",)
+
+
+def _client_ip(scope: Scope) -> str:
+    """The visitor's address — the first X-Forwarded-For hop when behind a proxy.
+
+    Public demos (e.g. Hugging Face Spaces) sit behind a proxy, so the socket
+    peer is the proxy itself; without this every visitor would share one quota.
+    """
+    for name, value in scope.get("headers", []):
+        if name == b"x-forwarded-for":
+            first = value.decode("latin-1").split(",")[0].strip()
+            if first:
+                return first
+    client = scope.get("client")
+    return client[0] if client else "unknown"
 
 
 class DemoRateLimitMiddleware:
-    """ASGI middleware enforcing per-IP rate limits and a global hard cap."""
+    """Per-visitor rate limit plus a rolling global cap, for public demos.
 
-    def __init__(self, app: ASGIApp) -> None:
+    Only requests that do work are limited — non-GET calls to ``/v1/*`` and
+    ``/showcase/api/*`` (running a prompt, creating or resuming a run).  Reads,
+    pages and ``/v1/health`` are free, so the showcase page's own polling
+    doesn't eat a visitor's quota.  State lives on the instance,
+    so separate apps (and tests) don't share quotas.  The client address is
+    taken from ``X-Forwarded-For`` — only enable this behind a proxy you trust.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        per_minute: int = _RATE_LIMIT,
+        per_hour: int = _HOURLY_CAP,
+    ) -> None:
         self._app = app
+        self._per_minute = per_minute
+        self._per_hour = per_hour
+        self._by_ip: dict[str, deque[float]] = defaultdict(deque)
+        self._all: deque[float] = deque()
+
+    @staticmethod
+    def _limited(method: str, path: str) -> bool:
+        if method in ("GET", "HEAD", "OPTIONS") or path in _UNLIMITED_PATHS:
+            return False
+        return path.startswith(("/v1/", "/showcase/api/"))
+
+    @staticmethod
+    def _prune(window: deque[float], now: float, seconds: float) -> None:
+        while window and now - window[0] >= seconds:
+            window.popleft()
+
+    async def _reject(self, scope: Scope, receive: Receive, send: Send, detail: str) -> None:
+        response = JSONResponse({"detail": detail}, status_code=429, headers={"Retry-After": "60"})
+        await response(scope, receive, send)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != "http" or not self._limited(
+            scope.get("method", "GET"), scope.get("path", "")
+        ):
             await self._app(scope, receive, send)
             return
 
-        path = scope.get("path", "")
-        # Only rate-limit showcase routes
-        if not path.startswith("/showcase"):
-            await self._app(scope, receive, send)
+        now = time.monotonic()
+        self._prune(self._all, now, 3600)
+        if len(self._all) >= self._per_hour:
+            await self._reject(scope, receive, send, "Demo is busy — please try again later.")
             return
 
-        global _total_requests
-
-        # Check hard cap
-        if _total_requests >= _HARD_CAP:
-            response = JSONResponse(
-                {"detail": "Demo request cap exceeded"},
-                status_code=429,
-            )
-            await response(scope, receive, send)
+        ip = _client_ip(scope)
+        mine = self._by_ip[ip]
+        self._prune(mine, now, 60)
+        if len(mine) >= self._per_minute:
+            await self._reject(scope, receive, send, "Rate limit exceeded. Please wait a moment.")
             return
 
-        # Get client IP
-        client_host = scope.get("client")
-        if client_host:
-            ip = client_host[0]
-        else:
-            ip = scope.get("headers", {}).get(b"x-forwarded-for", b"unknown").decode()
-
-        now = time.time()
-        # Clean old entries (older than 60s)
-        _rate_counts[ip] = [t for t in _rate_counts[ip] if now - t < 60]
-
-        # Check per-IP rate limit
-        if len(_rate_counts[ip]) >= _RATE_LIMIT:
-            response = JSONResponse(
-                {"detail": "Rate limit exceeded. Please wait a moment."},
-                status_code=429,
-            )
-            await response(scope, receive, send)
-            return
-
-        # Record this request
-        _rate_counts[ip].append(now)
-        _total_requests += 1
-
+        mine.append(now)
+        self._all.append(now)
+        if len(self._by_ip) > 10_000:  # forget idle visitors
+            for key in [k for k, v in self._by_ip.items() if not v]:
+                del self._by_ip[key]
         await self._app(scope, receive, send)
 
 
@@ -200,6 +226,8 @@ _SHOWCASE_HTML = """\
       <label for="prompt">Enter a prompt to traverse the governance pipeline</label>
       <textarea id="prompt" placeholder="Try: &quot;My email is user@example.com and my SSN is 123-45-6789&quot;">My email is user@example.com and my phone is 555-123-4567</textarea>
       <div class="row">
+        <label for="route" style="margin:0">Route</label>
+        <select id="route" style="padding:.45rem .6rem;border-radius:6px;border:1px solid #d1d5db"><option>default</option></select>
         <button id="sendBtn" onclick="sendPrompt()">Send prompt</button>
         <button class="secondary" onclick="refreshRuns()">Refresh runs</button>
         <span id="busy" style="font-size:.85rem;color:#6b7280;display:none;">Running…</span>
@@ -253,6 +281,8 @@ _SHOWCASE_HTML = """\
     function renderEvents(events) {
       const el = document.getElementById('eventLog');
       if (!events || !events.length) { el.innerHTML = '<div class="empty">No events.</div>'; return; }
+      // node_start markers add nothing a reader needs; verdicts and node results do.
+      events = events.filter(ev => ev.event_type !== 'node_start');
       el.innerHTML = events.map(ev => {
         const stage = esc(ev.stage || '');
         const node = esc(ev.node || '');
@@ -261,12 +291,12 @@ _SHOWCASE_HTML = """\
         const v = data.verdict ? data.verdict.toLowerCase() : '';
         const verdict = data.verdict ? `<span class="verdict ${verdictClass(v)}">${esc(data.verdict)}</span>` : '';
         let extra = '';
-        if (data.reason) extra += `<div style="font-size:.8rem;color:#4b5563;margin-top:3px;">Reason: ${esc(String(data.reason))}</div>`;
-        if (data.detail) extra += `<div style="font-size:.8rem;color:#4b5563;margin-top:3px;">Detail: ${esc(String(data.detail))}</div>`;
+        if (data.reason) extra += `<div style="font-size:.8rem;color:#e5e7eb;margin-top:3px;">Reason: ${esc(String(data.reason))}</div>`;
+        if (data.detail) extra += `<div style="font-size:.8rem;color:#e5e7eb;margin-top:3px;">Detail: ${esc(String(data.detail))}</div>`;
         if (data.run_id) extra += `<div style="font-size:.8rem;color:#9ca3af;margin-top:3px;">run_id: <code>${esc(data.run_id)}</code></div>`;
         return `<div>
           <div class="stage">${stage} / ${node} — ${etype} ${verdict}</div>
-          <pre>${extra || '&nbsp;'}</pre>
+          ${extra ? `<pre>${extra}</pre>` : ''}
         </div>`;
       }).join('');
     }
@@ -302,7 +332,7 @@ _SHOWCASE_HTML = """\
         const r = await fetch(`${BASE}/showcase/api/invoke`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: promptEl.value, route: 'default' }),
+          body: JSON.stringify({ prompt: promptEl.value, route: document.getElementById('route').value }),
         });
         const data = await r.json();
         if (!r.ok) {
@@ -311,8 +341,8 @@ _SHOWCASE_HTML = """\
         }
         renderEvents(data.events || []);
         renderPii(data.mask_map || {}, data.response);
-        if (data.status === 'require_approval') {
-          flash('msg', 'Run paused — approval required.', true);
+        if (data.status === 'paused') {
+          flash('msg', 'Run paused — approval required. Review it in the approval queue below.', true);
         } else {
           flash('msg', `Run completed (${data.status}).`, true);
         }
@@ -322,6 +352,7 @@ _SHOWCASE_HTML = """\
         btn.disabled = false;
         busy.style.display = 'none';
         refreshRuns();
+        refreshApprovals();
       }
     }
 
@@ -393,6 +424,10 @@ _SHOWCASE_HTML = """\
       }
     }
 
+    fetch('/v1/models').then(r => r.json()).then(d => {
+      const sel = document.getElementById('route');
+      sel.innerHTML = d.data.map(m => `<option>${esc(m.id)}</option>`).join('');
+    }).catch(() => {});
     refreshRuns();
     refreshApprovals();
   </script>

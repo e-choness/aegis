@@ -4,7 +4,7 @@ Aegis keeps two records of what happened:
 
 | Store | What's in it | Lifetime | Read it with |
 |---|---|---|---|
-| **Run store** | Every run: status, principal, route, approvers, full event log | In memory — cleared on restart | `aegis explain`, `aegis runs`, `GET /v1/audit`, `GET /v1/runs/{id}` |
+| **Run store** | Every run: status, principal, route, approvers, full event log | SQLite file (`--runs-db`, default `./aegis_runs.db`) | `aegis explain`, `aegis runs`, `GET /v1/audit`, `GET /v1/runs/{id}` |
 | **Evidence ledger** | Hash-chained `model_inventory` and `run_evidence` records | SQLite file (`--ledger-db`, default `./aegis_ledger.db`) | `aegis audit`, `aegis report`, `GET /v1/audit/ledger` |
 
 The run store is for operating the gateway; the ledger is the durable,

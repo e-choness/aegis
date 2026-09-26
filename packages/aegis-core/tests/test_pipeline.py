@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import operator
 import uuid
-from typing import Annotated
+from typing import Annotated, ClassVar, Literal
 
 import pytest
 
@@ -415,3 +415,37 @@ class TestAssemblerValidation:
         pipeline = PipelineAssembler().compile(execute=execute)
         result = asyncio.run(pipeline.run(_make_state()))
         assert result.response == "explicit"
+
+
+async def test_paused_run_keeps_the_verdict_that_paused_it() -> None:
+    """The pausing guard's verdict (and reason) must survive the interrupt."""
+    from aegis_core.guardrails.protocol import Guardrail
+    from aegis_core.guardrails.spine import GuardNode
+    from aegis_core.pipeline.checkpointer import make_memory_checkpointer
+    from aegis_core.pipeline.executor import PipelineExecutor
+    from aegis_core.pipeline.state import RunState as _RunState
+    from aegis_core.pipeline.verdict import Verdict as _Verdict
+    from aegis_core.providers.models import Message as _Message
+    from aegis_core.testing import FakeProvider as _FakeProvider
+
+    class _Review:
+        name: str = "review"
+        streaming: ClassVar[Literal["none", "incremental"]] = "none"
+
+        async def scan(self, state: _RunState) -> _Verdict:
+            return _Verdict.require_approval("large transfer needs sign-off")
+
+    executor = PipelineExecutor(checkpointer=make_memory_checkpointer())
+    guards: list[Guardrail] = [_Review()]
+    ingress: list[PipelineNode] = [GuardNode(guards, name="review")]
+    executor.register("pay", provider=_FakeProvider(), ingress=ingress)
+    state = _RunState(run_id="r-1", route="pay", messages=[_Message(role="user", content="wire it")])
+
+    result = await executor.run("pay", state)
+
+    assert result.status == "paused"
+    verdicts = [e for e in result.events if e.event_type == "verdict"]
+    assert [v.data["verdict"] for v in verdicts] == ["require_approval"]
+    assert verdicts[0].data["reason"] == "large transfer needs sign-off"
+    assert result.interrupt_value is not None
+    assert "events" not in result.interrupt_value

@@ -10,7 +10,13 @@ import pytest
 
 from aegis_core.config.build import build_executor, build_provider, config_digest
 from aegis_core.config.loader import load_config
-from aegis_core.config.models import AegisConfig, PipelineConfig, ProviderConfig, RouteConfig
+from aegis_core.config.models import (
+    AegisConfig,
+    GuardrailConfig,
+    PipelineConfig,
+    ProviderConfig,
+    RouteConfig,
+)
 from aegis_core.errors import AegisConfigValidationError
 from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.testing.providers import FakeProvider
@@ -48,7 +54,7 @@ def _fake_cfg(
 
 
 def test_build_provider_fake() -> None:
-    pcfg = ProviderConfig(type="fake", complete_response="hi")
+    pcfg = ProviderConfig.model_validate({"type": "fake", "complete_response": "hi"})
     provider = build_provider(pcfg)
     assert isinstance(provider, FakeProvider)
 
@@ -83,7 +89,7 @@ def test_build_executor_unknown_pack_raises() -> None:
     cfg = AegisConfig(
         providers={"fake": ProviderConfig(type="fake")},
         routes={"default": RouteConfig(provider="fake")},
-        guardrails={"bad": {"pack": "aegis.nonexistent_pack_xyz"}},
+        guardrails={"bad": GuardrailConfig(pack="aegis.nonexistent_pack_xyz")},
     )
     with pytest.raises(AegisPluginNotFoundError):
         build_executor(cfg)
@@ -100,7 +106,7 @@ def test_build_executor_bad_factory_shape_raises() -> None:
     cfg = AegisConfig(
         providers={"fake": ProviderConfig(type="fake")},
         routes={"default": RouteConfig(provider="fake")},
-        guardrails={"g": {"pack": "aegis.something"}},
+        guardrails={"g": GuardrailConfig(pack="aegis.something")},
     )
     with pytest.raises(AegisConfigValidationError, match="must return a dict"):
         build_executor(cfg, registry=registry)

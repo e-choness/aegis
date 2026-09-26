@@ -27,3 +27,9 @@ sdk/typescript/dist/
 # Environment
 .env
 .env.*
+# Not needed in the dev image build context
+node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+.tmp/
+/reference/

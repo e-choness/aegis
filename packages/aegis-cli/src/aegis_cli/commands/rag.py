@@ -23,23 +23,13 @@ app = typer.Typer(help="RAG: index documents and query the vector store.")
 
 def _make_store_and_embedder() -> tuple[Any, Any]:
     """Build a persistent Chroma store + deterministic embedder for CLI use."""
-    import chromadb
-
-    from aegis_core.rag.adapter import LangChainVectorStoreAdapter
-    from aegis_core.rag.chroma_store import make_chroma_store_factory
+    from aegis_core.rag.stores.chroma import ChromaVectorStore
     from aegis_core.testing.rag import FakeEmbeddingProvider
 
     rag_dir = Path.home() / ".aegis" / "rag"
     rag_dir.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(rag_dir))
-
-    fake_emb = FakeEmbeddingProvider()
-    factory = make_chroma_store_factory(
-        client=client,
-        embedding_function=fake_emb.as_langchain_embeddings(),
-    )
-    store = LangChainVectorStoreAdapter(store_factory=factory)
-    return store, fake_emb
+    embedder = FakeEmbeddingProvider()
+    return ChromaVectorStore(embedder=embedder, path=str(rag_dir)), embedder
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +39,7 @@ def _make_store_and_embedder() -> tuple[Any, Any]:
 
 @app.command("index")
 def index_docs(
-    path: Path = typer.Argument(..., help="Directory containing files to index."),  # noqa: B008
+    path: Path = typer.Argument(..., help="Directory containing files to index."),
     namespace: str = typer.Option("default", "--namespace", "-n", help="Target namespace."),
     chunk_size: int = typer.Option(1000, "--chunk-size", help="Characters per chunk."),
     chunk_overlap: int = typer.Option(
@@ -58,7 +48,7 @@ def index_docs(
     glob: str = typer.Option("**/*.txt", "--glob", help="File glob pattern."),
 ) -> None:
     """Index all matching files in PATH into the RAG vector store."""
-    from aegis_core.rag.chunking import chunk_text
+    from aegis_core.rag import TextChunker
     from aegis_core.rag.protocol import Doc
 
     files = list(path.glob(glob))
@@ -67,6 +57,7 @@ def index_docs(
         raise typer.Exit(1)
 
     store, _ = _make_store_and_embedder()
+    chunker = TextChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
     async def _run() -> None:
         all_docs: list[Doc] = []
@@ -76,9 +67,7 @@ def index_docs(
             except OSError as exc:
                 typer.echo(f"  skipping {f}: {exc}", err=True)
                 continue
-            chunks = chunk_text(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-            for chunk in chunks:
-                all_docs.append(Doc(text=chunk, metadata={"source": str(f)}))
+            all_docs.extend(chunker.split(text, metadata={"source": str(f)}))
 
         if not all_docs:
             typer.echo("No text chunks produced — nothing indexed.")

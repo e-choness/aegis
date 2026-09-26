@@ -1,7 +1,7 @@
 """RunStore — persist run metadata alongside the LangGraph checkpointer (D11/D14).
 
 ``InMemoryRunStore`` is used in tests and dev.
-``SqliteRunStore`` is the default for ``aegis dev``; requires *aiosqlite*
+``SqliteRunStore`` persists runs to SQLite; requires *aiosqlite*
 (installed transitively via langgraph-checkpoint-sqlite).
 """
 
@@ -182,7 +182,7 @@ class SqliteRunStore:
             for migrate_sql in (_MIGRATE_EVENTS_SQL, _MIGRATE_DIGEST_SQL):
                 try:
                     await db.execute(migrate_sql)
-                except Exception:  # noqa: BLE001 — column already exists
+                except Exception:
                     pass
             await db.commit()
         self._ready = True

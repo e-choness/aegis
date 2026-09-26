@@ -44,8 +44,13 @@ class ChromaVectorStore:
         self._collections: dict[str, Any] = {}
 
     def _get_collection(self, namespace: str) -> Any:
+        # Chroma requires 3-512 chars from [a-zA-Z0-9._-]; the prefix makes short
+        # namespaces ("hr") valid and keeps Aegis collections apart from others
+        # in a shared Chroma instance.
         if namespace not in self._collections:
-            self._collections[namespace] = self._client.get_or_create_collection(namespace)
+            self._collections[namespace] = self._client.get_or_create_collection(
+                f"aegis-{namespace}"
+            )
         return self._collections[namespace]
 
     async def add(self, docs: list[Doc], namespace: str) -> None:
@@ -69,14 +74,15 @@ class ChromaVectorStore:
         count = col.count()
         if count == 0:
             return []
-        results_raw = col.get(limit=min(k, count), include=["documents", "metadatas"])
-        docs: list[Doc] = []
-        for i, doc_id in enumerate(results_raw["ids"]):
-            docs.append(
-                Doc(
-                    id=doc_id,
-                    text=results_raw["documents"][i],
-                    metadata=dict(results_raw["metadatas"][i] or {}),
-                )
-            )
-        return docs
+        found = col.query(
+            query_embeddings=[vector],
+            n_results=min(k, count),
+            include=["documents", "metadatas"],
+        )
+        ids = found["ids"][0]
+        texts = (found["documents"] or [[]])[0]
+        metas = (found["metadatas"] or [[]])[0]
+        return [
+            Doc(id=doc_id, text=texts[i], metadata=dict(metas[i] or {}))
+            for i, doc_id in enumerate(ids)
+        ]

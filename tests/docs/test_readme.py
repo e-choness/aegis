@@ -50,7 +50,7 @@ REQUIRED_LINKS = [
     "images/banner-wide.svg",
     "images/terminal-demo.svg",
     "examples/fintech.yaml",
-    "examples/scenarios/02_approval_flow.py",
+    "examples/02_approval_flow.py",
     "docs/CONTRIBUTING.md",
     "docs/SECURITY.md",
 ]

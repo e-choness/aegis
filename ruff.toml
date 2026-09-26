@@ -23,3 +23,7 @@ known-first-party = ["aegis_core", "aegis_server", "aegis_cli", "aegis_sdk"]
 [format]
 quote-style = "double"
 indent-style = "space"
+
+[lint.flake8-bugbear]
+# Typer declares CLI parameters as call-expression defaults by design.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]

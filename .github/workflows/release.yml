@@ -1,0 +1,150 @@
+name: Release
+
+# Push a tag like v2.0.0a1 after running `scripts/release.py bump 2.0.0a1`.
+# Re-running the workflow for the same tag is safe: files already on PyPI are
+# skipped, the GitHub Release is updated, and the Space is re-uploaded.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)release, e.g. v2.0.0a1"
+        required: true
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Tag matches package versions
+        id: version
+        run: |
+          uv run --no-project --with packaging python scripts/release.py check "$TAG"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the published packages (never the test fixture plugin)
+        run: |
+          for pkg in $(uv run --no-project --with packaging python scripts/release.py packages); do
+            uv build "$pkg" --out-dir dist
+          done
+          ls -l dist
+
+      - name: Check metadata renders on PyPI
+        run: uvx twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/aegis-gateway/${{ needs.build.outputs.version }}/
+    permissions:
+      id-token: write # Trusted Publishing — no API token stored in GitHub
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Uploading new versions of existing projects isn't subject to the
+      # new-project creation limit, so every package goes in one step.
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          print-hash: true
+
+  github-release:
+    name: GitHub Release
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          {
+            uv run --no-project --with packaging python scripts/release.py notes "$TAG"
+            echo
+            echo "---"
+            echo "\`pip install aegis-gateway==${{ needs.build.outputs.version }}\` · [Documentation](https://e-choness.github.io/aegis/) · [Full changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)"
+          } > notes.md
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          body_path: notes.md
+          prerelease: ${{ contains(needs.build.outputs.version, 'a') || contains(needs.build.outputs.version, 'b') || contains(needs.build.outputs.version, 'rc') }}
+          files: dist/*
+
+  huggingface-space:
+    name: Deploy demo Space
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    # Set repository variable HF_SPACE_ID (e.g. e-choness/aegis-demo) and
+    # secret HF_TOKEN (write access) to enable; otherwise this job is skipped.
+    if: vars.HF_SPACE_ID != ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Wait until the release is installable from PyPI
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "https://pypi.org/pypi/aegis-gateway-cli/$VERSION/json" > /dev/null; then
+              echo "aegis-gateway-cli $VERSION is live"; exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::aegis-gateway-cli $VERSION not visible on PyPI after 10 minutes"; exit 1
+
+      - name: Pin the Space to this release
+        run: sed -i "s/__AEGIS_VERSION__/${{ needs.build.outputs.version }}/" deploy/huggingface/Dockerfile
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Upload to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # --delete removes anything in the Space that isn't in deploy/huggingface
+          # (e.g. the full source tree the old rsync-based sync copied there).
+          uvx --from huggingface_hub hf upload "${{ vars.HF_SPACE_ID }}" deploy/huggingface . \
+            --repo-type space \
+            --delete "*" \
+            --commit-message "Deploy Aegis ${{ needs.build.outputs.version }}"

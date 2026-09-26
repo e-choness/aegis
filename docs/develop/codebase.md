@@ -50,7 +50,9 @@ flowchart BT
 Packs may import only public `aegis_core` modules. `.importlinter` forbids
 them from importing `aegis_server`, `aegis_cli`, `aegis_core.config`,
 `aegis_core.secrets`, `aegis_core.registry` and `aegis_core.hooks`, and CI
-runs `lint-imports`. Heavy third-party libraries (LiteLLM, Presidio, LLM
+runs `lint-imports`. Types a pack factory needs (`GuardrailConfig`,
+`PackNodes`) are re-exported from the public `aegis_core.packs` module for
+exactly this reason. Heavy third-party libraries (LiteLLM, Presidio, LLM
 Guard) are each imported in exactly one adapter module, so swapping or
 upgrading one is a one-file change.
 
@@ -73,6 +75,7 @@ upgrading one is a one-file change.
 | `rag/` | `VectorStoreProvider`, `EmbeddingProvider`, `RetrievalNode`, Chroma/pgvector stores. |
 | `secrets/` | `SecretRef`, `SecretResolver`, `env` and `keyring` backends. |
 | `exporters/`, `hooks/` | `Exporter` protocol; pluggy hook specs (`on_run_start`, `on_verdict`, …). |
+| `packs.py` | Public API for pack and plugin factories: `GuardrailConfig`, `ProviderConfig`, `PackNodes`, `PackFactory`. |
 | `testing/` | Contract kits and fakes for plugin authors. |
 | `errors.py` | Every `AEG-*` error class. |
 

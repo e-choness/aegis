@@ -130,26 +130,54 @@ def test_showcase_pii_masking(client: TestClient) -> None:
 
 
 def test_showcase_rate_limit_returns_429(client: TestClient) -> None:
-    """Step 19 check: per-IP rate limit returns 429."""
-    # Reset rate limit state to test from clean state
-    from aegis_server.routes.showcase import _rate_counts
+    """Demo mode: an 11th API request within a minute from one visitor gets 429."""
+    statuses = [
+        client.post("/showcase/api/invoke", json={"prompt": f"r{i}", "route": "default"}).status_code
+        for i in range(11)
+    ]
+    assert statuses[:10] == [200] * 10
+    assert statuses[10] == 429
 
-    _rate_counts.clear()
-    import aegis_server.routes.showcase as sc
 
-    sc._total_requests = 0
+def test_demo_rate_limit_is_per_forwarded_visitor(client: TestClient) -> None:
+    """Behind a proxy, visitors are told apart by X-Forwarded-For."""
 
-    # Make requests up to and past the limit (10 req/min)
-    last_status = 200
-    for i in range(15):
-        r = client.post(
-            "/showcase/api/invoke",
-            json={"prompt": f"request {i}", "route": "default"},
-        )
-        last_status = r.status_code
-        if r.status_code == 429:
-            break
+    def run(ip: str) -> int:
+        body = {"messages": [{"role": "user", "content": "hi"}]}
+        return client.post("/v1/runs", json=body, headers={"X-Forwarded-For": ip}).status_code
 
-    # At least one request should have been rate-limited
-    assert last_status == 429, f"Expected 429 for rate-limited request, got {last_status}"
+    for i in range(10):
+        assert run(f"203.0.113.7, 10.0.0.{i}") == 200
+    assert run("203.0.113.7") == 429
+    assert run("198.51.100.2") == 200
+
+
+def test_demo_reads_and_pages_are_never_limited(client: TestClient) -> None:
+    """The showcase page polls runs/models; reads must not consume the quota."""
+    for _ in range(15):
+        assert client.get("/v1/health").status_code == 200
+        assert client.get("/showcase/api/runs").status_code == 200
+        assert client.get("/v1/models").status_code == 200
+    assert client.get("/showcase").status_code == 200
+
+
+def test_demo_hourly_cap_is_rolling() -> None:
+    """The global cap is a rolling window, not a lifetime counter."""
+    import asyncio
+
+    from aegis_server.routes import showcase as sc
+
+    calls: list[str] = []
+
+    async def app(scope, receive, send):  # type: ignore[no-untyped-def]
+        calls.append(scope["path"])
+
+    mw = sc.DemoRateLimitMiddleware(app, per_minute=100, per_hour=2)  # type: ignore[arg-type]
+    scope = {"type": "http", "method": "POST", "path": "/v1/runs", "headers": [], "client": ("1.2.3.4", 1)}
+    asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
+    asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
+    assert len(calls) == 2
+    mw._all[0] -= 3601  # the first request ages out of the window
+    asyncio.run(mw(scope, None, None))  # type: ignore[arg-type]
+    assert len(calls) == 3
 

@@ -96,22 +96,23 @@ class TestAegisErrorStructure:
 # ---------------------------------------------------------------------------
 
 # These bare raises in aegis-core source are known and acceptable.
-# The set holds (relative_file, lineno) tuples.
+# Keyed by (relative_file, enclosing_scope, exception_name) — not line numbers,
+# so unrelated edits above a raise don't break this test.
 # If you add a new bare non-AEG raise, add it here and document why.
-_KNOWN_BARE_RAISES: set[tuple[str, int]] = {
+_KNOWN_BARE_RAISES: set[tuple[str, str, str]] = {
     # assembler.py: internal invariant guards (unreachable in practice)
-    ("aegis_core/pipeline/assembler.py", 385),
-    ("aegis_core/pipeline/assembler.py", 455),
-    # executor.py: route lookup — should be replaced with AEG-CFG error
-    ("aegis_core/pipeline/executor.py", 58),
-    # profiles.py: JSON decode — acceptable at data-layer boundary
-    ("aegis_core/providers/profiles.py", 105),
+    ("aegis_core/pipeline/assembler.py", "CompiledPipeline.resume", "RuntimeError"),
+    ("aegis_core/pipeline/assembler.py", "PipelineAssembler.compile", "ValueError"),
+    # executor.py: route lookup — callers translate KeyError into a 404
+    ("aegis_core/pipeline/executor.py", "PipelineExecutor.get", "KeyError"),
+    # profiles.py: duplicate profile name — data-layer boundary
+    ("aegis_core/providers/profiles.py", "ProviderProfileStore.add", "ValueError"),
     # config/loader.py: missing PyYAML — import-time guard
-    ("aegis_core/config/loader.py", 24),
-    # litellm_provider.py: _map_litellm_error() is a helper that returns AegisProviderError
-    ("aegis_core/providers/litellm_provider.py", 134),
-    ("aegis_core/providers/litellm_provider.py", 160),
-    ("aegis_core/providers/litellm_provider.py", 181),
+    ("aegis_core/config/loader.py", "<module>", "ImportError"),
+    # litellm_provider.py: _map_litellm_error() returns an AegisProviderError
+    ("aegis_core/providers/litellm_provider.py", "LiteLLMProvider.complete", "_map_litellm_error"),
+    ("aegis_core/providers/litellm_provider.py", "LiteLLMProvider.stream", "_map_litellm_error"),
+    ("aegis_core/providers/litellm_provider.py", "LiteLLMProvider.embed", "_map_litellm_error"),
 }
 
 # Exception types that are always allowed (Python built-ins used for flow control)
@@ -124,42 +125,40 @@ _CORE_SRC = (
 )
 
 
-def _find_bare_raises(src_root: Path) -> list[tuple[str, int, str]]:
+def _exception_name(exc: ast.expr) -> str | None:
+    func = exc.func if isinstance(exc, ast.Call) else exc
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _find_bare_raises(src_root: Path) -> list[tuple[str, str, str, int]]:
     """Walk Python source and return bare non-AEG raises.
 
     Returns:
-        List of (relative_path, lineno, exception_name) tuples.
+        List of (relative_path, enclosing_scope, exception_name, lineno) tuples.
     """
-    results: list[tuple[str, int, str]] = []
+    results: list[tuple[str, str, str, int]] = []
+
+    def visit(node: ast.AST, rel: str, scope: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            child_scope = scope
+            if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+                child_scope = f"{scope}.{child.name}" if scope else child.name
+            if isinstance(child, ast.Raise) and child.exc is not None:
+                name = _exception_name(child.exc)
+                if name and not name.startswith("Aegis") and name not in _ALWAYS_ALLOWED:
+                    results.append((rel, scope or "<module>", name, child.lineno))
+            visit(child, rel, child_scope)
+
     for py_file in src_root.rglob("*.py"):
-        rel = py_file.relative_to(src_root)
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Raise) or node.exc is None:
-                continue
-            exc = node.exc
-            # Get the exception class name
-            if isinstance(exc, ast.Call):
-                func = exc.func
-                name = func.id if isinstance(func, ast.Name) else (
-                    func.attr if isinstance(func, ast.Attribute) else None
-                )
-            elif isinstance(exc, ast.Name):
-                name = exc.id
-            elif isinstance(exc, ast.Attribute):
-                name = exc.attr
-            else:
-                name = None
-
-            if name is None:
-                continue
-            # Skip Aegis framework errors and always-allowed exceptions
-            if name.startswith("Aegis") or name in _ALWAYS_ALLOWED:
-                continue
-            results.append((str(rel).replace("\\", "/"), node.lineno, name))
+        visit(tree, str(py_file.relative_to(src_root)).replace("\\", "/"), "")
     return results
 
 
@@ -174,13 +173,16 @@ class TestBareRaiseSweep:
         found = _find_bare_raises(_CORE_SRC)
 
         new_raises = [
-            (rel, lineno, name)
-            for rel, lineno, name in found
-            if (rel, lineno) not in _KNOWN_BARE_RAISES
+            (rel, scope, name, lineno)
+            for rel, scope, name, lineno in found
+            if (rel, scope, name) not in _KNOWN_BARE_RAISES
         ]
 
         assert not new_raises, (
             "New bare non-AEG raises found in aegis-core. "
             "Either wrap them in an AegisError subclass or add to _KNOWN_BARE_RAISES:\n"
-            + "\n".join(f"  {rel}:{lineno}  raise {name}" for rel, lineno, name in new_raises)
+            + "\n".join(
+                f"  {rel}:{lineno} ({scope})  raise {name}"
+                for rel, scope, name, lineno in new_raises
+            )
         )

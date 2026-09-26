@@ -18,6 +18,8 @@ import json
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
+from aegis_server import __version__
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -84,7 +86,7 @@ def make_inventory_record(
         "model_description": route_meta.get("description", f"route {route}"),
         "model_risk_rating": route_meta.get("risk_rating"),
         "model_owner": route_meta.get("owner"),
-        "model_developer": "aegis-gateway 2.0.0a0",
+        "model_developer": f"aegis-gateway {__version__}",
         "model_origin": "vendor",
         "model_version": config_digest,
         "date_of_deployment": deployed,

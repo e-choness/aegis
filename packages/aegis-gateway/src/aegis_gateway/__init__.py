@@ -1,4 +1,8 @@
 """Umbrella package for the Aegis gateway distribution."""
 
+from importlib.metadata import version as _dist_version
+
+#: Single source of truth is pyproject.toml (set by scripts/release.py bump).
+__version__ = _dist_version("aegis-gateway")
+
 __all__ = ["__version__"]
-__version__ = "2.0.0a0"

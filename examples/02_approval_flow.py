@@ -14,7 +14,11 @@ Demonstrates:
 - `aegis explain` rendering the verdict trail with the approver attached.
 - `aegis audit export` + `aegis audit verify` on just that route.
 
-Prerequisites:
+One command does all of the setup below and runs this script:
+
+    docker compose run --rm dev bash scripts/approval-scenario.sh
+
+Manual prerequisites:
     aegis keys create svc-underwriting --keys-file examples/fintech-keys.json
     aegis keys create jane             --keys-file examples/fintech-keys.json
     aegis serve --config examples/fintech.yaml \\
@@ -59,6 +63,7 @@ def _run_aegis_cli(*args: str, api_key: str) -> str:
     print(result.stdout, end="")
     if result.returncode != 0:
         print(result.stderr, end="", file=sys.stderr)
+        raise SystemExit(f"`aegis {' '.join(args)}` failed (exit {result.returncode})")
     return result.stdout
 
 

@@ -37,8 +37,9 @@ ledger verifies offline.
   <img src="images/terminal-demo.svg" alt="Terminal replay: aegis runs create pauses for approval, aegis runs deny, aegis explain shows the verdict trail, aegis audit verify confirms the chain is intact" width="100%">
 </p>
 
-Reproduce it with [`examples/scenarios/02_approval_flow.py`](examples/scenarios/02_approval_flow.py)
-(the docstring has the two-command setup).
+Reproduce it with one command —
+`docker compose run --rm dev bash scripts/approval-scenario.sh` — which creates
+the keys, starts the server, and runs [`examples/02_approval_flow.py`](examples/02_approval_flow.py).
 
 ## Install
 

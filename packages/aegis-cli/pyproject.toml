@@ -1,21 +1,38 @@
 [project]
 name = "aegis-gateway-cli"
 version = "2.0.0a0"
-description = "Aegis v2 — CLI: aegis command with Typer + Rich."
+description = "The aegis command-line tool: serve, lint, explain, approve and audit."
 license = { text = "MIT" }
 requires-python = ">=3.12"
+readme = "README.md"
+authors = [{ name = "Aegis contributors" }]
+keywords = ["llm", "ai-gateway", "guardrails", "openai", "governance", "audit", "pii"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
 
 dependencies = [
-    "aegis-gateway-core",
-    "aegis-gateway-sdk",
-    "aegis-gateway-server",
+    "aegis-gateway-core==2.0.0a0",
+    "aegis-gateway-sdk==2.0.0a0",
+    "aegis-gateway-server==2.0.0a0",
     "typer>=0.12",
     "rich>=13",
 ]
 
 [project.urls]
-Homepage = "https://github.com/e-choness/aegis"
+Homepage = "https://e-choness.github.io/aegis/"
+Documentation = "https://e-choness.github.io/aegis/"
 Repository = "https://github.com/e-choness/aegis"
+Changelog = "https://github.com/e-choness/aegis/blob/main/CHANGELOG.md"
 Issues = "https://github.com/e-choness/aegis/issues"
 
 [project.scripts]
