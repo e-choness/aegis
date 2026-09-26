@@ -13,6 +13,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from aegis_pack_pii._engine import DEFAULT_SPACY_MODEL, ensure_model_installed, get_analyzer
+
 #: Entities that identify a person or account. Everything else Presidio knows
 #: (dates, URLs, nationalities, region-specific IDs) is opt-in via ``entities:``.
 DEFAULT_ENTITIES: tuple[str, ...] = (
@@ -29,7 +31,6 @@ DEFAULT_ENTITIES: tuple[str, ...] = (
     "US_PASSPORT",
     "US_BANK_NUMBER",
     "UK_NHS",
-    "UK_NINO",
     "CA_SIN",
     "MEDICAL_LICENSE",
 )
@@ -42,17 +43,20 @@ ALL_ENTITIES = "ALL"
 
 
 def deduplicate(results: Iterable[Any]) -> list[Any]:
-    """Keep one detection per text span.
+    """Keep non-overlapping detections, most confident first.
 
-    Presidio may report overlapping results (an ``EMAIL_ADDRESS`` and a ``URL``
-    inside it; a SIN that also looks like a phone number). The widest span
-    wins; for identical spans, the most confident entity wins. Contained
-    spans are dropped so right-to-left replacement stays positionally valid.
+    Presidio may report overlapping results: a ``URL`` inside an
+    ``EMAIL_ADDRESS``, a SIN that also looks like a phone number, or a spaCy
+    ``PERSON`` guess that swallows a neighbouring email ("Email a@x.com and").
+    Pattern recognizers (emails, cards, SINs — score 1.0) are more reliable
+    than statistical name guesses (0.85), so the most confident detection wins
+    and anything overlapping it is dropped; ties go to the wider span. The
+    result never overlaps, so right-to-left replacement stays valid.
     """
-    ranked = sorted(results, key=lambda r: (r.end - r.start, r.score), reverse=True)
+    ranked = sorted(results, key=lambda r: (r.score, r.end - r.start), reverse=True)
     kept: list[Any] = []
     for r in ranked:
-        if not any(k.start <= r.start and k.end >= r.end for k in kept):
+        if not any(k.start < r.end and r.start < k.end for k in kept):
             kept.append(r)
     return kept
 
@@ -66,11 +70,14 @@ class PiiDetector:
             analyzer supports.
         threshold: Minimum confidence score (0-1).
         allow_list: Exact strings that are never reported as PII.
+        spacy_model: spaCy model used for names and locations (must be
+            installed; nothing is downloaded at runtime).
     """
 
     entities: tuple[str, ...] | None = DEFAULT_ENTITIES
     threshold: float = DEFAULT_THRESHOLD
     allow_list: tuple[str, ...] = ()
+    spacy_model: str = DEFAULT_SPACY_MODEL
 
     @classmethod
     def from_options(
@@ -78,6 +85,7 @@ class PiiDetector:
         entities: str | Sequence[str] | None = None,
         threshold: float | None = None,
         allow_list: Sequence[str] | None = None,
+        spacy_model: str | None = None,
     ) -> PiiDetector:
         """Build from ``aegis.yaml`` options, validating entity names.
 
@@ -86,6 +94,8 @@ class PiiDetector:
         """
         if threshold is not None and not 0.0 <= threshold <= 1.0:
             raise ValueError(f"threshold must be between 0 and 1, got {threshold}")
+        model = spacy_model or DEFAULT_SPACY_MODEL
+        ensure_model_installed(model)  # fail at startup, not on the first request
 
         chosen: tuple[str, ...] | None
         if entities is None:
@@ -96,9 +106,7 @@ class PiiDetector:
             chosen = None
         else:
             chosen = tuple(e.upper() for e in entities)
-            from aegis_pack_pii._engine import get_analyzer
-
-            supported = set(get_analyzer().get_supported_entities())
+            supported = set(get_analyzer(model).get_supported_entities())
             unknown = sorted(set(chosen) - supported)
             if unknown:
                 raise ValueError(
@@ -109,13 +117,12 @@ class PiiDetector:
             entities=chosen,
             threshold=DEFAULT_THRESHOLD if threshold is None else threshold,
             allow_list=tuple(allow_list or ()),
+            spacy_model=model,
         )
 
     def find(self, text: str) -> list[Any]:
         """Return de-duplicated Presidio results for *text*."""
-        from aegis_pack_pii._engine import get_analyzer
-
-        results = get_analyzer().analyze(
+        results = get_analyzer(self.spacy_model).analyze(
             text=text,
             language="en",
             entities=list(self.entities) if self.entities is not None else None,

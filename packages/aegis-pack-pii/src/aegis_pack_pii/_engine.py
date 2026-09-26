@@ -1,13 +1,19 @@
-"""Shared Presidio AnalyzerEngine singleton for the PII pack."""
+"""Shared Presidio AnalyzerEngine instances for the PII pack (one per spaCy model)."""
 
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from presidio_analyzer import AnalyzerEngine as _AE
 
-_analyzer: _AE | None = None
+#: spaCy model used for name/location detection. Small (~12 MB) and, for the
+#: identifying entities Aegis masks by default, as accurate as en_core_web_lg.
+DEFAULT_SPACY_MODEL = "en_core_web_sm"
+
+_analyzers: dict[str, _AE] = {}
 
 
 def _luhn_valid(digits: str) -> bool:
@@ -45,16 +51,37 @@ def _canadian_sin_recognizer() -> object:
     )
 
 
-def get_analyzer() -> _AE:
-    """Return the cached AnalyzerEngine, initialising it on first call.
+def ensure_model_installed(model: str) -> None:
+    """Raise ``ValueError`` with the install command if *model* isn't available.
 
-    Requires the ``[pii]`` extra (``presidio-analyzer`` + ``en_core_web_sm``).
+    Presidio would otherwise try to download a model at runtime — which fails
+    in read-only or non-root containers and stalls the first request.
     """
-    global _analyzer
-    if _analyzer is None:
-        from presidio_analyzer import AnalyzerEngine
+    if Path(model).is_dir() or importlib.util.find_spec(model) is not None:
+        return
+    raise ValueError(
+        f"spaCy model {model!r} is not installed — run `python -m spacy download {model}`"
+    )
 
-        engine = AnalyzerEngine()
+
+def get_analyzer(model: str = DEFAULT_SPACY_MODEL) -> _AE:
+    """Return the cached AnalyzerEngine for *model*, creating it on first use.
+
+    Requires the ``[pii]`` extra and the spaCy model to be installed; nothing
+    is downloaded at runtime.
+    """
+    if model not in _analyzers:
+        from presidio_analyzer import AnalyzerEngine
+        from presidio_analyzer.nlp_engine import NlpEngineProvider
+
+        ensure_model_installed(model)
+        nlp_engine = NlpEngineProvider(
+            nlp_configuration={
+                "nlp_engine_name": "spacy",
+                "models": [{"lang_code": "en", "model_name": model}],
+            }
+        ).create_engine()
+        engine = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
         engine.registry.add_recognizer(_canadian_sin_recognizer())  # type: ignore[arg-type]
-        _analyzer = engine
-    return _analyzer
+        _analyzers[model] = engine
+    return _analyzers[model]

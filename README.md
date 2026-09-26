@@ -17,6 +17,7 @@
 [Policy packs](https://e-choness.github.io/aegis/packs/) ·
 [Write a plugin](https://e-choness.github.io/aegis/develop/plugins) ·
 [Examples](examples/)
+[Demo](https://huggingface.co/spaces/echoness/aegis-server)
 
 </div>
 

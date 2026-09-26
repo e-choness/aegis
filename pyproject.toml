@@ -14,6 +14,9 @@ dev = [
     "pre-commit>=4",
     "import-linter>=2.15",
     "aegis-gateway-pack-pii[pii]",
+    # spaCy model the PII pack loads by default. Not on PyPI, so it's pinned by
+    # URL here for the dev env; users install it with `python -m spacy download`.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "aegis-gateway-pack-llm-guard",
     "aegis-gateway-core[rag]",
     "aegis-gateway-pack-classification",

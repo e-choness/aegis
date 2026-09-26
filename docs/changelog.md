@@ -9,6 +9,29 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a2] - 2026-09-26
+
+### Changed
+
+- Package versions come from git tags (`hatch-vcs`): pushing a tag such as
+  `v2.0.0a3` releases every package as `2.0.0a3`, with no version bump commit.
+  Dev checkouts report versions like `2.0.0a4.dev2`.
+
+### Fixed
+
+- The PII pack let Presidio pick its default spaCy model, `en_core_web_lg`,
+  and download it (~560 MB) on the first request. That failed in read-only or
+  non-root containers — every run on the Hugging Face demo returned 500 — and
+  made the first request slow elsewhere. The pack now loads `en_core_web_sm`
+  (configurable with `spacy_model:`), never downloads, and fails at startup
+  with the install command if the model is missing.
+- Overlapping PII detections now keep the most confident one, so a spaCy name
+  guess can no longer swallow an adjacent email or card number.
+- Releases publish `aegis-gateway` only after every component uploaded, so a
+  failed upload can't leave an umbrella release pointing at missing packages.
+- `UK_NINO` removed from the default PII entities: current Presidio has no
+  recognizer for it.
+
 ## [2.0.0a1] - 2026-09-26
 
 Everything since the first public alpha. Upgrading from 2.0.0a0? Read

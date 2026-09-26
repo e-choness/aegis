@@ -29,6 +29,13 @@ def _build_schema() -> dict[str, object]:
     return schema
 
 
+def _without_version(schema: dict[str, object]) -> dict[str, object]:
+    raw_info = schema.get("info")
+    info: dict[str, object] = dict(raw_info) if isinstance(raw_info, dict) else {}
+    info.pop("version", None)
+    return {**schema, "info": info}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export Aegis OpenAPI schema.")
     parser.add_argument(
@@ -52,8 +59,10 @@ def main() -> None:
         if not output.exists():
             print(f"FAIL: {output} does not exist. Run: python scripts/export_openapi.py", file=sys.stderr)
             sys.exit(1)
-        existing = output.read_text(encoding="utf-8")
-        if existing.strip() != serialized.strip():
+        existing = json.loads(output.read_text(encoding="utf-8"))
+        # The version comes from git (hatch-vcs) and changes with every commit;
+        # only the API surface has to match.
+        if _without_version(existing) != _without_version(schema):
             print(f"FAIL: {output} is out of date. Run: python scripts/export_openapi.py", file=sys.stderr)
             sys.exit(1)
         print(f"OK: {output} is up to date.")

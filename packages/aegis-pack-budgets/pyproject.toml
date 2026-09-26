@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-pack-budgets"
-version = "2.0.0a1"
+dynamic = ["version"]
 description = "Aegis policy pack: per-principal monthly spend caps."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = ["aegis-gateway-core==2.0.0a1"]
+dependencies = ["aegis-gateway-core"]
 
 [project.urls]
 Homepage = "https://e-choness.github.io/aegis/"
@@ -32,8 +32,13 @@ Issues = "https://github.com/e-choness/aegis/issues"
 aegis-gateway-core = { workspace = true }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+# The version is the git tag: v2.0.0a3 → 2.0.0a3; between tags → 2.0.0a4.devN.
+source = "vcs"
+raw-options = { root = "../..", local_scheme = "no-local-version", fallback_version = "0.0.0.dev0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_pack_budgets"]

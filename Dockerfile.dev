@@ -18,11 +18,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
 # uv — official binary from the release image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Bake in spaCy en_core_web_sm for the PII pack (step 10).
-# Installed at system level so this Docker layer is cached.
-# The uv venv will reference it via the model path when [pii] is installed.
-RUN pip install --no-cache-dir spacy click \
-    && python -m spacy download en_core_web_sm
+# Package versions come from git tags (hatch-vcs). The repo is bind-mounted with
+# a different owner, which git refuses to read unless it's marked safe.
+RUN git config --system --add safe.directory '*'
+
+# Python dependencies — including the spaCy model the PII pack loads — live in
+# the uv venv (`uv sync --all-packages`), pinned by uv.lock.
 
 WORKDIR /workspace
 

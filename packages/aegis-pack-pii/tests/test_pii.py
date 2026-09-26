@@ -390,3 +390,35 @@ class TestPlaceholderConsistency:
             "<EMAIL_ADDRESS_0>": "jane@example.com",
             "<EMAIL_ADDRESS_1>": "carol@example.com",
         }
+
+
+class TestSpacyModel:
+    """The pack must never download a model at runtime (fails in read-only containers)."""
+
+    def test_default_model_is_the_small_one(self) -> None:
+        from aegis_pack_pii import PiiDetector
+        from aegis_pack_pii._engine import get_analyzer
+
+        assert PiiDetector().spacy_model == "en_core_web_sm"
+        from presidio_analyzer.nlp_engine import SpacyNlpEngine
+
+        nlp_engine = get_analyzer().nlp_engine
+        assert isinstance(nlp_engine, SpacyNlpEngine)
+        assert nlp_engine.nlp is not None
+        assert [n.meta["name"] for n in nlp_engine.nlp.values()] == ["core_web_sm"]
+
+    def test_missing_model_fails_with_install_command(self) -> None:
+        from aegis_pack_pii import PiiDetector
+
+        with pytest.raises(ValueError, match="python -m spacy download xx_not_a_model"):
+            PiiDetector.from_options(spacy_model="xx_not_a_model")
+
+    def test_missing_model_is_a_startup_config_error(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.errors import AegisConfigValidationError
+
+        cfg = GuardrailConfig.model_validate({"pack": "aegis.pii", "spacy_model": "xx_not_a_model"})
+        with pytest.raises(AegisConfigValidationError, match="not installed"):
+            from_config("pii", cfg)

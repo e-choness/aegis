@@ -1,12 +1,18 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
-import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 
 const repo = 'https://github.com/e-choness/aegis'
 
-// Every package shares one version (scripts/release.py); show the core's.
-const version = readFileSync(new URL('../../packages/aegis-core/pyproject.toml', import.meta.url), 'utf8')
-  .match(/^version = "([^"]+)"/m)?.[1] ?? 'dev'
+// Versions come from git tags (hatch-vcs); show the latest release.
+function latestRelease(): string {
+  try {
+    return execSync('git describe --tags --abbrev=0 --match "v[0-9]*"', { encoding: 'utf8' }).trim()
+  } catch {
+    return 'dev'
+  }
+}
+const version = latestRelease().replace(/^v/, '')
 
 export default withMermaid(
   defineConfig({

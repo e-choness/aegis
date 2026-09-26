@@ -2,5 +2,5 @@
 
 from importlib.metadata import version as _dist_version
 
-#: Single source of truth is pyproject.toml (set by scripts/release.py bump).
+#: Derived from the git tag at build time (hatch-vcs), e.g. 2.0.0a3 or 2.0.0a4.dev2.
 __version__ = _dist_version("aegis-gateway-server")

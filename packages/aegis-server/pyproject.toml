@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-server"
-version = "2.0.0a1"
+dynamic = ["version"]
 description = "Aegis HTTP server: OpenAI-compatible and native APIs, auth, approvals and evidence ledger."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "aegis-gateway-core==2.0.0a1",
+    "aegis-gateway-core",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sse-starlette>=2.1",
@@ -45,8 +45,13 @@ Issues = "https://github.com/e-choness/aegis/issues"
 aegis-gateway-core = { workspace = true }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+# The version is the git tag: v2.0.0a3 → 2.0.0a3; between tags → 2.0.0a4.devN.
+source = "vcs"
+raw-options = { root = "../..", local_scheme = "no-local-version", fallback_version = "0.0.0.dev0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_server"]

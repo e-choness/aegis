@@ -1,27 +1,30 @@
-"""Release helper — one version for every published package.
+"""Release helper. The version of every published package is its git tag.
 
-Usage (inside the dev container)::
+Packages don't declare a version: hatch-vcs derives it from git when they are
+built (tag ``v2.0.0a3`` → ``2.0.0a3``; commits after it → ``2.0.0a4.devN``).
+To release, push a tag — see docs/CONTRIBUTING.md. This script covers the
+parts a tag can't:
 
-    uv run python scripts/release.py bump 2.0.0a1   # versions, internal pins, changelog heading
-    uv run python scripts/release.py check v2.0.0a1  # CI: tag must match the files
-    uv run python scripts/release.py packages        # paths of publishable packages
-    uv run python scripts/release.py notes v2.0.0a1  # this version's changelog section
+    uv run python scripts/release.py changelog 2.0.0a3   # optional, before tagging:
+                                                          #   Unreleased → [2.0.0a3] - <today>
+    uv run python scripts/release.py pin v2.0.0a3        # CI: pin internal deps to ==2.0.0a3
+    uv run python scripts/release.py verify v2.0.0a3 dist # CI: every built file is 2.0.0a3
+    uv run python scripts/release.py notes v2.0.0a3      # this version's changelog section
+    uv run python scripts/release.py packages            # paths of publishable packages
 
-Every publishable package shares one version. Internal dependencies are pinned
-to it exactly (``aegis-gateway-core==2.0.0a1``) so ``pip install
-aegis-gateway==X`` can never mix components from different releases.
-
-The changelog lives in ``docs/changelog.md`` (published on the docs site).
+Internal dependencies are unpinned in the repository (the uv workspace links
+them) and pinned exactly at release time, so ``pip install aegis-gateway==X``
+can never mix components from different releases.
 """
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 from datetime import date
 from pathlib import Path
 
+from packaging.utils import parse_sdist_filename, parse_wheel_filename
 from packaging.version import InvalidVersion, Version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,9 +45,9 @@ PUBLISHED = [
 ]
 CHANGELOG = ROOT / "docs" / "changelog.md"
 
-_VERSION_LINE = re.compile(r'^version = "([^"]+)"$', re.MULTILINE)
+_NAME_LINE = re.compile(r'^name = "([^"]+)"$', re.MULTILINE)
 _DEPS_BLOCK = re.compile(r"^dependencies = \[.*?\]$", re.MULTILINE | re.DOTALL)
-# "aegis-gateway-core", "aegis-gateway-core==2.0.0a0", "aegis-gateway-pack-pii[pii]>=1"
+# "aegis-gateway-core", "aegis-gateway-pack-pii[pii]", with or without a specifier
 _INTERNAL_DEP = re.compile(r'"(aegis-gateway(?:-[a-z-]+)?)(\[[a-z-]+\])?(?:[=<>!~][^"]*)?"')
 
 
@@ -56,64 +59,62 @@ def _normalise(raw: str) -> str:
     try:
         return str(Version(raw.removeprefix("v")))
     except InvalidVersion:
-        sys.exit(f"error: {raw!r} is not a PEP 440 version (e.g. 2.0.0, 2.0.0a1, 2.1.0rc1)")
+        sys.exit(f"error: {raw!r} is not a PEP 440 version (e.g. v2.0.0, v2.0.0a1, v2.1.0rc1)")
 
 
-def current_versions() -> dict[str, str]:
-    out: dict[str, str] = {}
+def _published_names() -> set[str]:
+    names = set()
     for path in _pyprojects():
-        m = _VERSION_LINE.search(path.read_text(encoding="utf-8"))
-        out[str(path.parent.relative_to(ROOT))] = m.group(1) if m else "?"
-    return out
-
-
-def bump(raw: str) -> None:
-    version = _normalise(raw)
-    published_names = set()
-    for path in _pyprojects():
-        m = re.search(r'^name = "([^"]+)"$', path.read_text(encoding="utf-8"), re.MULTILINE)
+        m = _NAME_LINE.search(path.read_text(encoding="utf-8"))
         if m:
-            published_names.add(m.group(1))
+            names.add(m.group(1))
+    return names
 
-    def pin(match: re.Match[str]) -> str:
+
+def pin(tag: str) -> None:
+    """Pin every internal dependency to exactly this release (CI, before building)."""
+    version = _normalise(tag)
+    names = _published_names()
+
+    def exact(match: re.Match[str]) -> str:
         name, extra = match.group(1), match.group(2) or ""
-        if name not in published_names:
-            return match.group(0)
-        return f'"{name}{extra}=={version}"'
+        return f'"{name}{extra}=={version}"' if name in names else match.group(0)
 
     for path in _pyprojects():
         text = path.read_text(encoding="utf-8")
-        text = _VERSION_LINE.sub(f'version = "{version}"', text, count=1)
         # The list ends at a "]" that closes a line — extras like "[pii]" don't.
-        text = _DEPS_BLOCK.sub(lambda m: _INTERNAL_DEP.sub(pin, m.group(0)), text, count=1)
+        text = _DEPS_BLOCK.sub(lambda m: _INTERNAL_DEP.sub(exact, m.group(0)), text, count=1)
         path.write_text(text, encoding="utf-8")
-
-    print(f"Set {len(PUBLISHED)} packages to {version}.")
-    if _roll_changelog(version):
-        print(f"docs/changelog.md: Unreleased → [{version}] - {date.today().isoformat()}")
-    print(f"Next: `uv lock`, commit, then `git tag v{version}` and push the tag.")
+    print(f"Pinned internal dependencies to =={version} in {len(PUBLISHED)} packages.")
 
 
-def _roll_changelog(version: str) -> bool:
+def verify(tag: str, dist_dir: str) -> None:
+    """Fail unless every built file is exactly *tag*'s version, for every package."""
+    version = Version(_normalise(tag))
+    files = sorted(Path(dist_dir).glob("*.whl")) + sorted(Path(dist_dir).glob("*.tar.gz"))
+    wrong, seen = [], set()
+    for f in files:
+        name, ver = (
+            parse_wheel_filename(f.name)[:2] if f.suffix == ".whl" else parse_sdist_filename(f.name)
+        )
+        seen.add(str(name))
+        if ver != version:
+            wrong.append(f"{f.name} (is {ver})")
+    missing = sorted(_published_names() - seen)
+    if wrong or missing:
+        sys.exit(f"error: built files don't match tag {tag}: wrong={wrong} missing={missing}")
+    print(f"ok: {len(files)} files, all {len(seen)} packages at {version}")
+
+
+def changelog(raw: str) -> None:
     """Turn ``## [Unreleased]`` into this version's section and start a fresh one."""
+    version = _normalise(raw)
     text = CHANGELOG.read_text(encoding="utf-8")
-    if f"## [{version}]" in text or "## [Unreleased]" not in text:
-        return False
+    if f"## [{version}]" in text:
+        sys.exit(f"docs/changelog.md already has a [{version}] section")
     fresh = f"## [Unreleased]\n\n## [{version}] - {date.today().isoformat()}"
     CHANGELOG.write_text(text.replace("## [Unreleased]", fresh, 1), encoding="utf-8")
-    return True
-
-
-def check(tag: str) -> None:
-    expected = _normalise(tag)
-    wrong = {pkg: v for pkg, v in current_versions().items() if v != expected}
-    if wrong:
-        lines = "\n".join(f"  {pkg}: {v}" for pkg, v in wrong.items())
-        sys.exit(
-            f"error: tag {tag} expects version {expected}, but these differ:\n{lines}\n"
-            f"Run `uv run python scripts/release.py bump {expected}` and commit."
-        )
-    print(f"ok: all {len(PUBLISHED)} packages are at {expected}")
+    print(f"docs/changelog.md: Unreleased → [{version}]. Commit it, then tag v{version}.")
 
 
 def notes(tag: str) -> None:
@@ -130,16 +131,16 @@ def notes(tag: str) -> None:
 
 def main(argv: list[str]) -> None:
     match argv:
-        case ["bump", v]:
-            bump(v)
-        case ["check", tag]:
-            check(tag)
+        case ["pin", tag]:
+            pin(tag)
+        case ["verify", tag, dist_dir]:
+            verify(tag, dist_dir)
+        case ["changelog", version]:
+            changelog(version)
         case ["notes", tag]:
             notes(tag)
         case ["packages"]:
             print("\n".join(PUBLISHED))
-        case ["current"]:
-            print(json.dumps(current_versions(), indent=2))
         case _:
             sys.exit(__doc__)
 

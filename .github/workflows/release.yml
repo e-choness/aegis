@@ -1,8 +1,9 @@
 name: Release
 
-# Push a tag like v2.0.0a1 after running `scripts/release.py bump 2.0.0a1`.
-# Re-running the workflow for the same tag is safe: files already on PyPI are
-# skipped, the GitHub Release is updated, and the Space is re-uploaded.
+# Push a tag like v2.0.0a3 — the tag *is* the version of every package
+# (hatch-vcs); nothing in the repo needs bumping first. Re-running the workflow
+# for the same tag is safe: files already on PyPI are skipped, the GitHub
+# Release is updated, and the Space is re-uploaded.
 on:
   push:
     tags: ["v*"]
@@ -29,21 +30,34 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+          fetch-depth: 0 # tags and history, for hatch-vcs
 
       - uses: astral-sh/setup-uv@v10.2.0
 
-      - name: Tag matches package versions
+      - name: Version from the tag
         id: version
         run: |
-          uv run --no-project --with packaging python scripts/release.py check "$TAG"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          version=$(uv run --no-project --with packaging python -c \
+            "import sys; from packaging.version import Version; print(Version(sys.argv[1].removeprefix('v')))" "$TAG")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version"
+
+      - name: Pin internal dependencies to this release
+        run: uv run --no-project --with packaging python scripts/release.py pin "$TAG"
 
       - name: Build the published packages (never the test fixture plugin)
+        env:
+          # The pin step leaves the checkout modified, which would make hatch-vcs
+          # compute the *next* dev version; state the tag's version explicitly.
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.version }}
         run: |
           for pkg in $(uv run --no-project --with packaging python scripts/release.py packages); do
             uv build "$pkg" --out-dir dist
           done
           ls -l dist
+
+      - name: Every file is exactly the tag's version
+        run: uv run --no-project --with packaging python scripts/release.py verify "$TAG" dist
 
       - name: Check metadata renders on PyPI
         run: uvx twine check --strict dist/*

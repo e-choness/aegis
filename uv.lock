@@ -47,6 +47,7 @@ dev = [
     { name = "aegis-gateway-pack-pii", extras = ["pii"], editable = "packages/aegis-pack-pii" },
     { name = "aegis-gateway-pack-residency", editable = "packages/aegis-pack-residency" },
     { name = "aegis-gateway-sdk", editable = "sdk/python" },
+    { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "git-cliff", specifier = ">=2.0" },
     { name = "import-linter", specifier = ">=2.15" },
     { name = "pre-commit", specifier = ">=4" },
@@ -59,7 +60,6 @@ dev = [
 
 [[package]]
 name = "aegis-gateway"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-gateway" }
 dependencies = [
     { name = "aegis-gateway-cli" },
@@ -87,7 +87,6 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-cli"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-cli" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -108,7 +107,6 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-core"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-core" }
 dependencies = [
     { name = "keyring" },
@@ -159,7 +157,6 @@ source = { editable = "packages/aegis-fixture-plugin" }
 
 [[package]]
 name = "aegis-gateway-pack-budgets"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-budgets" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -170,7 +167,6 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-pack-classification"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-classification" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -181,7 +177,6 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-pack-llm-guard"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-llm-guard" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -198,14 +193,13 @@ llm-guard = [
 [package.metadata]
 requires-dist = [
     { name = "aegis-gateway-core", editable = "packages/aegis-core" },
-    { name = "aegis-gateway-pack-llm-guard", extras = ["llm-guard"], marker = "extra == 'all'", editable = "packages/aegis-pack-llm-guard" },
+    { name = "llm-guard", marker = "extra == 'all'", specifier = ">=0.3" },
     { name = "llm-guard", marker = "extra == 'llm-guard'", specifier = ">=0.3" },
 ]
-provides-extras = ["llm-guard", "all"]
+provides-extras = ["all", "llm-guard"]
 
 [[package]]
 name = "aegis-gateway-pack-pii"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-pii" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -226,16 +220,17 @@ pii = [
 [package.metadata]
 requires-dist = [
     { name = "aegis-gateway-core", editable = "packages/aegis-core" },
-    { name = "aegis-gateway-pack-pii", extras = ["pii"], marker = "extra == 'all'", editable = "packages/aegis-pack-pii" },
+    { name = "presidio-analyzer", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "presidio-analyzer", marker = "extra == 'pii'", specifier = ">=2.2" },
+    { name = "presidio-anonymizer", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "presidio-anonymizer", marker = "extra == 'pii'", specifier = ">=2.2" },
+    { name = "spacy", marker = "extra == 'all'", specifier = ">=3.8.0,<3.9" },
     { name = "spacy", marker = "extra == 'pii'", specifier = ">=3.8.0,<3.9" },
 ]
-provides-extras = ["pii", "all"]
+provides-extras = ["all", "pii"]
 
 [[package]]
 name = "aegis-gateway-pack-residency"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-residency" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -246,7 +241,6 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-sdk"
-version = "2.0.0a1"
 source = { editable = "sdk/python" }
 dependencies = [
     { name = "httpx" },
@@ -261,7 +255,6 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-server"
-version = "2.0.0a1"
 source = { editable = "packages/aegis-server" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -1283,6 +1276,14 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/5d/5f8571bd5dedc80863191621ac4be001f3f3dd8315d2ec078705dab7dec1/durationpy-0.11.tar.gz", hash = "sha256:181898e1ae282e288f0a2291829656bf1b6b3aadf30a97993b85db4943642905", size = 3582, upload-time = "2026-08-26T13:56:00.991Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/c4/ebdf7837bc4ef6fd98cfb013c28855bb358467bf86c1af011bbc21e21df0/durationpy-0.11-py3-none-any.whl", hash = "sha256:a739fe2b8972c250ff72f8e2c488d18cf25f7b852f49ee76048775d5171df30c", size = 4133, upload-time = "2026-08-26T13:55:59.456Z" },
+]
+
+[[package]]
+name = "en-core-web-sm"
+version = "3.8.0"
+source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+wheels = [
+    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl", hash = "sha256:1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85" },
 ]
 
 [[package]]

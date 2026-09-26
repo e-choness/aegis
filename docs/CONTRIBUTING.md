@@ -90,23 +90,35 @@ dc node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
 
 ## Releasing
 
-Every published package shares one version. To release `2.0.0a1`:
+**The git tag is the version.** No package declares one: `hatch-vcs` reads it
+from git at build time, so tag `v2.0.0a3` builds as `2.0.0a3`, and every commit
+after it as `2.0.0a4.devN` (that's what `aegis --version` shows in a dev
+checkout). Internal dependencies are unpinned in the repo and pinned exactly
+(`==2.0.0a3`) by the release build. To release:
 
 ```bash
-dc uv run python scripts/release.py bump 2.0.0a1   # versions, internal pins, changelog heading
-dc uv lock
-git commit -am "chore(release): 2.0.0a1"
-git tag v2.0.0a1 && git push origin main v2.0.0a1   # tag the bump commit, not before it
+dc uv run python scripts/release.py changelog 2.0.0a3   # Unreleased → [2.0.0a3] - <today>
+git commit -am "docs: changelog for 2.0.0a3"
+git tag v2.0.0a3
+git push origin main v2.0.0a3
 ```
+
+The changelog step is optional — without it the release notes use the
+*Unreleased* section — but it keeps the changelog page tidy. Tags follow
+PEP 440 with a `v` prefix: `v2.0.0`, `v2.1.0a1`, `v2.1.0rc1`.
 
 The tag triggers `.github/workflows/release.yml`, which:
 
-1. checks the tag matches every package version (`release.py check`);
-2. builds the ten published packages (never the test fixture plugin) and runs
-   `twine check --strict`, so a README that PyPI can't render fails the build;
-3. publishes them to PyPI with Trusted Publishing — no API token is stored in
-   GitHub, and files that already exist are skipped, so re-running is safe;
-4. creates a GitHub Release whose notes are that version's section of ;
+1. pins internal dependencies to the tag's version and builds the ten
+   published packages (never the test fixture plugin);
+2. fails unless every built file is exactly that version
+   (`release.py verify`) and `twine check --strict` passes, so a README PyPI
+   can't render fails the build;
+3. publishes the components, then `aegis-gateway`, to PyPI with Trusted
+   Publishing — no API token is stored in GitHub, and files that already exist
+   are skipped, so re-running is safe;
+4. creates a GitHub Release whose notes are that version's section of
+   [`docs/changelog.md`](/changelog);
 5. waits until the version is installable, then uploads `deploy/huggingface/`
    to the demo Space pinned to that version.
 

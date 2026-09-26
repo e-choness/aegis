@@ -36,8 +36,9 @@ ledger — the ledger records entity *types and counts*, not values.
 Placeholders are allocated per run in reading order, and a value that
 appears more than once — in one message or across the conversation — always
 gets the same placeholder, so the model can tell two mentions are the same
-person. Overlapping detections resolve to the wider span, then the more
-confident entity (a SIN beats the phone number it resembles).
+person. When detections overlap, the most confident one wins — pattern
+matches such as emails, cards and SINs beat spaCy's statistical name guesses —
+and ties go to the wider span.
 
 ## Tuning detection
 
@@ -61,10 +62,11 @@ guardrails:
 | `entities` | the identifying set below | A list of entity types, or `ALL` for every recognizer. Unknown names fail at startup with the supported list. |
 | `threshold` | `0.4` | Phone numbers without context score 0.40 — raising the threshold above that stops masking them. |
 | `allow_list` | none | Product names, your company, public contacts. |
+| `spacy_model` | `en_core_web_sm` | spaCy model for names and locations. Must be installed (`python -m spacy download <model>`) — Aegis never downloads one at runtime, and a missing model fails at startup. `en_core_web_lg` (~560 MB) rarely finds more for the default entities. |
 
 **Default entities:** `PERSON`, `EMAIL_ADDRESS`, `PHONE_NUMBER`, `LOCATION`,
 `IP_ADDRESS`, `CREDIT_CARD`, `IBAN_CODE`, `CRYPTO`, `US_SSN`, `US_ITIN`,
-`US_PASSPORT`, `US_BANK_NUMBER`, `UK_NHS`, `UK_NINO`, `CA_SIN`,
+`US_PASSPORT`, `US_BANK_NUMBER`, `UK_NHS`, `CA_SIN`,
 `MEDICAL_LICENSE`.
 
 **Opt-in:** `DATE_TIME` (dates of birth — also weekdays and "quarterly"),

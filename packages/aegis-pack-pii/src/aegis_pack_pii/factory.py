@@ -21,6 +21,8 @@ def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]
             entities only — see ``aegis_pack_pii.detection.DEFAULT_ENTITIES``).
         threshold: minimum confidence 0-1 (default 0.4).
         allow_list: exact strings never treated as PII.
+        spacy_model: spaCy model for names/locations (default
+            ``en_core_web_sm``; ``en_core_web_lg`` is larger, rarely better).
     """
     from aegis_pack_pii import PiiMaskNode, PiiUnmaskNode
     from aegis_pack_pii.detection import PiiDetector
@@ -30,6 +32,7 @@ def from_config(name: str, cfg: GuardrailConfig) -> dict[str, list[PipelineNode]
             entities=getattr(cfg, "entities", None),
             threshold=cfg.threshold,
             allow_list=getattr(cfg, "allow_list", None),
+            spacy_model=getattr(cfg, "spacy_model", None),
         )
     except ValueError as exc:
         raise AegisConfigValidationError(f"guardrail {name!r}: {exc}", guardrail=name) from exc

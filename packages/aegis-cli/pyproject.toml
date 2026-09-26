@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-cli"
-version = "2.0.0a1"
+dynamic = ["version"]
 description = "The aegis command-line tool: serve, lint, explain, approve and audit."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -20,9 +20,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "aegis-gateway-core==2.0.0a1",
-    "aegis-gateway-sdk==2.0.0a1",
-    "aegis-gateway-server==2.0.0a1",
+    "aegis-gateway-core",
+    "aegis-gateway-sdk",
+    "aegis-gateway-server",
     "typer>=0.12",
     "rich>=13",
 ]
@@ -43,8 +43,13 @@ aegis-gateway-sdk = { workspace = true }
 aegis-gateway-server = { workspace = true }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+# The version is the git tag: v2.0.0a3 → 2.0.0a3; between tags → 2.0.0a4.devN.
+source = "vcs"
+raw-options = { root = "../..", local_scheme = "no-local-version", fallback_version = "0.0.0.dev0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_cli"]
