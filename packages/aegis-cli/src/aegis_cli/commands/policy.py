@@ -50,6 +50,7 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
     - AEG-POL-004: a stage ``aegis serve`` cannot enforce yet (tool_call/tool_result).
     - AEG-POL-005: a provider's endpoint URL encodes a region that contradicts
       its declared ``residency.region`` (needs the residency pack installed).
+    - AEG-POL-006: an ``exporters:`` entry names a type that isn't installed.
     """
     issues: list[LintIssue] = []
 
@@ -176,6 +177,22 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
 
     # AEG-POL-005: declared residency vs. region encoded in the endpoint URL.
     issues.extend(_lint_residency_endpoints(raw.get("providers") or {}))
+
+    # AEG-POL-006: exporter types must be installed (aegis.exporters entry points).
+    exporters_section = raw.get("exporters") or {}
+    if isinstance(exporters_section, dict) and exporters_section:
+        exporter_registry = PluginRegistry()
+        exporter_registry.discover(groups=("aegis.exporters",))
+        for exp_name, exp_cfg in exporters_section.items():
+            exp_type = exp_cfg.get("type") if isinstance(exp_cfg, dict) else None
+            try:
+                exporter_registry.get(str(exp_type), "aegis.exporters")
+            except AegisPluginNotFoundError:
+                issues.append(LintIssue(
+                    code="AEG-POL-006",
+                    message=f"Exporter type {exp_type!r} is not installed.",
+                    location=f"exporters.{exp_name}.type",
+                ))
 
     return issues
 

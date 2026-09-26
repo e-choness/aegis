@@ -23,6 +23,7 @@ from aegis_server.routes.rag import router as rag_router
 from aegis_server.routes.runs import router as runs_router
 from aegis_server.routes.showcase import DemoRateLimitMiddleware
 from aegis_server.routes.showcase import router as showcase_router
+from aegis_server.store.exporting import ExportingLedgerStore
 from aegis_server.store.ledger import LedgerStore
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
@@ -108,8 +109,19 @@ def create_app(
                 )
                 await ledger_store.append(None, body)
         yield
+        # Flush evidence still queued for exporters before the process exits.
+        if isinstance(ledger_store, ExportingLedgerStore):
+            await ledger_store.aclose()
 
-    app = FastAPI(title="Aegis AI Gateway", version=__version__, lifespan=_lifespan)
+    app = FastAPI(
+        title="Aegis AI Gateway",
+        version=__version__,
+        license_info={
+            "name": "AGPL-3.0-or-later",
+            "url": "https://github.com/e-choness/aegis/blob/main/LICENSE",
+        },
+        lifespan=_lifespan,
+    )
     app.state.executor = executor
     app.state.run_store = run_store if run_store is not None else InMemoryRunStore()
     app.state.rag_store = rag_store

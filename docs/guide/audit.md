@@ -85,6 +85,43 @@ mismatch — it trusts nothing the server says. Verify a **complete** export:
 a `--route`-filtered export only chains if that route's records are
 contiguous.
 
+## Forward evidence to other systems
+
+Every ledger record can also be sent to other destinations — a SIEM, a log
+pipeline, an archive — by declaring exporters:
+
+```yaml
+providers:
+  main:
+    type: fake
+
+routes:
+  default:
+    provider: main
+
+exporters:
+  archive:
+    type: jsonl                        # append one JSON line per record
+    path: /var/log/aegis/evidence.jsonl
+  siem:
+    type: webhook                      # POST {"records": [...]} as JSON
+    url: https://siem.example.com/ingest/aegis
+    headers:
+      Authorization: secret://env/SIEM_TOKEN#value
+    timeout: 10
+```
+
+Records are written to the ledger first, then queued per exporter: each
+destination receives them in ledger order, and a slow or failing one never
+delays a request or affects the others. Failures are logged and counted in
+the `aegis_exporter_failures_total{exporter}` metric; to backfill a
+destination, replay `aegis audit export --since-seq N`. Queued records are
+flushed when the server shuts down.
+
+`jsonl` and `webhook` are built in; any `aegis.exporters` plugin works the
+same way — see [Write a plugin](/develop/plugins#exporters). `aegis policy
+lint` reports exporter types that aren't installed (`AEG-POL-006`).
+
 ## Reports and inventory
 
 ```bash

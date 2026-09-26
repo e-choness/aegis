@@ -1,5 +1,5 @@
-# git-cliff configuration — generates CHANGELOG.md from conventional commits
-# Run: DC uv run git-cliff -o CHANGELOG.md
+# git-cliff configuration — drafts changelog entries from conventional commits.
+# Run: DC uv run git-cliff --unreleased   (then edit the result into docs/changelog.md)
 
 [changelog]
 header = """

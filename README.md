@@ -6,7 +6,7 @@
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://e-choness.github.io/aegis/)
 [![PyPI version](https://img.shields.io/pypi/v/aegis-gateway?style=flat-square&color=ff7a2e)](https://pypi.org/project/aegis-gateway/)
 [![Python versions](https://img.shields.io/pypi/pyversions/aegis-gateway?style=flat-square)](https://pypi.org/project/aegis-gateway/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Code style: ruff + pyright](https://img.shields.io/badge/code%20style-ruff%20%2B%20pyright-black?style=flat-square)](https://github.com/astral-sh/ruff)
 [![Last commit](https://img.shields.io/github/last-commit/e-choness/aegis?style=flat-square)](https://github.com/e-choness/aegis/commits/main)
 
@@ -133,9 +133,9 @@ through, and who signed off on the one that didn't?"* always has an answer.
 | 🔌 **OpenAI-compatible API** | `/v1/chat/completions` with SSE streaming, plus a native `/v1/runs` API with approvers and background runs. |
 | 🛡️ **Policy packs** | [PII masking](https://e-choness.github.io/aegis/packs/pii) · [residency](https://e-choness.github.io/aegis/packs/residency) · [classification](https://e-choness.github.io/aegis/packs/classification) · [budgets](https://e-choness.github.io/aegis/packs/budgets) · [LLM Guard](https://e-choness.github.io/aegis/packs/llm-guard) |
 | ⏸️ **Human-in-the-loop** | Checkpointed pauses; resume from the CLI, REST, or the `/approvals` page. [→](https://e-choness.github.io/aegis/guide/approvals) |
-| 🔗 **Evidence ledger** | Hash-chained route inventory and run evidence; `aegis audit export`/`verify`. [→](https://e-choness.github.io/aegis/guide/audit) |
+| 🔗 **Evidence ledger** | Hash-chained route inventory and run evidence; `aegis audit export`/`verify`; forward records to a SIEM or archive. [→](https://e-choness.github.io/aegis/guide/audit) |
 | 🧩 **Plugin-first** | Packs are entry-point plugins on public contracts — no built-in special cases. [→](https://e-choness.github.io/aegis/develop/plugins) |
-| 🧰 **Tooling** | `aegis` CLI, Python + TypeScript SDKs, OpenAPI spec, contract test kits. |
+| 🧰 **Tooling** | `aegis` CLI, Python SDK, OpenAPI spec (generate a client in any language), contract test kits. |
 
 Aegis is **2.0.0a0 (alpha)**. The docs keep an honest
 [status table](https://e-choness.github.io/aegis/guide/#where-things-stand)
@@ -164,4 +164,16 @@ Start with the [codebase tour](https://e-choness.github.io/aegis/develop/codebas
 
 - [**Docs site**](https://e-choness.github.io/aegis/) — guide, policy packs, developer docs, reference
 - [Contributing](docs/CONTRIBUTING.md) · [Security policy](docs/SECURITY.md) · [Code of conduct](docs/CODE_OF_CONDUCT.md)
-- [Changelog](CHANGELOG.md) · [MIT License](LICENSE)
+- [Changelog](https://e-choness.github.io/aegis/changelog) · [License](#license)
+
+## License
+
+Copyright © 2024–2026 Aegis contributors. Aegis is free software, licensed
+under the [GNU Affero General Public License v3.0 or later](LICENSE).
+
+In short: you may use, modify and self-host it, including commercially. If you
+distribute a modified version, **or let users interact with a modified
+version over a network**, you must offer those users its source under the same
+license. Plugins you write can use any AGPL-compatible license (MIT,
+Apache-2.0, BSD, GPL-3.0, …). This summary isn't legal advice; the
+[license text](LICENSE) is what applies.

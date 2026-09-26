@@ -9,7 +9,7 @@ All five ship with `pip install aegis-gateway`.
 
 | Pack | `pack:` | Adds | Kind | Options |
 |---|---|---|---|---|
-| [PII masking](./pii) | `aegis.pii` | ingress mask + egress unmask, or ingress detect | node / guard | `mode: mask \| detect` |
+| [PII masking](./pii) | `aegis.pii` | ingress mask + egress unmask, or ingress detect | node / guard | `mode`, `entities`, `threshold`, `allow_list` |
 | [Residency](./residency) | `aegis.residency` | ingress guard | guard | `region`, `jurisdiction`, `allowed_regions`, `require_approval` |
 | [Classification](./classification) | `aegis.classification` | ingress node | node | — |
 | [Budgets](./budgets) | `aegis.budgets` | ingress guard + egress recorder | guard / node | `default_cap` |

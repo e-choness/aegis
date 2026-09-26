@@ -20,9 +20,6 @@ build/
 # Docs build output
 site/
 
-# Node (for TypeScript SDK - not needed for Python Docker image)
-sdk/typescript/node_modules/
-sdk/typescript/dist/
 
 # Environment
 .env

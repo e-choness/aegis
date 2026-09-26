@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 20 via NodeSource (for the TypeScript SDK in step 15)
+# Node.js 20 via NodeSource (VitePress docs site; scripts/gen-terminal-demo.cjs)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*

@@ -22,7 +22,7 @@ REQUIRED_SECTIONS = [
     "[![Docs]",
     "[![PyPI version]",
     "[![Python versions]",
-    "[![License: MIT]",
+    "[![License: AGPL-3.0]",
     "[![Code style: ruff + pyright]",
     "## See it work",
     "## Install",
@@ -39,7 +39,7 @@ REQUIRED_BADGES = [
     "workflows/docs.yml/badge.svg",
     "img.shields.io/pypi/v/aegis-gateway",
     "img.shields.io/pypi/pyversions/aegis-gateway",
-    "badge/license-MIT",
+    "badge/license-AGPL--3.0",
     "code%20style-ruff",
 ]
 

@@ -57,6 +57,7 @@ In code they are subclasses of `aegis_core.errors.AegisError`.
 | `AEG-POL-003` | Egress guard is non-incremental; route will buffer | Informational — use an incremental guard if you need true streaming. |
 | `AEG-POL-004` | `tool_call` / `tool_result` is set; `aegis serve` would refuse to start | Remove the key; govern tools in Python with `McpExecuteNode`. |
 | `AEG-POL-005` | A provider's endpoint URL encodes a region that contradicts its `residency.region` | Fix the declaration or point at the right regional endpoint. |
+| `AEG-POL-006` | An `exporters:` entry names a type that isn't installed | Install the exporter's package or fix `type`. |
 
 ## MCP — `AEG-MCP`
 

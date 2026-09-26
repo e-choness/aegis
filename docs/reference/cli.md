@@ -71,8 +71,8 @@ respond.
 ```bash
 aegis config validate [aegis.yaml]   # schema validation
 aegis config show [aegis.yaml]       # resolved config, secrets redacted
-aegis policy lint [aegis.yaml]       # AEG-POL-001..005: bad refs, missing packs, streaming downgrades,
-                                     #   unenforceable stages, endpoint/residency mismatches
+aegis policy lint [aegis.yaml]       # AEG-POL-001..006: bad refs, missing packs, streaming downgrades,
+                                     #   unenforceable stages, residency mismatches, missing exporters
 aegis policy test <fixtures-dir>     # run YAML policy fixtures — see Testing
 ```
 

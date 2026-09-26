@@ -60,3 +60,15 @@ def test_sidebar_links_resolve() -> None:
         path = link.split("#")[0].rstrip("/")
         candidates = [DOCS_ROOT / f"{path.lstrip('/')}.md", DOCS_ROOT / path.lstrip("/") / "index.md"]
         assert any(c.exists() for c in candidates), f"sidebar link {link!r} has no page"
+
+
+def test_package_license_copies_match_root() -> None:
+    """Every published package ships the root LICENSE verbatim (AGPL-3.0 requires the text)."""
+    import sys
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from release import PUBLISHED
+
+    root_license = (ROOT / "LICENSE").read_bytes()
+    stale = [pkg for pkg in PUBLISHED if (ROOT / pkg / "LICENSE").read_bytes() != root_license]
+    assert not stale, f"LICENSE copies differ from the root LICENSE in: {stale} — copy it again"

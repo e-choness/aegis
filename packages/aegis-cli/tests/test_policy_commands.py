@@ -307,3 +307,16 @@ class TestLintUnwiredStagesAndResidency:
             routes: {default: {provider: bedrock}}
         """)
         assert not [i for i in issues if i.code == "AEG-POL-005"]
+
+
+def test_uninstalled_exporter_type_is_flagged(tmp_path: Path) -> None:
+    p = tmp_path / "aegis.yaml"
+    p.write_text(textwrap.dedent("""
+        providers: {fake: {type: fake}}
+        routes: {default: {provider: fake}}
+        exporters:
+          archive: {type: jsonl, path: /tmp/e.jsonl}
+          stream: {type: kafka}
+    """))
+    pol006 = [i for i in lint_policy(p) if i.code == "AEG-POL-006"]
+    assert [i.location for i in pol006] == ["exporters.stream.type"]

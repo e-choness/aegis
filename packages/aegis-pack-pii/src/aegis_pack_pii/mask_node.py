@@ -2,70 +2,64 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from aegis_core.pipeline.state import RunState, RunStateDelta
 from aegis_core.providers.models import Message
+from aegis_pack_pii.detection import PiiDetector
 
 
-def _deduplicate(results: list[Any]) -> list[Any]:
-    """Remove entities whose span is fully contained within a larger entity.
+class _Placeholders:
+    """Allocates placeholders for one run.
 
-    Presidio may return overlapping results (e.g. EMAIL_ADDRESS + URL for the
-    same text span).  We keep the widest entity and discard sub-spans so that
-    right-to-left replacement stays positionally valid.
+    The same value always gets the same placeholder (so the model can tell
+    that two mentions are the same person), numbering follows reading order,
+    and placeholders already in the run's ``mask_map`` are reused, never
+    reassigned to a different value.
     """
-    sorted_r: list[Any] = sorted(
-        results, key=lambda r: r.end - r.start, reverse=True
-    )
-    kept: list[Any] = []
-    for r in sorted_r:
-        s: int = r.start
-        e: int = r.end
-        if not any(k.start <= s and k.end >= e for k in kept):
-            kept.append(r)
-    return kept
+
+    def __init__(self, existing: dict[str, str]) -> None:
+        self.by_value: dict[tuple[str, str], str] = {}
+        self._next: dict[str, int] = {}
+        for placeholder, original in existing.items():
+            m = re.fullmatch(r"<([A-Z0-9_]+)_(\d+)>", placeholder)
+            if not m:
+                continue
+            etype, idx = m.group(1), int(m.group(2))
+            self.by_value[(etype, original)] = placeholder
+            self._next[etype] = max(self._next.get(etype, 0), idx + 1)
+
+    def get(self, etype: str, original: str) -> str:
+        key = (etype, original)
+        if key not in self.by_value:
+            idx = self._next.get(etype, 0)
+            self._next[etype] = idx + 1
+            self.by_value[key] = f"<{etype}_{idx}>"
+        return self.by_value[key]
 
 
 def _mask_text(
     text: str,
-    type_counts: dict[str, int],
+    placeholders: _Placeholders,
+    detector: PiiDetector,
 ) -> tuple[str, dict[str, str]]:
-    """Mask PII entities in *text* using Presidio.
+    """Mask PII entities in *text*.
 
-    Args:
-        text: The text to scan.
-        type_counts: Mutable dict tracking per-entity-type counter across
-            multiple messages (so placeholders are unique per run).
-
-    Returns:
-        A tuple ``(masked_text, partial_map)`` where ``partial_map`` maps
-        each new ``<ENTITY_TYPE_N>`` placeholder to its original value.
+    Returns ``(masked_text, partial_map)`` where ``partial_map`` maps each
+    placeholder used in *text* to its original value.
     """
-    from aegis_pack_pii._engine import get_analyzer
-
-    analyzer = get_analyzer()
-    results: list[Any] = analyzer.analyze(text=text, language="en")
-    if not results:
+    found: list[Any] = sorted(detector.find(text), key=lambda r: r.start)
+    if not found:
         return text, {}
 
-    # Remove sub-span duplicates before replacing.
-    deduped: list[Any] = _deduplicate(results)
-
-    partial_map: dict[str, str] = {}
+    # Allocate in reading order, then replace right-to-left so earlier
+    # replacements don't shift later offsets.
+    spans = [(r.start, r.end, placeholders.get(r.entity_type, text[r.start : r.end])) for r in found]
+    partial_map: dict[str, str] = {ph: text[a:b] for a, b, ph in spans}
     masked = text
-    # Process right-to-left so earlier-position replacements don't shift later ones.
-    for result in sorted(deduped, key=lambda r: r.start, reverse=True):
-        etype: str = result.entity_type
-        idx = type_counts.get(etype, -1) + 1
-        type_counts[etype] = idx
-        placeholder = f"<{etype}_{idx}>"
-        start: int = result.start
-        end: int = result.end
-        original = text[start:end]
-        partial_map[placeholder] = original
+    for start, end, placeholder in reversed(spans):
         masked = masked[:start] + placeholder + masked[end:]
-
     return masked, partial_map
 
 
@@ -85,19 +79,20 @@ class PiiMaskNode:
 
     name: str = "pii_mask_node"
 
-    def __init__(self, name: str | None = None) -> None:
+    def __init__(self, name: str | None = None, detector: PiiDetector | None = None) -> None:
         if name is not None:
             self.name = name
+        self._detector = detector or PiiDetector()
 
     async def run(self, state: RunState) -> RunStateDelta:
         """Mask PII in all messages; return updated messages and mask_map."""
-        type_counts: dict[str, int] = {}
+        placeholders = _Placeholders(state.mask_map)
         new_messages: list[Message] = []
         accumulated_map: dict[str, str] = {}
         changed = False
 
         for msg in state.messages:
-            masked_text, partial_map = _mask_text(msg.content, type_counts)
+            masked_text, partial_map = _mask_text(msg.content, placeholders, self._detector)
             new_messages.append(Message(role=msg.role, content=masked_text))
             accumulated_map.update(partial_map)
             if partial_map:

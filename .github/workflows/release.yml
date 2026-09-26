@@ -88,13 +88,13 @@ jobs:
 
       - uses: astral-sh/setup-uv@v3
 
-      - name: Release notes from CHANGELOG.md
+      - name: Release notes from docs/changelog.md
         run: |
           {
             uv run --no-project --with packaging python scripts/release.py notes "$TAG"
             echo
             echo "---"
-            echo "\`pip install aegis-gateway==${{ needs.build.outputs.version }}\` · [Documentation](https://e-choness.github.io/aegis/) · [Full changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)"
+            echo "\`pip install aegis-gateway==${{ needs.build.outputs.version }}\` · [Documentation](https://e-choness.github.io/aegis/) · [Full changelog](https://e-choness.github.io/aegis/changelog)"
           } > notes.md
 
       - uses: actions/download-artifact@v4

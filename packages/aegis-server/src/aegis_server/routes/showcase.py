@@ -217,7 +217,7 @@ _SHOWCASE_HTML = """\
 <body>
   <header>
     <h1>Aegis — Pipeline Showcase</h1>
-    <a href="/docs" target="_blank">OpenAPI docs &rarr;</a>
+    <span><a href="/docs" target="_blank">OpenAPI docs &rarr;</a> &nbsp;·&nbsp; <a href="https://github.com/e-choness/aegis" target="_blank">Source (AGPL-3.0) &rarr;</a></span>
   </header>
 
   <main>

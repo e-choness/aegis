@@ -61,14 +61,15 @@ def serve(
 
     import uvicorn
 
-    from aegis_core.config.build import build_executor, config_digest
+    from aegis_core.config.build import build_executor, build_exporters, config_digest
     from aegis_core.config.loader import load_config
     from aegis_core.errors import AegisConfigNotFoundError, AegisConfigValidationError
     from aegis_core.pipeline.checkpointer import sqlite_checkpointer
     from aegis_server.app import AEGServError, create_app
     from aegis_server.auth import ApiKeyAuthenticator
     from aegis_server.keys import KeyStore
-    from aegis_server.store.ledger import SqliteLedgerStore
+    from aegis_server.store.exporting import ExportingLedgerStore
+    from aegis_server.store.ledger import LedgerStore, SqliteLedgerStore
     from aegis_server.store.run_store import SqliteRunStore
 
     # 1. Load and validate config
@@ -102,8 +103,15 @@ def serve(
             meta["review_interval_days"] = route_cfg.review_interval_days
         route_metadata[route_name] = meta
 
-    # 4. Create ledger store
-    ledger_store = SqliteLedgerStore(path=str(ledger_db))
+    # 4. Create ledger store (forwarding to any configured exporters)
+    try:
+        exporters = build_exporters(cfg)
+    except AegisConfigValidationError as exc:
+        _console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    ledger_store: LedgerStore = SqliteLedgerStore(path=str(ledger_db))
+    if exporters:
+        ledger_store = ExportingLedgerStore(ledger_store, exporters)
 
     route_count = len(cfg.routes)
 

@@ -2,7 +2,7 @@
 name = "aegis-gateway-pack-pii"
 version = "2.0.0a0"
 description = "Aegis policy pack: PII masking and unmasking with Microsoft Presidio."
-license = { text = "MIT" }
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
 readme = "README.md"
 authors = [{ name = "Aegis contributors" }]
@@ -10,7 +10,6 @@ keywords = ["llm", "ai-gateway", "guardrails", "openai", "governance", "audit", 
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -34,7 +33,7 @@ all = ["aegis-gateway-pack-pii[pii]"]
 Homepage = "https://e-choness.github.io/aegis/"
 Documentation = "https://e-choness.github.io/aegis/"
 Repository = "https://github.com/e-choness/aegis"
-Changelog = "https://github.com/e-choness/aegis/blob/main/CHANGELOG.md"
+Changelog = "https://e-choness.github.io/aegis/changelog"
 Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]

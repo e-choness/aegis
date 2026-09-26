@@ -2,7 +2,7 @@
 
 One file configures a gateway. It is parsed by `aegis_core.config.load_config`
 in four steps: **YAML → `secret://` resolution → `AEGIS__*` env overrides →
-Pydantic validation**. Top-level keys other than the five below are
+Pydantic validation**. Top-level keys other than the six below are
 rejected, so typos surface as errors.
 
 ```bash
@@ -81,7 +81,7 @@ Extra keys are passed to the pack's factory.
 | `pack` | string, **required** | An `aegis.packs` entry point, e.g. `aegis.pii`. |
 | `mode` | string | Pack-specific (`aegis.pii`: `mask` \| `detect`). |
 | `scanners` | list of strings | Pack-specific (`aegis.llm_guard`). |
-| `threshold` | float | Pack-specific (`aegis.llm_guard`). |
+| `threshold` | float | Pack-specific (`aegis.pii`, `aegis.llm_guard`). |
 | *other* | any | See each [pack's page](/packs/). |
 
 ## `pipeline`
@@ -115,6 +115,19 @@ or `model` (OpenAI-compatible API). Extra keys are allowed.
 | Field | Type | Notes |
 |---|---|---|
 | `type` | `none` \| `api_key` | Default `none`. `aegis serve` itself uses API-key auth unless started with `--no-auth`. |
+
+## `exporters`
+
+Map of name → destination for evidence-ledger records. Extra keys are passed
+to the exporter.
+
+| Field | Type | Notes |
+|---|---|---|
+| `type` | string, **required** | `jsonl`, `webhook`, or an installed `aegis.exporters` plugin. |
+| `path` | string | `jsonl`: file to append to. |
+| `url`, `headers`, `timeout` | | `webhook`: endpoint, extra headers (may be `secret://` refs), seconds (default 10). |
+
+See [Forward evidence to other systems](/guide/audit#forward-evidence-to-other-systems).
 
 ## Secret references
 

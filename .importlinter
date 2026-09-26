@@ -24,7 +24,6 @@ forbidden_modules =
     aegis_core.config
     aegis_core.secrets
     aegis_core.registry
-    aegis_core.hooks
 # Direct imports only: public modules such as aegis_core.packs may themselves
 # use internals (it re-exports GuardrailConfig); packs just can't reach in.
 allow_indirect_imports = True

@@ -124,9 +124,9 @@ run is wrapped in an OpenTelemetry span (`aegis.run`) on the process's global
 tracer provider. Aegis doesn't configure an exporter itself: install
 `opentelemetry-distro` plus an exporter and start the server under
 `opentelemetry-instrument aegis serve …`, or set a tracer provider in your
-own entry point. The repo's `docker compose --profile observability up`
-starts Prometheus (`:9090`) and Grafana (`:3000`). Details in
-[Metrics & traces](/reference/observability).
+own entry point. Details in [Metrics & traces](/reference/observability).
+To ship evidence records to a SIEM or archive as they're written, configure
+[exporters](/guide/audit#forward-evidence-to-other-systems).
 
 ## Data you should keep
 

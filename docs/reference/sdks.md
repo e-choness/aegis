@@ -1,11 +1,12 @@
 # SDKs
 
 For plain chat, any **OpenAI SDK** works — set `base_url` to your gateway
-and use the route name as `model`. Use the Aegis SDKs when you need what
+and use the route name as `model`. Use the Aegis client when you need what
 OpenAI's API can't express: approver lists, background runs, resume, audit
-and ledger access.
+and ledger access. It's first-party for Python; for other languages, generate
+one from the OpenAPI spec (below).
 
-Both SDKs default to `http://localhost:8767`; pass your server's URL.
+The Python SDK defaults to `http://localhost:8767`; pass your server's URL.
 
 ## Python — `aegis-gateway-sdk`
 
@@ -48,38 +49,6 @@ with AegisClient(base_url="http://localhost:8000", api_key="aeg-...") as client:
 
 The default timeout is 60 s (model calls and first-use model loading are
 slow); override with `timeout=`. HTTP errors raise `httpx.HTTPStatusError`.
-
-## TypeScript — `@aegis/sdk`
-
-Lives in `sdk/typescript` (ESM + CJS, validated with zod). Build it from
-source until it is published:
-
-```bash
-cd sdk/typescript && npm ci && npm run build
-```
-
-```ts
-import { AegisClient } from "@aegis/sdk";
-
-const client = new AegisClient("http://localhost:8000", process.env.AEGIS_API_KEY);
-
-const run = await client.createRun(
-  [{ role: "user", content: "Summarise Q3 for the board" }],
-  { route: "default", approvers: ["jane"] },
-);
-
-if (run.status === "paused") {
-  await client.resumeRun(run.run_id, "approved");
-}
-
-for await (const chunk of client.streamChat([{ role: "user", content: "Hi" }])) {
-  process.stdout.write(chunk.choices?.[0]?.delta?.content ?? "");
-}
-```
-
-Methods: `createRun`, `getRun`, `resumeRun`, `listRuns`, `chat`,
-`streamChat`. Non-2xx responses throw `AegisError` with `status` and the
-parsed `body`.
 
 ## Other languages
 

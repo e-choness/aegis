@@ -19,7 +19,7 @@ answer.
 | **Evidence ledger** | Hash-chained, append-only SQLite ledger of route inventory and run evidence, verifiable offline. |
 | **Policy packs** | PII masking (Presidio), residency, classification, budgets, LLM Guard. |
 | **Plugin contracts** | Providers, guardrails, nodes, exporters, secret backends — discovered via Python entry points. |
-| **Tooling** | `aegis` CLI, Python + TypeScript SDKs, OpenAPI spec, contract test kits. |
+| **Tooling** | `aegis` CLI, Python SDK, OpenAPI spec for generating clients in any language, contract test kits. |
 
 ## How the pieces fit
 
@@ -47,6 +47,7 @@ some capabilities are available as Python APIs before they are reachable from
 | `ingress` / `egress` guard stages, per-route overrides | ✅ | ✅ |
 | Human approvals (SQLite checkpointer) | ✅ | ✅ — Postgres checkpointer too |
 | Evidence ledger, `aegis explain`, audit export/verify | ✅ | ✅ |
+| Forwarding evidence to other systems (`jsonl`, `webhook`, plugins) | ✅ | ✅ |
 | API-key auth (`aeg-…` virtual keys) | ✅ | ✅ |
 | Streaming (ingress always applied; true or buffered egress) | ✅ | ✅ |
 | `tool_call` / `tool_result` stages | **Refused at startup** — not enforceable from YAML yet | ✅ `McpExecuteNode` |

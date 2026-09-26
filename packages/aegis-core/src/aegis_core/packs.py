@@ -9,7 +9,8 @@ turns one ``guardrails:`` entry of ``aegis.yaml`` into pipeline nodes::
         return {"ingress": [...], "egress": [...]}
 
 Provider plugins (``aegis.providers``) may define
-``from_config(name: str, cfg: ProviderConfig)``.
+``from_config(name: str, cfg: ProviderConfig)``, and exporter plugins
+(``aegis.exporters``) ``from_config(name: str, cfg: ExporterConfig)``.
 
 Import these names from here rather than from ``aegis_core.config`` — the
 config package is internal, and the import-linter contract keeps packs off it.
@@ -19,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from aegis_core.config.models import GuardrailConfig, ProviderConfig
+from aegis_core.config.models import ExporterConfig, GuardrailConfig, ProviderConfig
 from aegis_core.pipeline.protocol import PipelineNode
 
 #: What a pack factory returns: stage name (``"ingress"`` / ``"egress"``) → nodes.
@@ -28,4 +29,4 @@ PackNodes = dict[str, list[PipelineNode]]
 #: Signature of an ``aegis.packs`` entry point.
 PackFactory = Callable[[str, GuardrailConfig], PackNodes]
 
-__all__ = ["GuardrailConfig", "PackFactory", "PackNodes", "ProviderConfig"]
+__all__ = ["ExporterConfig", "GuardrailConfig", "PackFactory", "PackNodes", "ProviderConfig"]

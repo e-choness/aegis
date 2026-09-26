@@ -5,12 +5,13 @@ Usage (inside the dev container)::
     uv run python scripts/release.py bump 2.0.0a1   # rewrite versions + internal pins
     uv run python scripts/release.py check v2.0.0a1  # CI: tag must match the files
     uv run python scripts/release.py packages        # paths of publishable packages
-    uv run python scripts/release.py notes v2.0.0a1  # this version's CHANGELOG section
+    uv run python scripts/release.py notes v2.0.0a1  # this version's changelog section
 
 Every publishable package shares one version. Internal dependencies are pinned
 to it exactly (``aegis-gateway-core==2.0.0a1``) so ``pip install
-aegis-gateway==X`` can never mix components from different releases. The
-TypeScript SDK's ``package.json`` follows along in semver form (``2.0.0-alpha.1``).
+aegis-gateway==X`` can never mix components from different releases.
+
+The changelog lives in ``docs/changelog.md`` (published on the docs site).
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ PUBLISHED = [
     "packages/aegis-pack-budgets",
     "packages/aegis-gateway",
 ]
-TS_PACKAGE = ROOT / "sdk" / "typescript" / "package.json"
+CHANGELOG = ROOT / "docs" / "changelog.md"
 
 _VERSION_LINE = re.compile(r'^version = "([^"]+)"$', re.MULTILINE)
 _DEPS_BLOCK = re.compile(r"^dependencies = \[.*?\]$", re.MULTILINE | re.DOTALL)
@@ -55,14 +56,6 @@ def _normalise(raw: str) -> str:
         return str(Version(raw.removeprefix("v")))
     except InvalidVersion:
         sys.exit(f"error: {raw!r} is not a PEP 440 version (e.g. 2.0.0, 2.0.0a1, 2.1.0rc1)")
-
-
-def _semver(v: Version) -> str:
-    base = ".".join(str(p) for p in v.release)
-    if v.pre is None:
-        return base
-    label = {"a": "alpha", "b": "beta", "rc": "rc"}[v.pre[0]]
-    return f"{base}-{label}.{v.pre[1]}"
 
 
 def current_versions() -> dict[str, str]:
@@ -94,12 +87,11 @@ def bump(raw: str) -> None:
         text = _DEPS_BLOCK.sub(lambda m: _INTERNAL_DEP.sub(pin, m.group(0)), text, count=1)
         path.write_text(text, encoding="utf-8")
 
-    pkg = json.loads(TS_PACKAGE.read_text(encoding="utf-8"))
-    pkg["version"] = _semver(Version(version))
-    TS_PACKAGE.write_text(json.dumps(pkg, indent=2) + "\n", encoding="utf-8")
-
-    print(f"Set {len(PUBLISHED)} Python packages to {version} and @aegis/sdk to {pkg['version']}.")
-    print("Next: run `uv lock`, add a CHANGELOG section, commit, then tag v" + version)
+    print(f"Set {len(PUBLISHED)} packages to {version}.")
+    print(
+        "Next: run `uv lock`, rename the changelog's Unreleased section to "
+        f"[{version}], commit, then tag v{version}"
+    )
 
 
 def check(tag: str) -> None:
@@ -115,15 +107,15 @@ def check(tag: str) -> None:
 
 
 def notes(tag: str) -> None:
-    """Print this version's CHANGELOG section, falling back to [Unreleased]."""
+    """Print this version's changelog section, falling back to [Unreleased]."""
     version = _normalise(tag)
-    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    text = CHANGELOG.read_text(encoding="utf-8")
     for heading in (rf"## \[{re.escape(version)}\]", r"## \[Unreleased\]"):
         m = re.search(heading + r"[^\n]*\n(.*?)(?=\n## \[|\Z)", text, re.DOTALL)
         if m and m.group(1).strip():
             print(m.group(1).strip())
             return
-    print(f"Release {version}. See CHANGELOG.md.")
+    print(f"Release {version}. See https://e-choness.github.io/aegis/changelog")
 
 
 def main(argv: list[str]) -> None:

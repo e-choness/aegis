@@ -83,6 +83,41 @@ def build_provider(
     return _build_plugin_provider(ptype, pcfg, name=name, registry=registry)
 
 
+def build_exporters(cfg: AegisConfig, *, registry: PluginRegistry | None = None) -> list[Any]:
+    """Instantiate every exporter declared under ``exporters:`` in *cfg*.
+
+    Each ``type`` is an ``aegis.exporters`` entry point. The registered object's
+    ``from_config(name, cfg)`` is used when present, otherwise it is constructed
+    with no arguments; the result must satisfy the ``Exporter`` protocol.
+    """
+    from aegis_core.exporters.protocol import Exporter
+
+    if not cfg.exporters:
+        return []
+    reg = registry if registry is not None else _discovered()
+    exporters: list[Any] = []
+    for name, ecfg in cfg.exporters.items():
+        try:
+            target = reg.load(ecfg.type, "aegis.exporters")
+        except AegisPluginNotFoundError:
+            installed = sorted(p.name for p in reg.list_plugins("aegis.exporters"))
+            raise AegisConfigValidationError(
+                f"exporters.{name}: unknown exporter type {ecfg.type!r}; "
+                f"installed: {', '.join(installed) or 'none'}.",
+                exporter=name,
+            ) from None
+        factory = getattr(target, "from_config", None)
+        exporter = factory(name, ecfg) if callable(factory) else target()
+        if not isinstance(exporter, Exporter):
+            raise AegisConfigValidationError(
+                f"exporters.{name}: {ecfg.type!r} did not produce an Exporter "
+                "(needs name and async export(records)).",
+                exporter=name,
+            )
+        exporters.append(exporter)
+    return exporters
+
+
 def _required(pcfg: ProviderConfig, field: str, name: str) -> str:
     value = getattr(pcfg, field, None)
     if not value:

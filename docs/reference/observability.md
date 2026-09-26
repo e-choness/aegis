@@ -9,6 +9,7 @@ the network layer.
 |---|---|---|---|
 | `aegis_runs_total` | counter | `route`, `status` | Runs finished, by final status. |
 | `aegis_run_duration_seconds` | histogram | `route` | Wall-clock time per run. |
+| `aegis_exporter_failures_total` | counter | `exporter` | Evidence records an [exporter](/guide/audit#forward-evidence-to-other-systems) failed to deliver. |
 
 ```yaml
 scrape_configs:
@@ -26,9 +27,8 @@ histogram_quantile(0.95, sum by (le, route) (rate(aegis_run_duration_seconds_buc
 sum(aegis_runs_total{status="paused"}) - sum(aegis_runs_total{status="denied"})  # rough review backlog
 ```
 
-For a local stack, `docker compose --profile observability up` starts
-Prometheus on `:9090` (config in `prometheus/prometheus.yml`) and Grafana on
-`:3000` with Prometheus pre-provisioned as a data source.
+Point your own Prometheus at `/metrics` with the scrape config above;
+Aegis doesn't bundle a monitoring stack.
 
 ## OpenTelemetry
 

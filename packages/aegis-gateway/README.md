@@ -79,7 +79,7 @@ aegis-gateway-core` to build a plugin.
 ## Learn more
 
 - [Documentation](https://e-choness.github.io/aegis/) — guide, policy packs, plugin development, reference
-- [Changelog](https://github.com/e-choness/aegis/blob/main/CHANGELOG.md) · [Releases](https://github.com/e-choness/aegis/releases)
+- [Changelog](https://e-choness.github.io/aegis/changelog) · [Releases](https://github.com/e-choness/aegis/releases)
 - [Source & issues](https://github.com/e-choness/aegis)
 
-Aegis is **alpha** software. MIT licensed.
+Aegis is **alpha** software, licensed under [AGPL-3.0-or-later](https://github.com/e-choness/aegis/blob/main/LICENSE).

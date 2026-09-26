@@ -42,7 +42,7 @@ export default withMermaid(
         {
           text: 'v2.0.0a0',
           items: [
-            { text: 'Changelog', link: `${repo}/blob/main/CHANGELOG.md` },
+            { text: 'Changelog', link: '/changelog' },
             { text: 'Contributing', link: '/CONTRIBUTING' },
             { text: 'Security policy', link: '/SECURITY' },
           ],
@@ -122,7 +122,7 @@ export default withMermaid(
       outline: { level: [2, 3] },
 
       footer: {
-        message: 'Released under the MIT License.',
+        message: 'Released under the <a href="https://github.com/e-choness/aegis/blob/main/LICENSE">GNU AGPL-3.0-or-later</a>.',
         copyright: 'Copyright © 2024–present Aegis contributors',
       },
     },
