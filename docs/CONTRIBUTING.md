@@ -110,9 +110,14 @@ The tag triggers `.github/workflows/release.yml`, which:
 5. waits until the version is installable, then uploads `deploy/huggingface/`
    to the demo Space pinned to that version.
 
-**One-time setup.** On PyPI, add a *trusted publisher* to each of the ten
-projects: owner `e-choness`, repository `aegis`, workflow `release.yml`,
-environment `pypi`. In the GitHub repo, create an environment named `pypi`,
+**One-time setup.** On PyPI, add a *trusted publisher* (project → Settings →
+Publishing) to **every one** of the ten projects — `aegis-gateway`,
+`aegis-gateway-core`, `-server`, `-cli`, `-sdk`, `-pack-pii`,
+`-pack-llm-guard`, `-pack-classification`, `-pack-residency`,
+`-pack-budgets` — with owner `e-choness`, repository `aegis`, workflow
+`release.yml`, environment `pypi`. A project without one rejects the upload
+(403). Components are published first and `aegis-gateway` last, so a failure
+never leaves an umbrella release pointing at components that don't exist. In the GitHub repo, create an environment named `pypi`,
 and for the demo Space set the variable `HF_SPACE_ID` (e.g. `e-choness/aegis-demo`)
 and the secret `HF_TOKEN` (a Hugging Face token with write access). Without
 `HF_SPACE_ID` the Space job is skipped.

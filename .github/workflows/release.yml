@@ -68,10 +68,25 @@ jobs:
           name: dist
           path: dist/
 
-      # Uploading new versions of existing projects isn't subject to the
-      # new-project creation limit, so every package goes in one step.
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      # The umbrella pins every component to this exact version, so it must be
+      # published last: if any component fails, aegis-gateway never goes up and
+      # `pip install aegis-gateway` keeps resolving to the previous release.
+      - name: Hold the umbrella package back
+        run: |
+          mkdir umbrella
+          mv dist/aegis_gateway-[0-9]* umbrella/
+          ls dist umbrella
+
+      - name: Publish components
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          skip-existing: true
+          print-hash: true
+
+      - name: Publish aegis-gateway (only after every component succeeded)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: umbrella/
           skip-existing: true
           print-hash: true
 
