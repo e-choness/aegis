@@ -12,7 +12,7 @@ All five ship with `pip install aegis-gateway`.
 | [PII masking](./pii) | `aegis.pii` | ingress mask + egress unmask, or ingress detect | node / guard | `mode: mask \| detect` |
 | [Residency](./residency) | `aegis.residency` | ingress guard | guard | `region`, `jurisdiction`, `allowed_regions`, `require_approval` |
 | [Classification](./classification) | `aegis.classification` | ingress node | node | — |
-| [Budgets](./budgets) | `aegis.budgets` | ingress guard | guard | `default_cap` |
+| [Budgets](./budgets) | `aegis.budgets` | ingress guard + egress recorder | guard / node | `default_cap` |
 | [LLM Guard](./llm-guard) | `aegis.llm_guard` | ingress guard | guard | `scanners`, `threshold` |
 
 ## How a pack plugs in
@@ -56,7 +56,7 @@ guardrails:
 
 pipeline:
   ingress: [budget, classify, pii]
-  egress: [pii]
+  egress: [pii, budget]
 ```
 
 Want a pack that doesn't exist? [Write one](/develop/plugins) — it is a

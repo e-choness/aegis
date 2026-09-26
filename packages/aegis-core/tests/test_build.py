@@ -15,7 +15,6 @@ from aegis_core.errors import AegisConfigValidationError
 from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.testing.providers import FakeProvider
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -149,3 +148,165 @@ def test_load_and_build_fake_provider(tmp_path: Path) -> None:
     ex = build_executor(cfg)
     assert isinstance(ex, PipelineExecutor)
     assert "default" in ex._pipelines
+
+
+# ── Plugin providers ──────────────────────────────────────────────────────────
+
+
+class _PluginRegistry:
+    """Registry stand-in exposing one aegis.providers entry point."""
+
+    def __init__(self, name: str, target: object) -> None:
+        from aegis_core.registry.models import PluginInfo
+
+        self._name = name
+        self._target = target
+        self._info = PluginInfo(
+            name=name, group="aegis.providers", value="x:y", dist_name="d", dist_version="1"
+        )
+
+    def load(self, name: str, group: str) -> object:
+        from aegis_core.errors import AegisPluginNotFoundError
+
+        if name != self._name or group != "aegis.providers":
+            raise AegisPluginNotFoundError(name=name, group=group)
+        return self._target
+
+    def list_plugins(self, group: str | None = None) -> list:
+        return [self._info]
+
+
+class _ConfiguredProvider(FakeProvider):
+    @classmethod
+    def from_config(cls, name: str, cfg: ProviderConfig) -> _ConfiguredProvider:
+        return cls(name=name, complete_response=getattr(cfg, "greeting", "hi"))
+
+
+def test_build_provider_plugin_with_from_config() -> None:
+    reg = _PluginRegistry("acme", _ConfiguredProvider)
+    pcfg = ProviderConfig(type="acme", greeting="hello from acme")  # type: ignore[call-arg]
+    provider = build_provider(pcfg, name="primary", registry=reg)  # type: ignore[arg-type]
+    assert isinstance(provider, _ConfiguredProvider)
+    assert provider.name == "primary"
+    assert provider.complete_response == "hello from acme"
+
+
+def test_build_provider_plugin_zero_arg() -> None:
+    reg = _PluginRegistry("plain", FakeProvider)
+    provider = build_provider(ProviderConfig(type="plain"), registry=reg)  # type: ignore[arg-type]
+    assert isinstance(provider, FakeProvider)
+
+
+def test_build_provider_plugin_must_be_a_model_provider() -> None:
+    reg = _PluginRegistry("broken", object)
+    with pytest.raises(AegisConfigValidationError, match="did not produce a ModelProvider"):
+        build_provider(ProviderConfig(type="broken"), registry=reg)  # type: ignore[arg-type]
+
+
+def test_build_provider_unknown_lists_installed_plugins() -> None:
+    reg = _PluginRegistry("acme", FakeProvider)
+    with pytest.raises(AegisConfigValidationError, match="installed provider plugins: acme"):
+        build_provider(ProviderConfig(type="nope"), registry=reg)  # type: ignore[arg-type]
+
+
+# ── Stages that cannot be wired yet fail closed ───────────────────────────────
+
+
+@pytest.mark.parametrize("stage", ["tool_call", "tool_result"])
+def test_build_executor_refuses_unwired_global_stage(stage: str) -> None:
+    cfg = AegisConfig(
+        providers={"fake": ProviderConfig(type="fake")},
+        guardrails={"g": {"pack": "aegis.pii"}},  # type: ignore[dict-item]
+        pipeline=PipelineConfig(**{stage: ["g"]}),
+        routes={"default": RouteConfig(provider="fake")},
+    )
+    with pytest.raises(AegisConfigValidationError, match=rf"pipeline.{stage} is set"):
+        build_executor(cfg, registry=MagicMock())
+
+
+def test_build_executor_refuses_unwired_route_stage() -> None:
+    cfg = AegisConfig(
+        providers={"fake": ProviderConfig(type="fake")},
+        guardrails={"g": {"pack": "aegis.pii"}},  # type: ignore[dict-item]
+        routes={
+            "default": RouteConfig(provider="fake", pipeline=PipelineConfig(tool_result=["g"]))
+        },
+    )
+    with pytest.raises(AegisConfigValidationError, match=r"routes.default.pipeline.tool_result"):
+        build_executor(cfg, registry=MagicMock())
+
+
+# ── Built-in real providers ───────────────────────────────────────────────────
+
+
+def test_build_openai_compatible_provider() -> None:
+    from pydantic import SecretStr
+
+    from aegis_core.config.models import ResidencyConfig
+    from aegis_core.providers.openai_compatible import OpenAICompatibleProvider
+
+    pcfg = ProviderConfig(
+        type="openai_compatible",
+        base_url="http://localhost:11434/v1",
+        model="llama3.1",
+        api_key=SecretStr("sk-test"),
+        residency=ResidencyConfig(region="ca-central-1", jurisdiction="CA"),
+    )
+    provider = build_provider(pcfg, name="local")
+
+    assert isinstance(provider, OpenAICompatibleProvider)
+    assert provider.name == "local"
+    assert provider.info().residency.region == "ca-central-1"
+    kwargs = provider._call_kwargs()
+    assert kwargs["api_key"] == "sk-test"  # secret unwrapped only at call time
+    assert kwargs["base_url"] == "http://localhost:11434/v1"
+    assert kwargs["custom_llm_provider"] == "openai"  # arbitrary model names route correctly
+
+
+def test_build_anthropic_provider() -> None:
+    from pydantic import SecretStr
+
+    from aegis_core.providers.litellm_provider import LiteLLMProvider
+
+    pcfg = ProviderConfig(
+        type="anthropic", model="anthropic/claude-sonnet-5", api_key=SecretStr("sk-ant")
+    )
+    provider = build_provider(pcfg, name="claude")
+
+    assert isinstance(provider, LiteLLMProvider)
+    assert provider.info().provider_type == "anthropic"
+    assert provider._call_kwargs() == {"api_key": "sk-ant"}
+
+
+@pytest.mark.parametrize(
+    ("ptype", "fields", "missing"),
+    [
+        ("anthropic", {}, "model"),
+        ("openai_compatible", {"model": "m"}, "base_url"),
+        ("openai_compatible", {"base_url": "http://x/v1"}, "model"),
+    ],
+)
+def test_build_provider_requires_fields(ptype: str, fields: dict, missing: str) -> None:
+    with pytest.raises(AegisConfigValidationError, match=f"requires '{missing}'"):
+        build_provider(ProviderConfig(type=ptype, **fields), name="p")
+
+
+def test_build_executor_with_real_provider_types(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """End-to-end: YAML with secret refs → load → build must not crash."""
+    monkeypatch.setenv("OPENAI_KEY", "sk-live")
+    path = _write_yaml(
+        tmp_path,
+        """
+        providers:
+          local:
+            type: openai_compatible
+            base_url: http://localhost:11434/v1
+            model: llama3.1
+            api_key: secret://env/OPENAI_KEY#value
+        routes:
+          default:
+            provider: local
+        """,
+    )
+    executor = build_executor(load_config(path), registry=MagicMock())
+    assert executor.routes() == ["default"]

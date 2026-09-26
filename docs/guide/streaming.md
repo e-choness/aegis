@@ -13,9 +13,15 @@ Each guardrail declares `streaming = "none"` or `"incremental"`.
   forwarded as they arrive, each one scanned with `scan_chunk()` first. When
   the provider finishes, every guard's `finalize()` sees the full text
   before the `stop` frame is sent.
-- **Any egress guard `"none"` → buffered.** The whole pipeline runs, then the
-  result is replayed as SSE frames. Clients see latency, never protocol
-  errors.
+- **Any egress guard `"none"`, or any egress node that doesn't declare
+  `stream_capability` → buffered.** The whole pipeline runs, then the result
+  is replayed as SSE frames. Clients see latency, never protocol errors.
+  Transformation nodes (PII unmasking, budget recording) buffer by design:
+  they need the complete response.
+
+**Ingress always runs first**, in either mode — the provider only ever
+streams the ingress-processed (e.g. masked) messages. Streamed runs are
+recorded in the run store and ledger exactly like non-streamed ones.
 
 ```mermaid
 sequenceDiagram
@@ -44,6 +50,11 @@ sequenceDiagram
 
 A block from `scan_chunk()` ends the stream immediately with
 `finish_reason: "content_filter"` and `aegis_event: "stream_violation"`.
+
+If an **ingress** node blocks or pauses the request, no provider call is made
+and the stream is a single terminal frame: `finish_reason: "content_filter"`,
+`aegis_event` set to `blocked`, `paused` or `denied`, and `aegis_run_id` so a
+paused run can be approved with `aegis runs approve <id>`.
 
 ## Find out which mode you got
 
@@ -85,15 +96,3 @@ class NoCodenamesGuard:
 
 `scan()` is still required — buffered routes and non-streaming requests use
 it.
-
-## Known limitation
-
-::: warning 2.0.0a0
-On a true-streaming route, a `stream: true` request to
-`/v1/chat/completions` currently goes straight to the provider: **ingress
-nodes are not run**, and the run is not written to the run store or ledger.
-Nodes that don't declare `stream_capability` (such as the PII pack's unmask
-node) count as streaming-capable, so the default `aegis init` config is
-affected. Until this is fixed, don't rely on ingress policy for streamed
-requests — use `stream: false` or `POST /v1/runs` for governed traffic.
-:::

@@ -64,5 +64,5 @@ Use it on routes that must never receive personal data at all.
 - Detection is English-only (`language="en"`).
 - The first request after start-up loads the spaCy model and can take
   several seconds.
-- The egress unmask node currently makes a route count as
-  streaming-capable; see the [streaming limitation](/guide/streaming#known-limitation).
+- The egress unmask node needs the complete response, so routes that
+  unmask buffer streamed responses (see [Streaming](/guide/streaming)).

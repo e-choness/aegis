@@ -315,6 +315,26 @@
             "title": "Approvers",
             "type": "array"
           },
+          "config_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Digest"
+          },
+          "events": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Events",
+            "type": "array"
+          },
           "principal_id": {
             "title": "Principal Id",
             "type": "string"
@@ -501,6 +521,153 @@
         "summary": "Audit Runs"
       }
     },
+    "/v1/audit/inventory": {
+      "get": {
+        "description": "Return model_inventory records from the evidence ledger.",
+        "operationId": "audit_inventory_v1_audit_inventory_get",
+        "parameters": [
+          {
+            "description": "Filter by model_id/route",
+            "in": "query",
+            "name": "route",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by model_id/route",
+              "title": "Route"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Audit Inventory V1 Audit Inventory Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Inventory"
+      }
+    },
+    "/v1/audit/ledger": {
+      "get": {
+        "description": "Return hash-chained evidence records from the ledger.",
+        "operationId": "audit_ledger_v1_audit_ledger_get",
+        "parameters": [
+          {
+            "description": "Return records with seq > since_seq",
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Return records with seq > since_seq",
+              "title": "Since Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by model_id/route",
+            "in": "query",
+            "name": "route",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by model_id/route",
+              "title": "Route"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Audit Ledger V1 Audit Ledger Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Ledger"
+      }
+    },
+    "/v1/audit/report": {
+      "get": {
+        "description": "Return OSFI E-23 compliance summary: inventory, run stats, chain length.",
+        "operationId": "audit_report_v1_audit_report_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Audit Report V1 Audit Report Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Report"
+      }
+    },
     "/v1/chat/completions": {
       "post": {
         "operationId": "chat_completions_v1_chat_completions_post",
@@ -535,6 +702,47 @@
           }
         },
         "summary": "Chat Completions"
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "description": "Liveness probe. Returns the running config digest.",
+        "operationId": "health_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "description": "OpenAI-compatible model list: every Aegis route is exposed as a model id.",
+        "operationId": "list_models_v1_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Models V1 Models Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Models"
       }
     },
     "/v1/rag/index": {

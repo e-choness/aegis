@@ -57,15 +57,12 @@ hostname finds an edge node, not the GPUs. Aegis enforces what is
 - Some endpoints encode their region — Azure OpenAI
   (`<resource>.<region>.cognitiveservices.azure.com`), Bedrock
   (`bedrock-runtime.<region>.amazonaws.com`) and Vertex
-  (`<region>-aiplatform.googleapis.com`). `aegis_pack_residency.lint`
-  compares those against the declared region.
+  (`<region>-aiplatform.googleapis.com`). `aegis policy lint` compares a
+  provider's `base_url` against its declared `residency.region` and reports
+  a mismatch as `AEG-POL-005`.
 - Every run's ledger record includes the config digest, so the declared
   regions in force for any request are provable after the fact.
 
 Hard guarantees ("data never leaves Canada") belong at the network layer.
 Pair this pack with egress allow-listing in your firewall or DNS.
 
-::: info Current state
-The endpoint-region validator exists as a Python API
-(`aegis_pack_residency.lint`) but is not yet called by `aegis policy lint`.
-:::

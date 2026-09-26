@@ -60,7 +60,7 @@ upgrading one is a one-file change.
 |---|---|
 | `config/models.py` | Pydantic models for `aegis.yaml` (`AegisConfig`, `ProviderConfig`, `GuardrailConfig`, `PipelineConfig`, `RouteConfig`, `AuthConfig`). Unknown top-level keys are errors. |
 | `config/loader.py` | `load_config(path)` — YAML → `secret://` resolution → `AEGIS__*` env overrides → validation. |
-| `config/build.py` | `build_executor(cfg)` — calls each pack's factory, builds providers, compiles one pipeline per route. `config_digest(cfg)`. |
+| `config/build.py` | `build_executor(cfg)` — calls each pack's factory, builds providers (built-in or `aegis.providers` plugins), compiles one pipeline per route; refuses stages it can't enforce. `config_digest(cfg)`. |
 | `registry/` | `PluginRegistry` — entry-point discovery across the `aegis.*` groups. |
 | `pipeline/state.py` | `RunState`, `RunStateDelta`, `RunEvent`. |
 | `pipeline/verdict.py` | `Verdict` and its four constructors. |
@@ -108,7 +108,7 @@ upgrading one is a one-file change.
 | Add a REST endpoint | `aegis_server/routes/`, include it in `app.py`, re-export `openapi.json`, update both SDKs. |
 | Add a CLI command | `aegis_cli/commands/`, register it in `main.py`. |
 | Add an error | Subclass in `errors.py` with `code`, `what`, `why`, `fix`; add it to the [error reference](/reference/errors). |
-| Wire `tool_call` / `tool_result` from YAML | `config/build.py` — the config is already parsed and linted. |
+| Wire `tool_call` / `tool_result` from YAML | `config/build.py` (`UNWIRED_STAGES`, `_check_unwired_stages`) — the config is parsed and linted; it needs an MCP-session config to hang off. |
 
 ## Conventions
 

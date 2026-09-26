@@ -54,7 +54,9 @@ guardrails:
 
   # residency:
   #   pack: aegis.residency
-  #   region: us
+  #   region: us-east-1
+  #   jurisdiction: US
+  #   allowed_regions: [us-east-1]
 
 # ── Pipeline ──────────────────────────────────────────────────────────────
 # Guardrail names listed here must match keys in the guardrails section above.
@@ -62,7 +64,6 @@ guardrails:
 pipeline:
   ingress: [pii]
   egress: [pii]
-  # tool_result: [pii]
 
 # ── Routes ────────────────────────────────────────────────────────────────
 

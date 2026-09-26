@@ -2,7 +2,8 @@
 # Run: aegis serve --config examples/dev.yaml --no-auth
 #
 # Uses FakeProvider so no API keys are needed.
-# PII masking and budget guard are enabled for local dogfooding.
+# PII masking and budgets are enabled for local dogfooding. `budget` is listed
+# in ingress (reject principals over their cap) and egress (charge each run).
 
 providers:
   fake:
@@ -19,7 +20,7 @@ guardrails:
 
 pipeline:
   ingress: [budget, pii]
-  egress: [pii]
+  egress: [pii, budget]
 
 routes:
   default:

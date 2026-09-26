@@ -43,19 +43,20 @@ some capabilities are available as Python APIs before they are reachable from
 
 | Capability | From `aegis.yaml` / `aegis serve` | From Python |
 |---|---|---|
-| Providers: `fake`, `anthropic` (via LiteLLM), `openai_compatible` | ✅ | ✅ |
+| Providers: `fake`, `anthropic` (via LiteLLM), `openai_compatible`, plugin types | ✅ | ✅ |
 | `ingress` / `egress` guard stages, per-route overrides | ✅ | ✅ |
 | Human approvals (SQLite checkpointer) | ✅ | ✅ — Postgres checkpointer too |
 | Evidence ledger, `aegis explain`, audit export/verify | ✅ | ✅ |
 | API-key auth (`aeg-…` virtual keys) | ✅ | ✅ |
-| True streaming vs buffered negotiation | ✅ | ✅ |
-| `tool_call` / `tool_result` stages | Validated, **not yet wired** | ✅ `McpExecuteNode` |
+| Streaming (ingress always applied; true or buffered egress) | ✅ | ✅ |
+| `tool_call` / `tool_result` stages | **Refused at startup** — not enforceable from YAML yet | ✅ `McpExecuteNode` |
 | RAG retrieval into the pipeline | CLI index/query only | ✅ retrieval node + stores |
-| Budget accounting | Pre-flight cap check only | ✅ `BudgetGuard.record()` |
+| Budget accounting (check on ingress, charge on egress) | ✅ | ✅ |
 | Run store (`/v1/runs`, `/v1/audit`) | In-memory (lost on restart) | Pluggable `RunStore` |
 | Secret backends | `env` | `env`, `keyring`, custom |
 
-Items marked "not yet wired" are good first contributions — see
+Wiring the refused stages and the CLI-only features into `aegis serve` are good
+first contributions — see
 [Contributing](/CONTRIBUTING).
 
 ## Next steps

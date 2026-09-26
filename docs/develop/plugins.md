@@ -29,7 +29,7 @@ flowchart LR
 | `aegis.packs` | `from_config(name, cfg) -> dict[str, list[PipelineNode]]` | **Loaded by `aegis serve`** for every `pack:` in `aegis.yaml`. This is the group that makes a plugin usable from config. |
 | `aegis.guardrails` | `Guardrail` | Discovery and conformance (`aegis plugin list/info/test`). Wrap in a `GuardNode` from your pack factory. |
 | `aegis.nodes` | `PipelineNode` | Discovery and conformance. Return from your pack factory. |
-| `aegis.providers` | `ModelProvider` | Discovery and conformance. Register on an executor from Python — `aegis.yaml` builds only `fake`, `anthropic` and `openai_compatible` so far. |
+| `aegis.providers` | `ModelProvider` | **Loaded by `aegis serve`** when a provider's `type:` isn't built in — the entry-point name is the type. |
 | `aegis.exporters` | `Exporter` | Discovery and conformance; no runtime consumer yet. |
 | `aegis.secrets` | `SecretProvider` | Register with a `SecretResolver` when loading config yourself. |
 
@@ -180,15 +180,42 @@ must be unique across installed packages — a duplicate raises
 
 A provider implements `complete`, `stream`, `embed` and `info`
 (`aegis_core.providers.ModelProvider`). `aegis plugin new --kind provider`
-generates a working stub. Until `aegis.yaml` can build plugin providers,
-register yours on an executor directly:
+generates a working stub.
+
+Any `type:` that isn't built in (`fake`, `anthropic`, `openai_compatible`)
+is looked up in the `aegis.providers` group. If the registered class has a
+`from_config(name, cfg)` classmethod it's called with the profile's name and
+its `ProviderConfig` (extra YAML keys are allowed); otherwise the class is
+constructed with no arguments.
 
 ```python
-from aegis_core.pipeline import PipelineExecutor
+from pydantic import SecretStr
+
+from aegis_core.config.models import ProviderConfig
+from aegis_core.testing import FakeProvider
 
 
-def register(executor: PipelineExecutor, provider, ingress, egress) -> None:
-    executor.register("custom", provider=provider, ingress=ingress, egress=egress)
+class AcmeProvider(FakeProvider):  # a real one implements the four methods itself
+    @classmethod
+    def from_config(cls, name: str, cfg: ProviderConfig) -> "AcmeProvider":
+        key = cfg.api_key or SecretStr("")
+        return cls(
+            name=name,
+            complete_response=f"acme ({len(key.get_secret_value())}-char key)",
+        )
+```
+
+```toml
+[project.entry-points."aegis.providers"]
+acme = "aegis_provider_acme:AcmeProvider"
+```
+
+```yaml
+providers:
+  primary:
+    type: acme
+    api_key: secret://env/ACME_KEY#value
+    region_hint: ca     # extra keys reach from_config via cfg
 ```
 
 Often you don't need one at all: any OpenAI-compatible server (vLLM,

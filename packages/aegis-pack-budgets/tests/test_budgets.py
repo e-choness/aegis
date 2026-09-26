@@ -8,7 +8,8 @@ from __future__ import annotations
 from aegis_pack_budgets import BudgetGuard, BudgetLedger
 
 from aegis_core.pipeline.state import RunState
-from aegis_core.providers.models import Message, UsageInfo
+from aegis_core.providers.models import CompletionRequest, CompletionResult, Message, UsageInfo
+from aegis_core.testing import FakeProvider
 from aegis_core.testing.guardrails import GuardrailContractKit
 
 # ---------------------------------------------------------------------------
@@ -208,3 +209,78 @@ class TestBudgetGuardScan:
         bob_verdict = await guard.scan(_state("bob"))
         assert alice_verdict.is_block
         assert bob_verdict.is_allow
+
+
+# ---------------------------------------------------------------------------
+# Pack wiring — spend must accumulate through a real pipeline
+# ---------------------------------------------------------------------------
+
+
+class _PricedProvider(FakeProvider):
+    """FakeProvider that charges a fixed cost per completion."""
+
+    def __init__(self, cost: float) -> None:
+        super().__init__(name="priced")
+        self._cost = cost
+
+    async def complete(self, req: CompletionRequest) -> CompletionResult:
+        result = await super().complete(req)
+        result.usage = UsageInfo(
+            prompt_tokens=5, completion_tokens=5, total_tokens=10, cost=self._cost
+        )
+        return result
+
+
+def _budget_pipeline(cap: float, cost: float):  # type: ignore[no-untyped-def]
+    from aegis_pack_budgets.factory import from_config
+
+    from aegis_core.config.models import GuardrailConfig
+    from aegis_core.pipeline import PipelineAssembler
+
+    cfg = GuardrailConfig.model_validate({"pack": "aegis.budgets", "default_cap": cap})
+    nodes = from_config("budget", cfg)
+    provider = _PricedProvider(cost)
+    pipeline = PipelineAssembler().compile(
+        ingress=nodes["ingress"], egress=nodes["egress"], provider=provider
+    )
+    return pipeline, provider
+
+
+class TestBudgetPackWiring:
+    def test_factory_contributes_check_and_recorder(self) -> None:
+        from aegis_pack_budgets import BudgetRecordNode
+        from aegis_pack_budgets.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+
+        nodes = from_config("budget", GuardrailConfig(pack="aegis.budgets"))
+        assert set(nodes) == {"ingress", "egress"}
+        assert isinstance(nodes["egress"][0], BudgetRecordNode)
+
+    async def test_spend_accumulates_until_principal_is_blocked(self) -> None:
+        pipeline, provider = _budget_pipeline(cap=1.0, cost=0.6)
+
+        first = await pipeline.run(_state())
+        second = await pipeline.run(_state())
+        third = await pipeline.run(_state())
+
+        assert first.status == "completed"
+        assert second.status == "completed"  # $0.60 spent, still under $1.00
+        assert third.status == "blocked"  # $1.20 spent — over the cap
+        assert len(provider.complete_calls) == 2
+        assert any(e.event_type == "budget_recorded" for e in first.events)
+
+    async def test_principals_are_charged_separately(self) -> None:
+        pipeline, _ = _budget_pipeline(cap=1.0, cost=0.6)
+
+        await pipeline.run(_state("alice"))
+        await pipeline.run(_state("alice"))
+        bob = await pipeline.run(_state("bob"))
+
+        assert bob.status == "completed"
+
+    def test_recorder_forces_buffered_streaming(self) -> None:
+        from aegis_core.pipeline.assembler import StreamCapability
+
+        pipeline, _ = _budget_pipeline(cap=1.0, cost=0.1)
+        assert pipeline.stream_capability == StreamCapability.BUFFERED

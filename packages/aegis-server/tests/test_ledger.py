@@ -362,7 +362,7 @@ def test_export_validates_against_schema(client_with_ledger: TestClient) -> None
     assert records
 
     schema_path = (
-        pathlib.Path(__file__).resolve().parents[3] / "docs" / "assets" / "evidence-record.schema.json"
+        pathlib.Path(__file__).resolve().parents[3] / "docs" / "public" / "evidence-record.schema.json"
     )
     schema = json.loads(schema_path.read_text())
     validator = jsonschema.Draft202012Validator(schema)

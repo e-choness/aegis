@@ -12,7 +12,6 @@ it safely.
 - [ ] `aegis_ledger.db` and `aegis_checkpoints.db` on persistent storage and backed up.
 - [ ] `/metrics` reachable only from your monitoring network.
 - [ ] Residency-sensitive deployments pair the residency pack with network egress controls.
-- [ ] Streamed requests are not relied on for ingress policy yet — see the [streaming limitation](./streaming#known-limitation).
 
 ## Run it
 

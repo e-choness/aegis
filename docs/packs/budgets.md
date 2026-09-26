@@ -1,8 +1,12 @@
 # Budgets
 
-`aegis.budgets` caps monthly model spend per principal. Before the provider
-is called, it blocks any principal whose spend this calendar month has
-reached their cap.
+`aegis.budgets` caps monthly model spend per principal. The pack adds two
+nodes that share one ledger:
+
+- on **ingress**, a guard blocks any principal whose spend this calendar
+  month has reached their cap — before the provider is called;
+- on **egress**, a recorder charges the finished run's usage
+  (`usage.cost`, as reported by the provider) to the principal.
 
 ```yaml
 guardrails:
@@ -12,6 +16,7 @@ guardrails:
 
 pipeline:
   ingress: [budget]         # list it first: a blocked request should cost nothing
+  egress: [budget]          # without this, spend is never recorded
 ```
 
 A blocked request's reason names the principal, the amount spent and the
@@ -35,10 +40,10 @@ guard = BudgetGuard(ledger, name="budget")
 Keys are principal ids, so issue one key per team service
 (`aegis keys create svc-batch --team data`) to budget by team.
 
-::: warning Current state
-The pre-flight check is wired into `aegis serve`, but spend isn't recorded
-automatically yet — nothing calls `BudgetGuard.record(state)` after a run,
-and the ledger is in memory. Until that lands, call `record()` yourself when
-embedding the pipeline, or treat the pack as a hard stop you can trip
-manually.
-:::
+## Things to know
+
+- The budget ledger lives in memory: spend resets when the server restarts.
+- The recorder needs each run's final usage, so routes with budgets buffer
+  streamed responses.
+- Spend comes from the provider's reported cost; a provider that doesn't
+  report cost (e.g. `fake`) is never charged.

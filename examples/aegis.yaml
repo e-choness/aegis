@@ -24,8 +24,9 @@ guardrails:
 
 pipeline:
   ingress: [pii, injection]
-  tool_result: [injection]
   egress: [pii]
+  # tool_call / tool_result aren't enforced by `aegis serve` yet (it refuses to
+  # start if they are set) — govern MCP tools in Python with McpExecuteNode.
 
 routes:
   default:

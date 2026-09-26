@@ -46,5 +46,6 @@ coordinate).
 See [Deploying](/guide/deployment) for the production checklist, and the
 [residency pack](/packs/residency#what-can-and-can-t-be-verified) for what is
 enforced versus declared — and why network egress controls are the last
-line. Known limitations are called out on the page they affect, e.g.
-[streaming](/guide/streaming#known-limitation).
+line. Capabilities that aren't enforceable from `aegis.yaml` yet are
+refused at startup rather than silently skipped — see the
+[status table](/guide/#where-things-stand).

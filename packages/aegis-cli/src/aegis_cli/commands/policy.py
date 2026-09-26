@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 import yaml
@@ -46,6 +46,10 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
     Checks:
     - AEG-POL-001: pipeline references an undeclared guardrail name.
     - AEG-POL-002: guardrail pack module is not importable.
+    - AEG-POL-003: a non-incremental egress guard forces a route to buffer.
+    - AEG-POL-004: a stage ``aegis serve`` cannot enforce yet (tool_call/tool_result).
+    - AEG-POL-005: a provider's endpoint URL encodes a region that contradicts
+      its declared ``residency.region`` (needs the residency pack installed).
     """
     issues: list[LintIssue] = []
 
@@ -148,6 +152,63 @@ def lint_policy(config_path: Path) -> list[LintIssue]:
                 f"routes.{route_name}.pipeline.egress",
             )
 
+    # AEG-POL-004: stages aegis serve refuses to start with (it can't enforce them).
+    from aegis_core.config.build import UNWIRED_STAGES
+
+    stage_sections: list[tuple[str, Any]] = [("pipeline", pipeline_section)] + [
+        (f"routes.{rname}.pipeline", (rcfg or {}).get("pipeline") if isinstance(rcfg, dict) else None)
+        for rname, rcfg in routes_section.items()
+    ]
+    for location, section in stage_sections:
+        if not isinstance(section, dict):
+            continue
+        for stage in UNWIRED_STAGES:
+            if section.get(stage):
+                issues.append(LintIssue(
+                    code="AEG-POL-004",
+                    message=(
+                        f"{stage} stage is not enforced by aegis serve yet; the server "
+                        "will refuse to start. Configure tool governance in Python "
+                        "(aegis_core.mcp.McpExecuteNode) and remove this key."
+                    ),
+                    location=f"{location}.{stage}",
+                ))
+
+    # AEG-POL-005: declared residency vs. region encoded in the endpoint URL.
+    issues.extend(_lint_residency_endpoints(raw.get("providers") or {}))
+
+    return issues
+
+
+def _lint_residency_endpoints(providers: dict) -> list[LintIssue]:
+    try:
+        from aegis_pack_residency.lint import lint_endpoint
+        from aegis_pack_residency.schema import ResidencyProfile
+    except ImportError:  # residency pack not installed — nothing to check against
+        return []
+
+    issues: list[LintIssue] = []
+    for pname, pcfg in providers.items():
+        if not isinstance(pcfg, dict):
+            continue
+        residency = pcfg.get("residency")
+        base_url = pcfg.get("base_url")
+        if not isinstance(residency, dict) or not residency.get("region") or not base_url:
+            continue
+        profile = ResidencyProfile(
+            region=str(residency["region"]),
+            jurisdiction=str(residency.get("jurisdiction") or "unspecified"),
+            endpoint_url=str(base_url),
+        )
+        for violation in lint_endpoint(profile):
+            issues.append(LintIssue(
+                code="AEG-POL-005",
+                message=(
+                    f"endpoint region '{violation.detected}' ({violation.provider}) does not "
+                    f"match declared residency.region '{violation.declared}'"
+                ),
+                location=f"providers.{pname}.residency.region",
+            ))
     return issues
 
 

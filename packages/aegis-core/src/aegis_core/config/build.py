@@ -27,8 +27,27 @@ def _discovered() -> PluginRegistry:
     return reg
 
 
-def build_provider(pcfg: ProviderConfig) -> Any:
-    """Instantiate a ModelProvider from a ProviderConfig."""
+#: Built-in provider types; any other ``type:`` is looked up as a plugin.
+BUILTIN_PROVIDER_TYPES: tuple[str, ...] = ("fake", "anthropic", "openai_compatible")
+
+#: Pipeline stages ``aegis.yaml`` accepts but ``build_executor`` cannot wire yet.
+#: Tool governance is configured in Python (``aegis_core.mcp.McpExecuteNode``).
+UNWIRED_STAGES: tuple[str, ...] = ("tool_call", "tool_result")
+
+
+def build_provider(
+    pcfg: ProviderConfig,
+    *,
+    name: str = "",
+    registry: PluginRegistry | None = None,
+) -> Any:
+    """Instantiate a ModelProvider from a ProviderConfig.
+
+    ``fake``, ``anthropic`` and ``openai_compatible`` are built in.  Any other
+    ``type`` is resolved from the ``aegis.providers`` entry-point group: the
+    registered object's ``from_config(name, cfg)`` is called if it has one,
+    otherwise it is constructed with no arguments.
+    """
     ptype = pcfg.type
 
     if ptype == "fake":
@@ -42,25 +61,100 @@ def build_provider(pcfg: ProviderConfig) -> Any:
         from aegis_core.providers.litellm_provider import LiteLLMProvider
 
         return LiteLLMProvider(
-            api_key=pcfg.api_key.get_secret_value() if pcfg.api_key else None,
-            model=pcfg.model,
+            name=name or ptype,
+            model=_required(pcfg, "model", name),
+            provider_type="anthropic",
+            api_key=pcfg.api_key,
             base_url=pcfg.base_url,
+            residency=_residency(pcfg),
         )
 
     if ptype == "openai_compatible":
         from aegis_core.providers.openai_compatible import OpenAICompatibleProvider
 
         return OpenAICompatibleProvider(
-            api_key=pcfg.api_key.get_secret_value() if pcfg.api_key else None,
-            base_url=pcfg.base_url or "",
-            model=pcfg.model or "",
+            name=name or ptype,
+            model=_required(pcfg, "model", name),
+            base_url=_required(pcfg, "base_url", name),
+            api_key=pcfg.api_key,
+            residency=_residency(pcfg),
         )
 
-    raise AegisConfigValidationError(
-        f"Unknown provider type {ptype!r}. "
-        "Supported types: fake, anthropic, openai_compatible.",
-        provider_type=ptype,
+    return _build_plugin_provider(ptype, pcfg, name=name, registry=registry)
+
+
+def _required(pcfg: ProviderConfig, field: str, name: str) -> str:
+    value = getattr(pcfg, field, None)
+    if not value:
+        raise AegisConfigValidationError(
+            f"Provider {name or pcfg.type!r} (type {pcfg.type!r}) requires {field!r}.",
+            provider=name,
+            field=field,
+        )
+    return str(value)
+
+
+def _residency(pcfg: ProviderConfig) -> Any:
+    from aegis_core.providers.models import ResidencyInfo
+
+    if pcfg.residency is None:
+        return None
+    return ResidencyInfo(
+        region=pcfg.residency.region,
+        jurisdiction=pcfg.residency.jurisdiction or "",
+        source_url=pcfg.residency.source_url or "",
     )
+
+
+def _build_plugin_provider(
+    ptype: str,
+    pcfg: ProviderConfig,
+    *,
+    name: str,
+    registry: PluginRegistry | None,
+) -> Any:
+    from aegis_core.providers.protocol import ModelProvider
+
+    reg = registry if registry is not None else _discovered()
+    try:
+        target = reg.load(ptype, "aegis.providers")
+    except AegisPluginNotFoundError:
+        plugins = sorted(p.name for p in reg.list_plugins("aegis.providers"))
+        raise AegisConfigValidationError(
+            f"Unknown provider type {ptype!r}. Built-in types: "
+            f"{', '.join(BUILTIN_PROVIDER_TYPES)}; installed provider plugins: "
+            f"{', '.join(plugins) or 'none'}.",
+            provider_type=ptype,
+        ) from None
+
+    factory = getattr(target, "from_config", None)
+    provider = factory(name, pcfg) if callable(factory) else target()
+    if not isinstance(provider, ModelProvider):
+        raise AegisConfigValidationError(
+            f"Provider plugin {ptype!r} did not produce a ModelProvider "
+            "(needs name, complete, stream, embed and info).",
+            provider_type=ptype,
+        )
+    return provider
+
+
+def _check_unwired_stages(cfg: AegisConfig) -> None:
+    """Refuse configs whose tool stages would otherwise be silently skipped."""
+    pipelines = [("pipeline", cfg.pipeline)] + [
+        (f"routes.{rname}.pipeline", route.pipeline)
+        for rname, route in cfg.routes.items()
+        if route.pipeline is not None
+    ]
+    for location, pipeline in pipelines:
+        for stage in UNWIRED_STAGES:
+            if getattr(pipeline, stage):
+                raise AegisConfigValidationError(
+                    f"{location}.{stage} is set, but aegis serve cannot enforce the "
+                    f"{stage} stage yet — refusing to start rather than skip that policy. "
+                    "Remove it from aegis.yaml and configure tool governance in Python "
+                    "with aegis_core.mcp.McpExecuteNode.",
+                    stage=stage,
+                )
 
 
 def _collect(
@@ -93,8 +187,11 @@ def build_executor(
 
     Raises:
         AegisPluginNotFoundError: If a guardrail's pack is not installed.
-        AegisConfigValidationError: If a pack factory returns an unexpected shape.
+        AegisConfigValidationError: If a pack factory returns an unexpected shape,
+            a provider type is unknown, or a stage that can't be wired
+            (``tool_call`` / ``tool_result``) is configured.
     """
+    _check_unwired_stages(cfg)
     reg = registry if registry is not None else _discovered()
 
     # 1. Instantiate every declared guardrail once via its pack factory.
@@ -111,7 +208,10 @@ def build_executor(
         contributions[gname] = result
 
     # 2. Build providers.
-    providers = {pname: build_provider(pcfg) for pname, pcfg in cfg.providers.items()}
+    providers = {
+        pname: build_provider(pcfg, name=pname, registry=reg)
+        for pname, pcfg in cfg.providers.items()
+    }
 
     # 3. Compile one pipeline per route.
     ex = PipelineExecutor(checkpointer=checkpointer)

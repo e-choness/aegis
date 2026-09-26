@@ -100,8 +100,8 @@ class TestAegisErrorStructure:
 # If you add a new bare non-AEG raise, add it here and document why.
 _KNOWN_BARE_RAISES: set[tuple[str, int]] = {
     # assembler.py: internal invariant guards (unreachable in practice)
-    ("aegis_core/pipeline/assembler.py", 328),
-    ("aegis_core/pipeline/assembler.py", 398),
+    ("aegis_core/pipeline/assembler.py", 385),
+    ("aegis_core/pipeline/assembler.py", 455),
     # executor.py: route lookup — should be replaced with AEG-CFG error
     ("aegis_core/pipeline/executor.py", 58),
     # profiles.py: JSON decode — acceptable at data-layer boundary

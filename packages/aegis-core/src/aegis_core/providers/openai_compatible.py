@@ -18,7 +18,16 @@ class OpenAICompatibleProvider(LiteLLMProvider):
 
     Configured via ``type: openai_compatible`` in ``aegis.yaml`` or
     ``aegis provider add --type openai_compatible``.
+
+    LiteLLM infers the wire protocol from the model name, which fails for
+    arbitrary self-hosted names (``llama3.1``, ``qwen2.5``); this provider
+    always pins the OpenAI protocol against ``base_url``.
     """
+
+    def _call_kwargs(self) -> dict[str, object]:
+        kw = super()._call_kwargs()
+        kw["custom_llm_provider"] = "openai"
+        return kw
 
     def __init__(
         self,

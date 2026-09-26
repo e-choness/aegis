@@ -3,8 +3,10 @@
 PROJECT_SPEC D9 / D12:
 - Non-streaming: returns a single JSON completion.
 - Streaming (stream=true): returns OpenAI-format Server-Sent Events.
-  - TRUE_STREAMING route: streams provider chunks through incremental egress guards.
+  - TRUE_STREAMING route: runs ingress, then streams provider chunks through
+    incremental egress guards.
   - BUFFERED route: runs the full pipeline then replays the result as SSE.
+- Every run, on every path, is written to the run store and evidence ledger.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -23,9 +26,11 @@ from sse_starlette.sse import EventSourceResponse
 
 from aegis_core.pipeline.assembler import StreamCapability
 from aegis_core.pipeline.executor import PipelineExecutor
-from aegis_core.pipeline.state import RunState
+from aegis_core.pipeline.state import RunEvent, RunState
 from aegis_core.providers.models import CompletionRequest, Message
 from aegis_server.auth.protocol import Principal
+from aegis_server.store.run_store import RunRecord
+from aegis_server.telemetry import run_span
 
 router = APIRouter()
 
@@ -100,50 +105,136 @@ def _violation_frame(completion_id: str, model: str, aegis_event: str) -> str:
     })
 
 
+def _verdict_event(guard: Any, verdict: Any, position: str) -> RunEvent:
+    return RunEvent(
+        stage="egress",
+        node=guard.name,
+        event_type="verdict",
+        data={
+            "verdict": verdict.kind.value,
+            "guard": guard.name,
+            "reason": verdict.reason,
+            "position": position,
+        },
+    )
+
+
+async def _record_run(app_state: Any, result: RunState, created_at: str) -> None:
+    """Persist a finished (or paused) chat run to the run store and evidence ledger.
+
+    Paused runs must be in the run store for ``POST /v1/runs/{id}/resume`` to
+    find them; every run, whatever its outcome, gets a ``run_evidence`` record.
+    """
+    config_digest = getattr(app_state, "config_digest", None)
+    events = [e.to_dict() for e in result.events]
+    run_store = getattr(app_state, "run_store", None)
+    if run_store is not None:
+        await run_store.create(
+            RunRecord(
+                run_id=result.run_id,
+                route=result.route,
+                principal_id=result.principal or "",
+                status=result.status,
+                created_at=created_at,
+                events=events,
+                config_digest=config_digest,
+            )
+        )
+
+    ledger_store = getattr(app_state, "ledger_store", None)
+    if ledger_store is not None:
+        from aegis_server.store.ledger import make_run_evidence
+
+        evidence = SimpleNamespace(
+            run_id=result.run_id,
+            route=result.route,
+            config_digest=config_digest,
+            principal_id=result.principal or "",
+            created_at=created_at,
+            status=result.status,
+            events=events,
+        )
+        completed_at = datetime.now(tz=UTC).isoformat()
+        await ledger_store.append(result.run_id, make_run_evidence(evidence, completed_at))
+
+
+def _held_frame(completion_id: str, model: str, result: RunState) -> str:
+    """Terminal frame for a run that was blocked, paused or denied."""
+    frame = json.loads(_violation_frame(completion_id, model, result.status))
+    frame["aegis_run_id"] = result.run_id
+    return json.dumps(frame)
+
+
 async def _true_stream_gen(
     pipeline: Any,
     state: RunState,
     completion_id: str,
     model: str,
+    app_state: Any,
 ) -> AsyncGenerator[dict[str, str], None]:
-    """True-streaming generator: forward provider chunks with incremental egress scanning."""
-    assert pipeline._provider is not None, "TRUE_STREAMING pipeline must have a provider"
+    """True-streaming generator.
 
-    req = CompletionRequest(messages=state.messages, model=model, stream=True)
-    accumulated = ""
+    1. Run every ingress node (masking, residency, budgets, ...) first.
+    2. Stream the provider's output for the *ingress-processed* messages,
+       scanning each chunk with the route's incremental egress guards.
+    3. Run ``finalize()`` before releasing the ``stop`` frame.
+    4. Record the run exactly like the buffered path does.
+    """
+    created_at = datetime.now(tz=UTC).isoformat()
+    violation: str | None = None
+    async with run_span(state.route, state.run_id, state.principal or "") as (span, status):
+        pre = await pipeline.run_ingress(state)
 
-    async for chunk in await pipeline._provider.stream(req):
-        # Incremental egress scan for each chunk
-        for guard in pipeline._incremental_egress_guards:
-            v = await guard.scan_chunk(chunk.text)
-            if v.is_block:
-                yield {"data": _violation_frame(completion_id, model, "stream_violation")}
-                yield {"data": "[DONE]"}
-                return
+        if pre.status == "paused":
+            # Re-run through the checkpointed graph so the pause is resumable.
+            result = await pipeline.run(state)
+        elif pre.status in ("blocked", "denied"):
+            result = pre
+        else:
+            result = pre
+            req = CompletionRequest(messages=pre.messages, model="", stream=True)
+            accumulated = ""
+            async for chunk in await pipeline._provider.stream(req):
+                for guard in pipeline._incremental_egress_guards:
+                    v = await guard.scan_chunk(chunk.text)
+                    if v.is_block:
+                        result.events.append(_verdict_event(guard, v, "chunk"))
+                        violation = "stream_violation"
+                        break
+                if violation:
+                    break
+                accumulated += chunk.text
+                # Hold back the stop reason until finalize passes.
+                yield {
+                    "data": _chunk_frame(
+                        completion_id,
+                        model,
+                        chunk.text,
+                        finish_reason=None if chunk.finish_reason == "stop" else chunk.finish_reason,
+                    )
+                }
 
-        accumulated += chunk.text
+            if violation is None:
+                for guard in pipeline._incremental_egress_guards:
+                    v = await guard.finalize(accumulated)
+                    result.events.append(_verdict_event(guard, v, "finalize"))
+                    if v.is_block:
+                        violation = "late_violation"
+                        break
 
-        # Emit intermediate chunks with no finish_reason;
-        # hold back the stop reason until finalize passes.
-        yield {
-            "data": _chunk_frame(
-                completion_id,
-                model,
-                chunk.text,
-                finish_reason=None if chunk.finish_reason == "stop" else chunk.finish_reason,
-            )
-        }
+            result.response = accumulated
+            result.status = "blocked" if violation else "completed"
 
-    # Finalize pass (hold-back: late violation check before emitting stop).
-    for guard in pipeline._incremental_egress_guards:
-        v = await guard.finalize(accumulated)
-        if v.is_block:
-            yield {"data": _violation_frame(completion_id, model, "late_violation")}
-            yield {"data": "[DONE]"}
-            return
+        status[0] = result.status
+        span.set_attribute("run.status", result.status)
+        await _record_run(app_state, result, created_at)
 
-    # Emit final stop frame + done.
-    yield {"data": _chunk_frame(completion_id, model, "", finish_reason="stop")}
+    if violation:
+        yield {"data": _violation_frame(completion_id, model, violation)}
+    elif result.status != "completed":
+        yield {"data": _held_frame(completion_id, model, result)}
+    else:
+        yield {"data": _chunk_frame(completion_id, model, "", finish_reason="stop")}
     yield {"data": "[DONE]"}
 
 
@@ -152,20 +243,41 @@ async def _buffered_stream_gen(
     state: RunState,
     completion_id: str,
     model: str,
+    app_state: Any,
 ) -> AsyncGenerator[dict[str, str], None]:
-    """Buffered streaming: run full pipeline, then replay result as SSE frames."""
-    result = await pipeline.run(state)
-    content = result.response or ""
+    """Buffered streaming: run the full pipeline, then replay the result as SSE frames."""
+    created_at = datetime.now(tz=UTC).isoformat()
+    async with run_span(state.route, state.run_id, state.principal or "") as (span, status):
+        result = await pipeline.run(state)
+        status[0] = result.status
+        span.set_attribute("run.status", result.status)
+    await _record_run(app_state, result, created_at)
 
-    yield {
-        "data": _chunk_frame(completion_id, model, content, finish_reason="stop")
-    }
+    if result.status != "completed":
+        yield {"data": _held_frame(completion_id, model, result)}
+    else:
+        yield {
+            "data": _chunk_frame(completion_id, model, result.response or "", finish_reason="stop")
+        }
     yield {"data": "[DONE]"}
 
 
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
+
+
+@router.get("/v1/models")
+async def list_models(request: Request) -> dict[str, Any]:
+    """OpenAI-compatible model list: every Aegis route is exposed as a model id."""
+    executor: PipelineExecutor = request.app.state.executor  # type: ignore[attr-defined]
+    return {
+        "object": "list",
+        "data": [
+            {"id": route, "object": "model", "created": 0, "owned_by": "aegis"}
+            for route in executor.routes()
+        ],
+    }
 
 
 @router.post("/v1/chat/completions")
@@ -191,31 +303,21 @@ async def chat_completions(
 
     if body.stream:
         completion_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
-        if pipeline.stream_capability == StreamCapability.TRUE_STREAMING:
-            gen = _true_stream_gen(pipeline, state, completion_id, route)
-        else:
-            gen = _buffered_stream_gen(pipeline, state, completion_id, route)
-        return EventSourceResponse(gen)
-
-    result = await pipeline.run(state)
-
-    ledger_store = getattr(request.app.state, "ledger_store", None)
-    if ledger_store is not None:
-        from types import SimpleNamespace
-
-        from aegis_server.store.ledger import make_run_evidence
-
-        completed_at = datetime.now(tz=UTC).isoformat()
-        evidence_obj = SimpleNamespace(
-            run_id=state.run_id,
-            route=state.route,
-            config_digest=getattr(request.app.state, "config_digest", None),
-            principal_id=state.principal,
-            created_at=completed_at,
-            status="completed",
-            events=[],
+        true_stream = (
+            pipeline.stream_capability == StreamCapability.TRUE_STREAMING
+            and pipeline._provider is not None
         )
-        await ledger_store.append(state.run_id, make_run_evidence(evidence_obj, completed_at))
+        stream_gen = _true_stream_gen if true_stream else _buffered_stream_gen
+        return EventSourceResponse(
+            stream_gen(pipeline, state, completion_id, route, request.app.state)
+        )
+
+    created_at = datetime.now(tz=UTC).isoformat()
+    async with run_span(route, state.run_id, principal.id) as (span, status):
+        result = await pipeline.run(state)
+        status[0] = result.status
+        span.set_attribute("run.status", result.status)
+    await _record_run(request.app.state, result, created_at)
 
     return ChatCompletionResponse(  # type: ignore[return-value]
         id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
@@ -226,7 +328,8 @@ async def chat_completions(
             _Choice(
                 index=0,
                 message=_ChatMessage(role="assistant", content=result.response or ""),
-                finish_reason="stop",
+                # blocked / paused / denied: the response was withheld
+                finish_reason="stop" if result.status == "completed" else "content_filter",
             )
         ],
         usage=_Usage(

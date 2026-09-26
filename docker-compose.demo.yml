@@ -21,14 +21,17 @@ services:
     working_dir: /workspace
     environment:
       UV_CACHE_DIR: /workspace/.uv-cache
-    command: uv run aegis dev --host 0.0.0.0 --port 8000
+    command: >-
+      bash -c "uv sync --all-packages --quiet &&
+      uv run aegis serve --config examples/dev.yaml --no-auth --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/docs > /dev/null"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/v1/health > /dev/null"]
       interval: 5s
       timeout: 5s
       retries: 12
+      start_period: 180s   # first start runs uv sync
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main

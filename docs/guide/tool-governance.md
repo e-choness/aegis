@@ -16,10 +16,11 @@ flowchart LR
 ```
 
 ::: info Current state
-The `tool_call` and `tool_result` stages are accepted and linted in
-`aegis.yaml`, but `aegis serve` does not wire them yet. Tool governance is
-available today as a Python API: an `McpExecuteNode` placed in the execute
-position of a pipeline.
+Tool governance is a Python API today: an `McpExecuteNode` placed in the
+execute position of a pipeline. The `tool_call` and `tool_result` keys in
+`aegis.yaml` can't be enforced by `aegis serve` yet, so it **refuses to
+start** if they're set rather than silently skipping that policy
+(`aegis policy lint` reports them as `AEG-POL-004`).
 :::
 
 ## Guard contracts

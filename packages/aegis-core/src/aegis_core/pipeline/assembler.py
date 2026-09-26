@@ -39,10 +39,16 @@ class StreamCapability(StrEnum):
 
 
 def _compute_stream_capability(egress_nodes: list[PipelineNode]) -> StreamCapability:
-    """Return TRUE_STREAMING only when every egress node reports incremental capability."""
+    """Return TRUE_STREAMING only when every egress node explicitly reports it.
+
+    Fail-safe: an egress node that does not declare ``stream_capability``
+    (e.g. a transformation node such as PII unmasking) cannot run on the
+    true-streaming path, where only incremental guards see the output — so
+    the route buffers and the node runs over the complete response.
+    """
     for node in egress_nodes:
-        cap = getattr(node, "stream_capability", "true_streaming")
-        if cap == "buffered":
+        cap = getattr(node, "stream_capability", "buffered")
+        if cap != "true_streaming":
             return StreamCapability.BUFFERED
     return StreamCapability.TRUE_STREAMING
 
@@ -220,6 +226,7 @@ class CompiledPipeline:
         provider: ModelProvider | None = None,
         incremental_egress_guards: list[Any] | None = None,
         checkpointer: Any | None = None,
+        ingress_nodes: list[PipelineNode] | None = None,
     ) -> None:
         self._app = app
         self.route = route
@@ -228,6 +235,7 @@ class CompiledPipeline:
         self._provider = provider
         self._incremental_egress_guards: list[Any] = incremental_egress_guards or []
         self._checkpointer = checkpointer
+        self._ingress_nodes: list[PipelineNode] = ingress_nodes or []
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -310,6 +318,55 @@ class CompiledPipeline:
             else await self._app.ainvoke(initial)
         )
         return self._final_to_run_state(final, state.run_id)
+
+    async def run_ingress(self, state: RunState) -> RunState:
+        """Run only the ingress stage, outside the graph, and return the resulting state.
+
+        Used by the true-streaming path, which calls the provider's ``stream()``
+        itself but must still apply every ingress node first (masking, residency,
+        budgets, …).  Stops at the first node that blocks or pauses.  A paused
+        result here is *not* checkpointed — callers that need a resumable pause
+        must re-run the request through :meth:`run`.
+        """
+        current = RunState(
+            run_id=state.run_id,
+            route=state.route,
+            messages=list(state.messages),
+            principal=state.principal,
+            labels=dict(state.labels),
+            mask_map=dict(state.mask_map),
+            usage=state.usage,
+            response=state.response,
+            status=state.status,
+        )
+        for node in self._ingress_nodes:
+            current.events.append(RunEvent("ingress", node.name, "node_start"))
+            delta = await node.run(current)
+            if delta.labels is not None:
+                current.labels = delta.labels
+            if delta.mask_map is not None:
+                current.mask_map = delta.mask_map
+            if delta.messages is not None:
+                current.messages = list(delta.messages)
+            if delta.response is not None:
+                current.response = delta.response
+            if delta.usage is not None:
+                current.usage = delta.usage
+            if delta.events:
+                current.events.extend(delta.events)
+            if delta.status is not None:
+                current.status = delta.status
+            current.events.append(
+                RunEvent(
+                    "ingress",
+                    node.name,
+                    "node_end",
+                    {"status": delta.status} if delta.status else {},
+                )
+            )
+            if current.status in ("blocked", "paused", "denied"):
+                break
+        return current
 
     async def resume(self, run_id: str, decision: dict[str, object]) -> RunState:
         """Resume a paused run with an approve/deny decision.
@@ -437,4 +494,5 @@ class PipelineAssembler:
             provider=provider,
             incremental_egress_guards=inc_guards,
             checkpointer=checkpointer,
+            ingress_nodes=ingress_nodes,
         )

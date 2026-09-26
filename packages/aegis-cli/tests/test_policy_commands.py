@@ -255,3 +255,55 @@ class TestPolicyTest:
             })
         results = run_fixture_tests(fixtures_dir)
         assert len(results) == 3
+
+
+class TestLintUnwiredStagesAndResidency:
+    def _lint(self, tmp_path: Path, content: str) -> list[LintIssue]:
+        p = tmp_path / "aegis.yaml"
+        p.write_text(textwrap.dedent(content))
+        return lint_policy(p)
+
+    def test_tool_result_stage_is_flagged(self, tmp_path: Path) -> None:
+        issues = self._lint(tmp_path, """
+            providers: {fake: {type: fake}}
+            guardrails: {pii: {pack: aegis.pii}}
+            pipeline: {ingress: [pii], tool_result: [pii]}
+            routes: {default: {provider: fake}}
+        """)
+        pol004 = [i for i in issues if i.code == "AEG-POL-004"]
+        assert [i.location for i in pol004] == ["pipeline.tool_result"]
+
+    def test_route_level_tool_call_is_flagged(self, tmp_path: Path) -> None:
+        issues = self._lint(tmp_path, """
+            providers: {fake: {type: fake}}
+            guardrails: {pii: {pack: aegis.pii}}
+            routes: {agent: {provider: fake, pipeline: {tool_call: [pii]}}}
+        """)
+        assert any(
+            i.code == "AEG-POL-004" and i.location == "routes.agent.pipeline.tool_call"
+            for i in issues
+        )
+
+    def test_endpoint_region_mismatch_is_flagged(self, tmp_path: Path) -> None:
+        issues = self._lint(tmp_path, """
+            providers:
+              bedrock:
+                type: openai_compatible
+                base_url: https://bedrock-runtime.us-east-1.amazonaws.com
+                residency: {region: ca-central-1}
+            routes: {default: {provider: bedrock}}
+        """)
+        pol005 = [i for i in issues if i.code == "AEG-POL-005"]
+        assert len(pol005) == 1
+        assert "us-east-1" in pol005[0].message
+
+    def test_endpoint_region_match_is_clean(self, tmp_path: Path) -> None:
+        issues = self._lint(tmp_path, """
+            providers:
+              bedrock:
+                type: openai_compatible
+                base_url: https://bedrock-runtime.ca-central-1.amazonaws.com
+                residency: {region: ca-central-1}
+            routes: {default: {provider: bedrock}}
+        """)
+        assert not [i for i in issues if i.code == "AEG-POL-005"]
