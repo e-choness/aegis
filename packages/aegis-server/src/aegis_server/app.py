@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+import asyncio
+import logging
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import cast
@@ -27,6 +29,8 @@ from aegis_server.store.exporting import ExportingLedgerStore
 from aegis_server.store.ledger import LedgerStore
 from aegis_server.store.run_store import InMemoryRunStore
 from aegis_server.telemetry import make_metrics_app
+
+logger = logging.getLogger(__name__)
 
 
 class AEGServError(RuntimeError):
@@ -108,7 +112,26 @@ def create_app(
                     deployed_at=deployed_at,
                 )
                 await ledger_store.append(None, body)
+
+        # Load models in the background: the server answers (slowly) meanwhile,
+        # and /v1/health reports "warming" until it's done.
+        warm_task: asyncio.Task[None] | None = None
+        warm = getattr(executor, "warmup", None)
+        if callable(warm):
+            app.state.warmup = "warming"
+
+            async def _warm() -> None:
+                try:
+                    await cast("Callable[[], Awaitable[object]]", warm)()
+                    app.state.warmup = "ready"
+                except Exception as exc:
+                    logger.exception("warm-up failed")
+                    app.state.warmup = f"failed: {exc}"
+
+            warm_task = asyncio.create_task(_warm())
         yield
+        if warm_task is not None and not warm_task.done():
+            warm_task.cancel()
         # Flush evidence still queued for exporters before the process exits.
         if isinstance(ledger_store, ExportingLedgerStore):
             await ledger_store.aclose()
@@ -139,6 +162,7 @@ def create_app(
         return RedirectResponse(url="/showcase")
 
     # Step 19: Demo safety rails - per-IP rate limit + hard cap on showcase routes
+    app.state.demo_mode = demo_mode
     if demo_mode:
         # Wrap the showcase router with rate limiting middleware
         app.add_middleware(DemoRateLimitMiddleware)

@@ -11,11 +11,12 @@ LangGraph interrupt machinery as Step 09 HITL.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from aegis_core.mcp.protocol import ToolCallGuard, ToolResultGuard
 from aegis_core.mcp.tool_policy import ToolPolicy
-from aegis_core.pipeline.state import RunEvent, RunState, RunStateDelta
+from aegis_core.pipeline.state import APPROVAL_LABEL, RunEvent, RunState, RunStateDelta
 from aegis_core.providers.models import CompletionRequest, Message, UsageInfo
 from aegis_core.providers.protocol import ModelProvider
 
@@ -58,6 +59,10 @@ class McpExecuteNode:
         self._tool_policies: dict[str, ToolPolicy] = tool_policies or {}
         self._max_iterations = max_iterations
 
+    #: After a reviewer approves a paused tool call, run the loop again (with
+    #: the approval visible) so the approved tool is actually called.
+    rerun_on_approval = True
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -94,6 +99,9 @@ class McpExecuteNode:
         messages: list[Message] = list(state.messages)
         events: list[RunEvent] = []
         total_usage = UsageInfo()
+        # Set by the assembler when a reviewer approved this run's pause; the
+        # approval covers the tool calls the run was paused for.
+        approved = state.labels.get(APPROVAL_LABEL) == "approved"
 
         mcp_tools = await self._list_tools()
 
@@ -132,9 +140,24 @@ class McpExecuteNode:
                     if verdict.is_require_approval:
                         return RunStateDelta(status="paused", events=events)
 
-                # ── 2. Per-tool approval policy ─────────────────────────────
+                # ── 2. Per-tool policy: deny, or pause for approval ─────────
                 policy = self._tool_policies.get(tool_call.name)
-                if policy and policy.require_approval:
+                if policy and policy.deny:
+                    events.append(
+                        RunEvent(
+                            stage="mcp_tool_policy",
+                            node=f"tool_policy_{tool_call.name}",
+                            event_type="verdict",
+                            data={
+                                "verdict": "block",
+                                "tool": tool_call.name,
+                                "arguments": tool_call.arguments,
+                                "reason": f"tool '{tool_call.name}' is denied by policy",
+                            },
+                        )
+                    )
+                    return RunStateDelta(status="blocked", events=events)
+                if policy and policy.require_approval and not approved:
                     events.append(
                         RunEvent(
                             stage="mcp_tool_policy",
@@ -143,7 +166,11 @@ class McpExecuteNode:
                             data={
                                 "verdict": "require_approval",
                                 "tool": tool_call.name,
-                                "reason": "per-tool policy requires human approval",
+                                "arguments": tool_call.arguments,
+                                "reason": (
+                                    f"tool '{tool_call.name}' requires human approval — "
+                                    f"arguments: {json.dumps(tool_call.arguments, default=str)}"
+                                ),
                             },
                         )
                     )
@@ -160,9 +187,7 @@ class McpExecuteNode:
                 )
                 call_result = await self._session.call_tool(tool_call.name, tool_call.arguments)
                 tool_result_text = "\n".join(
-                    block.text
-                    for block in call_result.content
-                    if hasattr(block, "text")
+                    block.text for block in call_result.content if hasattr(block, "text")
                 )
                 events.append(
                     RunEvent(

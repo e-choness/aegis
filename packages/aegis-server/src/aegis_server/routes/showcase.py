@@ -5,6 +5,7 @@ Public-demo safety rails (`aegis serve --demo`): per-visitor rate limit + rollin
 
 from __future__ import annotations
 
+import hashlib
 import time
 import uuid
 from collections import defaultdict, deque
@@ -284,7 +285,9 @@ _SHOWCASE_HTML = """\
       if (!events || !events.length) { el.innerHTML = '<div class="empty">No events.</div>'; return; }
       // node_start markers add nothing a reader needs; verdicts and node results do.
       events = events.filter(ev => ev.event_type !== 'node_start');
-      el.innerHTML = events.map(ev => {
+      const total = events.reduce((sum, ev) => sum + ((ev.data || {}).duration_ms || 0), 0);
+      const header = `<div class="stage" style="color:#9ca3af">pipeline time ${total.toFixed(1)} ms</div>`;
+      el.innerHTML = header + events.map(ev => {
         const stage = esc(ev.stage || '');
         const node = esc(ev.node || '');
         const etype = esc(ev.event_type || '');
@@ -296,7 +299,7 @@ _SHOWCASE_HTML = """\
         if (data.detail) extra += `<div style="font-size:.8rem;color:#e5e7eb;margin-top:3px;">Detail: ${esc(String(data.detail))}</div>`;
         if (data.run_id) extra += `<div style="font-size:.8rem;color:#9ca3af;margin-top:3px;">run_id: <code>${esc(data.run_id)}</code></div>`;
         return `<div>
-          <div class="stage">${stage} / ${node} — ${etype} ${verdict}</div>
+          <div class="stage">${stage} / ${node} — ${etype} ${verdict}${data.duration_ms != null ? ` <span style="color:#9ca3af">${Number(data.duration_ms).toFixed(1)} ms</span>` : ''}</div>
           ${extra ? `<pre>${extra}</pre>` : ''}
         </div>`;
       }).join('');
@@ -452,6 +455,19 @@ _SHOWCASE_HTML = """\
 # ---------------------------------------------------------------------------
 
 
+def _visitor_principal(principal_id: str, request: Request) -> str:
+    """In demo mode, give each anonymous visitor their own principal.
+
+    Budgets and runs are per principal; without this every visitor of a public
+    demo would share — and exhaust — one budget. The address is hashed, never
+    stored.
+    """
+    if principal_id != "anonymous" or not getattr(request.app.state, "demo_mode", False):
+        return principal_id
+    digest = hashlib.sha256(_client_ip(request.scope).encode()).hexdigest()[:10]
+    return f"visitor-{digest}"
+
+
 @router.get("/showcase", response_class=HTMLResponse, include_in_schema=False)
 async def showcase_page() -> str:
     return _SHOWCASE_HTML
@@ -462,6 +478,7 @@ async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse
     executor: PipelineExecutor = request.app.state.executor  # type: ignore[attr-defined]
     run_store: RunStore = request.app.state.run_store  # type: ignore[attr-defined]
     principal: Principal = request.state.principal  # type: ignore[attr-defined]
+    principal_id = _visitor_principal(principal.id, request)
 
     try:
         pipeline = executor.get(body.route)
@@ -476,19 +493,19 @@ async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse
         run_id=run_id,
         route=body.route,
         messages=messages,
-        principal=principal.id,
+        principal=principal_id,
     )
 
     record = RunRecord(
         run_id=run_id,
         route=body.route,
-        principal_id=principal.id,
+        principal_id=principal_id,
         status="running",
     )
     await run_store.create(record)
 
     tracer = getattr(request.app.state, "tracer", None)
-    async with run_span(body.route, run_id, principal.id, tracer=tracer) as (span, status_holder):
+    async with run_span(body.route, run_id, principal_id, tracer=tracer) as (span, status_holder):
         result = await pipeline.run(state)
         span.set_attribute("run.status", result.status)
         status_holder[0] = result.status

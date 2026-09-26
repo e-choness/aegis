@@ -6,6 +6,7 @@ This is the only module in aegis-core that imports langgraph directly.
 from __future__ import annotations
 
 import operator
+import time
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Annotated, Any, TypedDict
@@ -15,13 +16,14 @@ from langgraph.types import Command, interrupt
 
 from aegis_core.pipeline.nodes import ExecuteNode
 from aegis_core.pipeline.protocol import PipelineNode
-from aegis_core.pipeline.state import RunEvent, RunState, RunStateDelta
+from aegis_core.pipeline.state import APPROVAL_LABEL, RunEvent, RunState, RunStateDelta
 from aegis_core.providers.models import Message, UsageInfo
 from aegis_core.providers.protocol import ModelProvider
 
 # ---------------------------------------------------------------------------
 # Streaming capability
 # ---------------------------------------------------------------------------
+
 
 class StreamCapability(StrEnum):
     """Compile-time streaming capability for a route (PROJECT_SPEC D12).
@@ -64,9 +66,11 @@ def _collect_incremental_guards(egress_nodes: list[PipelineNode]) -> list[Any]:
             guards.extend(g for g in node_guards if isinstance(g, IncrementalGuardrail))
     return guards
 
+
 # ---------------------------------------------------------------------------
 # LangGraph state schema
 # ---------------------------------------------------------------------------
+
 
 class _PipelineStateDict(TypedDict):
     run_id: str
@@ -87,6 +91,7 @@ class _PipelineStateDict(TypedDict):
 # ---------------------------------------------------------------------------
 # Conversion helpers
 # ---------------------------------------------------------------------------
+
 
 def _state_to_run_state(s: _PipelineStateDict) -> RunState:
     return RunState(
@@ -137,6 +142,7 @@ def _delta_to_partial(node_name: str, stage: str, delta: RunStateDelta) -> dict[
 # Node wrapper
 # ---------------------------------------------------------------------------
 
+
 def _make_short_circuit_router(next_node: str) -> Callable[[_PipelineStateDict], str]:
     """Return a conditional-edge router that goes to END when blocked, paused, or denied."""
 
@@ -146,6 +152,14 @@ def _make_short_circuit_router(next_node: str) -> Callable[[_PipelineStateDict],
         return next_node
 
     return _router
+
+
+def _end_data(status: str | None, started: float) -> dict[str, Any]:
+    """``node_end`` payload: how long the node took, and the status it set."""
+    data: dict[str, Any] = {"duration_ms": round((time.perf_counter() - started) * 1000, 2)}
+    if status:
+        data["status"] = status
+    return data
 
 
 def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
@@ -159,12 +173,13 @@ def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
             "data": {},
         }
         run_state = _state_to_run_state(state)
+        started = time.perf_counter()
         delta = await node.run(run_state)
         end_evt: dict[str, Any] = {
             "stage": stage,
             "node": node.name,
             "event_type": "node_end",
-            "data": {"status": delta.status} if delta.status else {},
+            "data": _end_data(delta.status, started),
         }
         partial = _delta_to_partial(node.name, stage, delta)
         partial["events"] = [start_evt, *partial.get("events", []), end_evt]
@@ -198,6 +213,36 @@ def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
                         },
                     },
                 ]
+            elif getattr(node, "rerun_on_approval", False):
+                # The node paused *before* doing its work (e.g. a tool call awaiting
+                # sign-off): run it again with the approval visible so it proceeds.
+                approved_state = _state_to_run_state(state)
+                approved_state.labels = {**approved_state.labels, APPROVAL_LABEL: "approved"}
+                started = time.perf_counter()
+                rerun_delta = await node.run(approved_state)
+                rerun = _delta_to_partial(node.name, stage, rerun_delta)
+                rerun["events"] = [
+                    *partial["events"],
+                    {
+                        "stage": stage,
+                        "node": node.name,
+                        "event_type": "verdict",
+                        "data": {
+                            "verdict": "approved",
+                            "guard": node.name,
+                            "reason": "approved by reviewer",
+                        },
+                    },
+                    *rerun.get("events", []),
+                    {
+                        "stage": stage,
+                        "node": node.name,
+                        "event_type": "node_end",
+                        "data": _end_data(rerun_delta.status, started),
+                    },
+                ]
+                rerun.setdefault("status", "running")
+                partial = rerun
             else:
                 # Approved — clear paused status so the pipeline continues.
                 partial["status"] = "running"
@@ -211,6 +256,7 @@ def _wrap_node(node: PipelineNode, stage: str) -> Callable[..., Any]:
 # ---------------------------------------------------------------------------
 # Compiled pipeline
 # ---------------------------------------------------------------------------
+
 
 class CompiledPipeline:
     """A compiled LangGraph app ready to execute.
@@ -275,8 +321,7 @@ class CompiledPipeline:
             run_id=final.get("run_id", run_id),
             route=final.get("route", ""),
             messages=[
-                Message(role=m["role"], content=m["content"])
-                for m in final.get("messages") or []
+                Message(role=m["role"], content=m["content"]) for m in final.get("messages") or []
             ],
             principal=final.get("principal"),
             labels=final.get("labels") or {},
@@ -352,6 +397,7 @@ class CompiledPipeline:
         )
         for node in self._ingress_nodes:
             current.events.append(RunEvent("ingress", node.name, "node_start"))
+            started = time.perf_counter()
             delta = await node.run(current)
             if delta.labels is not None:
                 current.labels = delta.labels
@@ -368,12 +414,7 @@ class CompiledPipeline:
             if delta.status is not None:
                 current.status = delta.status
             current.events.append(
-                RunEvent(
-                    "ingress",
-                    node.name,
-                    "node_end",
-                    {"status": delta.status} if delta.status else {},
-                )
+                RunEvent("ingress", node.name, "node_end", _end_data(delta.status, started))
             )
             if current.status in ("blocked", "paused", "denied"):
                 break
@@ -398,15 +439,14 @@ class CompiledPipeline:
                 "Compile the pipeline with a checkpointer via PipelineExecutor(checkpointer=...)."
             )
         cfg = self._build_config(run_id)
-        final: dict[str, Any] = await self._app.ainvoke(
-            Command(resume=decision), config=cfg
-        )
+        final: dict[str, Any] = await self._app.ainvoke(Command(resume=decision), config=cfg)
         return self._final_to_run_state(final, run_id)
 
 
 # ---------------------------------------------------------------------------
 # Assembler
 # ---------------------------------------------------------------------------
+
 
 class PipelineAssembler:
     """Compiles a LangGraph StateGraph from ordered PipelineNode lists.

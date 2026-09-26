@@ -141,6 +141,10 @@ class PiiDetector:
             spacy_model=model,
         )
 
+    def warmup(self) -> None:
+        """Load spaCy and Presidio now (~9 s cold) rather than on the first request."""
+        self.find("Warm-up: Jane Doe, jane@example.com, 416-555-0199.")
+
     def find(self, text: str) -> list[Any]:
         """Return de-duplicated Presidio results for *text*."""
         results = get_analyzer(self.spacy_model).analyze(

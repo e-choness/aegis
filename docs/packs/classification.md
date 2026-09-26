@@ -52,7 +52,24 @@ events.
 
 ## Acting on the label
 
-Put the classifier first, then a guard that reads the label:
+The [label policy](./policy) pack turns labels into verdicts from
+`aegis.yaml`:
+
+```yaml
+guardrails:
+  classify:
+    pack: aegis.classification
+  content_policy:
+    pack: aegis.policy
+    rules:
+      - when: {label: classification, in: [secret]}
+        verdict: block
+
+pipeline:
+  ingress: [classify, content_policy]
+```
+
+Or write the guard yourself:
 
 ```python
 from aegis_core.pipeline.state import RunState

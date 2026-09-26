@@ -489,3 +489,21 @@ class TestSpacyModel:
         cfg = GuardrailConfig.model_validate({"pack": "aegis.pii", "spacy_model": "xx_not_a_model"})
         with pytest.raises(AegisConfigValidationError, match="not installed"):
             from_config("pii", cfg)
+
+
+def test_mask_node_and_guard_warm_up_their_detector() -> None:
+    from aegis_pack_pii import PiiDetector
+
+    from aegis_core.pipeline import Warmable
+
+    calls: list[str] = []
+
+    class _Detector(PiiDetector):
+        def warmup(self) -> None:
+            calls.append("warm")
+
+    detector = _Detector()
+    for obj in (PiiMaskNode(detector=detector), PiiMaskGuard(detector=detector)):
+        assert isinstance(obj, Warmable)
+        obj.warmup()
+    assert calls == ["warm", "warm"]

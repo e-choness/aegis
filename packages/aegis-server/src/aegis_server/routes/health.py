@@ -10,11 +10,16 @@ router = APIRouter(tags=["health"])
 
 @router.get("/v1/health", include_in_schema=True)
 async def health(request: Request) -> JSONResponse:
-    """Liveness probe. Returns the running config digest."""
+    """Liveness probe. Returns the running config digest and model warm-up state.
+
+    ``warmup`` is ``warming`` while models load after startup (requests are
+    served meanwhile, just slower), then ``ready`` — or ``failed: <reason>``.
+    """
     return JSONResponse(
         {
             "status": "ok",
             "config_digest": getattr(request.app.state, "config_digest", None),
             "config_path": getattr(request.app.state, "config_path", None),
+            "warmup": getattr(request.app.state, "warmup", "ready"),
         }
     )

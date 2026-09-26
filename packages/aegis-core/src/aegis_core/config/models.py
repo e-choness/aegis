@@ -71,10 +71,32 @@ class PipelineConfig(_StrictModel):
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 
+class ToolConfig(_StrictModel):
+    """A tool declared on a route.
+
+    The tool returns *result* when called — a static stand-in for a real tool
+    server, like the ``fake`` provider is for a model. Policies apply to every
+    call: ``deny`` blocks the run, ``require_approval`` pauses it until a
+    reviewer approves (then the call goes ahead).
+    """
+
+    description: str = ""
+    result: str = ""
+    parameters: dict[str, Any] = Field(default_factory=lambda: {"type": "object", "properties": {}})
+    require_approval: bool = False
+    deny: bool = False
+
+
 class RouteConfig(_StrictModel):
     provider: str
     model: str | None = None
     pipeline: PipelineConfig | None = None
+    #: Tools the model may call on this route, with their policies. Declaring
+    #: any turns on the governed tool loop for the route.
+    tools: dict[str, ToolConfig] = Field(default_factory=dict)
+    #: Built-in tool guards: ``exfiltration`` (blocks masked PII in tool
+    #: arguments) and ``injection`` (blocks tool results that carry instructions).
+    tool_guards: list[Literal["exfiltration", "injection"]] = Field(default_factory=list)
     owner: str | None = None
     risk_rating: Literal["low", "medium", "high"] | None = None
     review_interval_days: int | None = None
@@ -177,5 +199,3 @@ def _redact(node: Any) -> Any:
     if isinstance(node, list):
         return [_redact(item) for item in node]
     return node
-
-

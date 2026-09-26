@@ -6,6 +6,7 @@ from aegis_core.pipeline.nodes import ExecuteNode
 from aegis_core.pipeline.protocol import PipelineNode
 from aegis_core.pipeline.state import RunEvent, RunState, RunStateDelta
 from aegis_core.pipeline.verdict import Verdict, VerdictKind
+from aegis_core.pipeline.warmup import Warmable, warm_up
 
 __all__ = [
     "CompiledPipeline",
@@ -18,4 +19,6 @@ __all__ = [
     "RunStateDelta",
     "Verdict",
     "VerdictKind",
+    "Warmable",
+    "warm_up",
 ]

@@ -275,7 +275,9 @@ class TestResidencyGuardRouting:
 
     async def test_require_approval_mode_still_fails_closed_on_no_profile(self) -> None:
         """mode="require_approval" only softens a *declared* mismatch, not a missing profile."""
-        guard = ResidencyGuard(profiles={}, allowed_regions=["ca-central-1"], mode="require_approval")
+        guard = ResidencyGuard(
+            profiles={}, allowed_regions=["ca-central-1"], mode="require_approval"
+        )
         verdict = await guard.scan(_state("orphan"))
         assert verdict.is_block
 
@@ -326,6 +328,65 @@ class TestResidencyFactory:
         guard = result["ingress"][0].guards[0]  # type: ignore[attr-defined]
         verdict = await guard.scan(_state("underwriting"))
         assert verdict.is_require_approval
+
+    def test_rejects_unknown_apply_when(self) -> None:
+        with pytest.raises(AegisConfigValidationError, match="apply_when"):
+            from_config("residency", self._cfg(apply_when="sometimes"))
+
+
+# ---------------------------------------------------------------------------
+# apply_when: sensitive — only requests carrying sensitive data are held back
+# ---------------------------------------------------------------------------
+
+
+class TestContentAwareResidency:
+    def _guard(self, **options: object) -> ResidencyGuard:
+        cfg = GuardrailConfig.model_validate(
+            {
+                "pack": "aegis.residency",
+                "region": "us-east-1",
+                "jurisdiction": "US",
+                "allowed_regions": ["ca-central-1"],
+                "require_approval": True,
+                "apply_when": "sensitive",
+                **options,
+            }
+        )
+        return from_config("residency_ca", cfg)["ingress"][0].guards[0]  # type: ignore[attr-defined]
+
+    @staticmethod
+    def _with(**fields: object) -> RunState:
+        state = _state("underwriting")
+        for key, value in fields.items():
+            setattr(state, key, value)
+        return state
+
+    async def test_clean_request_uses_the_endpoint(self) -> None:
+        verdict = await self._guard().scan(self._with(labels={"classification": "public"}))
+        assert verdict.is_allow
+
+    async def test_masked_pii_is_still_personal_data(self) -> None:
+        state = self._with(mask_map={"<CA_SIN_0>": "046 454 286"})
+        assert (await self._guard().scan(state)).is_require_approval
+
+    async def test_sensitive_label_triggers(self) -> None:
+        state = self._with(labels={"classification": "secret"})
+        assert (await self._guard().scan(state)).is_require_approval
+
+    async def test_custom_sensitive_labels(self) -> None:
+        guard = self._guard(sensitive_labels=["medical"])
+        assert (await guard.scan(self._with(labels={"classification": "secret"}))).is_allow
+        assert (await guard.scan(self._with(labels={"x": "medical"}))).is_require_approval
+
+    async def test_allowed_region_passes_even_when_sensitive(self) -> None:
+        guard = self._guard(region="ca-central-1", jurisdiction="CA")
+        assert (await guard.scan(self._with(labels={"classification": "pii"}))).is_allow
+
+    async def test_undeclared_route_still_fails_closed(self) -> None:
+        guard = ResidencyGuard(
+            profiles={}, allowed_regions=["ca-central-1"], apply_when="sensitive"
+        )
+        assert (await guard.scan(_state("orphan"))).is_block
 
 
 # ---------------------------------------------------------------------------
@@ -423,9 +484,7 @@ class TestLintDeclaredVsEndpointMatrix:
     def test_profiles_lint_clean(self, route: str, profile: ResidencyProfile) -> None:
         """All correctly declared profiles in the matrix lint clean."""
         violations = lint_endpoint(profile)
-        assert violations == [], (
-            f"route={route!r} has unexpected lint violations: {violations}"
-        )
+        assert violations == [], f"route={route!r} has unexpected lint violations: {violations}"
 
     def test_lint_flags_mismatched_bedrock(self) -> None:
         bad_profile = ResidencyProfile(

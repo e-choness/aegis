@@ -9,6 +9,8 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a3] - 2026-09-26
+
 ### Changed
 
 - PII masking no longer masks `LOCATION` by default: a place name rarely
@@ -28,6 +30,28 @@ becomes the version's entry and its GitHub Release notes.
 
 ### Added
 
+- Tools in `aegis.yaml`: a route's `tools:` declares what the model may call,
+  each with a canned `result`, `require_approval` or `deny`; `tool_guards:`
+  adds the built-in `exfiltration` and `injection` guards. The `fake`
+  provider scripts tool calls with `tool_calls:`.
+- Approving a paused tool call now runs the call and continues the run —
+  before, approval skipped the call and the run ended without a reply.
+- `aegis.policy` (in `aegis-gateway-pack-classification`): rules that turn
+  labels into verdicts — e.g. `secret` blocks, `pii` requires approval.
+- Residency `apply_when: sensitive`: enforce only for requests that carry
+  personal or sensitive data (PII was masked, or a sensitive label); other
+  requests may use the endpoint wherever it is.
+- Per-step timing: every `node_end` event records `duration_ms`, and the
+  showcase shows each step's time and the pipeline total.
+- Warm-up at startup: nodes and guards may define `warmup()`; the server
+  calls it in the background and `/v1/health` reports `warmup: warming |
+  ready | failed: …`. The PII pack loads spaCy and Presidio this way, so the
+  first request no longer waits ~9 s.
+- `GET /v1/audit/verify` checks the evidence ledger's hash chain in place.
+- The `fake` provider's `cost_per_request` reports a cost per completion, so
+  budgets can be demonstrated; in `--demo` mode each showcase visitor gets
+  their own principal (a hash of their address), so budgets and runs are
+  per visitor.
 - Guard evals: `evals/probes.jsonl` (labelled prompts) and
   `scripts/eval_guards.py`, which scores each detector's precision, recall and
   latency; CI fails when a score drops below `evals/baseline.json`.

@@ -48,3 +48,4 @@ classification = "aegis_pack_classification:ClassificationNode"
 
 [project.entry-points."aegis.packs"]
 "aegis.classification" = "aegis_pack_classification.factory:from_config"
+"aegis.policy" = "aegis_pack_classification.factory:policy_from_config"

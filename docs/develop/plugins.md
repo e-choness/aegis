@@ -133,6 +133,41 @@ class StripSignatures:
         return RunStateDelta(messages=cleaned, events=[event])
 ```
 
+### Loading models at startup
+
+A node or guard that loads something slow — a spaCy pipeline, a transformer
+— can define `warmup()` (sync or async). `aegis serve` calls it once in the
+background after startup, so the first request doesn't wait; `/v1/health`
+reports `"warmup": "warming"` until every warm-up returns, then `"ready"`
+(or `"failed: <reason>"`). It's optional and duck-typed:
+
+```python
+from dataclasses import dataclass, field
+from typing import Any
+
+from aegis_core.pipeline.state import RunState
+from aegis_core.pipeline.verdict import Verdict
+
+
+@dataclass
+class ToxicityGuard:
+    name: str = "toxicity"
+    streaming: str = "none"
+    _model: Any = field(default=None, repr=False)
+
+    def warmup(self) -> None:
+        self._model = self._model or load_my_model()  # your loader
+
+    async def scan(self, state: RunState) -> Verdict:
+        self.warmup()  # still correct if the server skipped warm-up
+        score = self._model.score(state.messages[-1].content)
+        return Verdict.block("toxic") if score > 0.9 else Verdict.allow()
+
+
+def load_my_model() -> Any:
+    raise NotImplementedError
+```
+
 ## 3. Test
 
 ```bash

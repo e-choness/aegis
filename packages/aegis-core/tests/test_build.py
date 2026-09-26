@@ -316,3 +316,15 @@ def test_build_executor_with_real_provider_types(tmp_path: Path, monkeypatch) ->
     )
     executor = build_executor(load_config(path), registry=MagicMock())
     assert executor.routes() == ["default"]
+
+
+async def test_fake_provider_reports_configured_cost() -> None:
+    from aegis_core.providers.models import CompletionRequest, Message
+
+    provider = build_provider(
+        ProviderConfig.model_validate({"type": "fake", "cost_per_request": 0.25})
+    )
+    result = await provider.complete(
+        CompletionRequest(messages=[Message(role="user", content="x")], model="")
+    )
+    assert result.usage.cost == 0.25

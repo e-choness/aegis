@@ -428,7 +428,7 @@
       "url": "https://github.com/e-choness/aegis/blob/main/LICENSE"
     },
     "title": "Aegis AI Gateway",
-    "version": "2.0.0a2"
+    "version": "2.0.0a2.dev2"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -672,6 +672,27 @@
         "summary": "Audit Report"
       }
     },
+    "/v1/audit/verify": {
+      "get": {
+        "description": "Check the evidence ledger's hash chain end to end.\n\n``intact`` is true when every record's hash matches its content and links\nto the one before it \u2014 i.e. nothing was edited, removed or reordered.\n``head`` is the latest hash: record it elsewhere to detect a rewrite of\nthe whole chain later. ``aegis audit verify`` checks an exported copy\noffline the same way.",
+        "operationId": "audit_verify_v1_audit_verify_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Audit Verify V1 Audit Verify Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Verify"
+      }
+    },
     "/v1/chat/completions": {
       "post": {
         "operationId": "chat_completions_v1_chat_completions_post",
@@ -710,7 +731,7 @@
     },
     "/v1/health": {
       "get": {
-        "description": "Liveness probe. Returns the running config digest.",
+        "description": "Liveness probe. Returns the running config digest and model warm-up state.\n\n``warmup`` is ``warming`` while models load after startup (requests are\nserved meanwhile, just slower), then ``ready`` \u2014 or ``failed: <reason>``.",
         "operationId": "health_v1_health_get",
         "responses": {
           "200": {

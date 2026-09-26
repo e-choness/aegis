@@ -11,8 +11,9 @@ opt-in — see [LLM Guard](./llm-guard).
 | Pack | `pack:` | Adds | Kind | Options |
 |---|---|---|---|---|
 | [PII masking](./pii) | `aegis.pii` | ingress mask + egress unmask, or ingress detect | node / guard | `mode`, `entities`, `threshold`, `allow_list` |
-| [Residency](./residency) | `aegis.residency` | ingress guard | guard | `region`, `jurisdiction`, `allowed_regions`, `require_approval` |
+| [Residency](./residency) | `aegis.residency` | ingress guard | guard | `region`, `jurisdiction`, `allowed_regions`, `require_approval`, `apply_when` |
 | [Classification](./classification) | `aegis.classification` | ingress node | node | — |
+| [Label policy](./policy) | `aegis.policy` | ingress guard | guard | `rules` |
 | [Budgets](./budgets) | `aegis.budgets` | ingress guard + egress recorder | guard / node | `default_cap` |
 | [LLM Guard](./llm-guard) | `aegis.llm_guard` | ingress guard | guard | `scanners`, `threshold` |
 

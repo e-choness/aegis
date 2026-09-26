@@ -184,7 +184,9 @@ def test_mask_map_never_in_ledger() -> None:
     app = create_app(ex, no_auth=True, ledger_store=ledger)
 
     with TestClient(app, raise_server_exceptions=True) as client:
-        client.post("/v1/runs", json={"messages": [{"role": "user", "content": "my email is a@b.com"}]})
+        client.post(
+            "/v1/runs", json={"messages": [{"role": "user", "content": "my email is a@b.com"}]}
+        )
         records = client.get("/v1/audit/ledger").json()["records"]
 
     run_ev = [r for r in records if r.get("record_type") == "run_evidence"]
@@ -275,7 +277,9 @@ def test_hitl_denial_records_approver_identity() -> None:
             "/v1/audit/ledger", headers={"Authorization": f"Bearer {api_key}"}
         ).json()["records"]
 
-    run_ev = [r for r in records if r.get("record_type") == "run_evidence" and r.get("run_id") == run_id]
+    run_ev = [
+        r for r in records if r.get("record_type") == "run_evidence" and r.get("run_id") == run_id
+    ]
     # One record from the initial pause, one from the resume decision.
     assert len(run_ev) == 2
     resolved = run_ev[-1]
@@ -316,7 +320,9 @@ async def test_background_run_appends_to_ledger() -> None:
         await asyncio.sleep(0.1)
         records = (await client.get("/v1/audit/ledger")).json()["records"]
 
-    run_ev = [r for r in records if r.get("record_type") == "run_evidence" and r.get("run_id") == run_id]
+    run_ev = [
+        r for r in records if r.get("record_type") == "run_evidence" and r.get("run_id") == run_id
+    ]
     assert len(run_ev) == 1
     assert run_ev[0]["status"] == "completed"
 
@@ -336,7 +342,9 @@ def test_chain_verifies_after_n_runs() -> None:
 
     with TestClient(app, raise_server_exceptions=True) as client:
         for i in range(n):
-            resp = client.post("/v1/runs", json={"messages": [{"role": "user", "content": f"msg {i}"}]})
+            resp = client.post(
+                "/v1/runs", json={"messages": [{"role": "user", "content": f"msg {i}"}]}
+            )
             assert resp.status_code == 200
         records = client.get("/v1/audit/ledger").json()["records"]
 
@@ -362,9 +370,51 @@ def test_export_validates_against_schema(client_with_ledger: TestClient) -> None
     assert records
 
     schema_path = (
-        pathlib.Path(__file__).resolve().parents[3] / "docs" / "public" / "evidence-record.schema.json"
+        pathlib.Path(__file__).resolve().parents[3]
+        / "docs"
+        / "public"
+        / "evidence-record.schema.json"
     )
     schema = json.loads(schema_path.read_text())
     validator = jsonschema.Draft202012Validator(schema)
     for record in records:
         validator.validate(record)
+
+
+def test_verify_endpoint_reports_intact_chain(client_with_ledger: TestClient) -> None:
+    client_with_ledger.post(
+        "/v1/chat/completions",
+        json={"model": "default", "messages": [{"role": "user", "content": "hi"}]},
+    )
+    body = client_with_ledger.get("/v1/audit/verify").json()
+    assert body["intact"] is True
+    assert body["records"] >= 2  # inventory record + run evidence
+    assert body["head"].startswith("sha256:")
+    assert body["errors"] == []
+
+
+def test_verify_endpoint_detects_tampering(client_with_ledger: TestClient) -> None:
+    client_with_ledger.post(
+        "/v1/chat/completions",
+        json={"model": "default", "messages": [{"role": "user", "content": "hi"}]},
+    )
+    ledger = client_with_ledger.app.state.ledger_store  # type: ignore[attr-defined]
+    ledger._records[-1]["status"] = "completed-but-edited"
+    body = client_with_ledger.get("/v1/audit/verify").json()
+    assert body["intact"] is False
+    assert any("hash does not match" in e for e in body["errors"])
+
+
+def test_verify_chain_detects_removed_record() -> None:
+    from aegis_server.store.ledger import compute_hash, verify_chain
+
+    records, prev = [], "genesis"
+    for seq in range(3):
+        rec = {"seq": seq, "prev_hash": prev, "body": seq}
+        rec["hash"] = compute_hash(rec)
+        records.append(rec)
+        prev = rec["hash"]
+    assert verify_chain(records) == []
+    assert verify_chain([records[0], records[2]]) == [
+        "seq=2: prev_hash does not match the previous record's hash"
+    ]

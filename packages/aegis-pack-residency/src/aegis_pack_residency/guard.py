@@ -9,6 +9,17 @@ from aegis_core.pipeline.state import RunState
 from aegis_core.pipeline.verdict import Verdict
 from aegis_pack_residency.schema import ResidencyProfile
 
+#: Labels that make a request subject to residency under ``apply_when: sensitive``
+#: — what aegis.classification and a sensitivity labeler write.
+DEFAULT_SENSITIVE_LABELS: tuple[str, ...] = (
+    "pii",
+    "financial",
+    "secret",
+    "medical",
+    "legal",
+    "confidential",
+)
+
 
 class ResidencyGuard:
     """A :class:`~aegis_core.guardrails.protocol.Guardrail` that enforces
@@ -36,6 +47,13 @@ class ResidencyGuard:
         mode: ``"block"`` (default) or ``"require_approval"`` for a
             declared-but-disallowed region.
         name: Guard name.
+        apply_when: ``"always"`` (default) enforces on every request.
+            ``"sensitive"`` enforces only when the request carries sensitive
+            data: an earlier node masked PII (masked data is still personal
+            data), or any label value is in *sensitive_labels*. Everything
+            else may use the endpoint wherever it is.
+        sensitive_labels: Label values that make a request sensitive under
+            ``apply_when="sensitive"``.
     """
 
     streaming: ClassVar[Literal["none", "incremental"]] = "none"
@@ -46,11 +64,18 @@ class ResidencyGuard:
         allowed_regions: Sequence[str],
         mode: Literal["block", "require_approval"] = "block",
         name: str = "residency",
+        apply_when: Literal["always", "sensitive"] = "always",
+        sensitive_labels: Sequence[str] = DEFAULT_SENSITIVE_LABELS,
     ) -> None:
         self.name = name
         self._profiles = profiles
         self._allowed = {r.lower().strip() for r in allowed_regions}
         self._mode = mode
+        self._apply_when = apply_when
+        self._sensitive = frozenset(sensitive_labels)
+
+    def _is_sensitive(self, state: RunState) -> bool:
+        return bool(state.mask_map) or any(v in self._sensitive for v in state.labels.values())
 
     async def scan(self, state: RunState) -> Verdict:
         """Block (or pause, per *mode*) requests whose region is not in *allowed_regions*."""
@@ -61,6 +86,8 @@ class ResidencyGuard:
             )
 
         region = profile.region.lower().strip()
+        if self._apply_when == "sensitive" and not self._is_sensitive(state):
+            return Verdict.allow()
         if region not in self._allowed:
             reason = (
                 f"residency: region '{profile.region}' for route '{state.route}' "

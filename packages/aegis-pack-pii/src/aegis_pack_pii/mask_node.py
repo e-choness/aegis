@@ -84,6 +84,10 @@ class PiiMaskNode:
             self.name = name
         self._detector = detector or PiiDetector()
 
+    def warmup(self) -> None:
+        """Load the NLP models at startup (called by the server)."""
+        self._detector.warmup()
+
     async def run(self, state: RunState) -> RunStateDelta:
         """Mask PII in all messages; return updated messages and mask_map."""
         placeholders = _Placeholders(state.mask_map)

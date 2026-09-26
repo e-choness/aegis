@@ -7,6 +7,10 @@ from typing import Any
 
 from aegis_core.providers.models import Message, UsageInfo
 
+#: Label the assembler sets to ``"approved"`` when it re-runs a node with
+#: ``rerun_on_approval = True`` after a reviewer approved the node's pause.
+APPROVAL_LABEL = "approval"
+
 
 @dataclass
 class RunEvent:

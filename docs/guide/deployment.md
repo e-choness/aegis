@@ -119,6 +119,11 @@ server {
 
 ## Observability
 
+`GET /v1/health` is the liveness probe. Its `warmup` field reads `warming`
+while packs load their models after startup (requests are served meanwhile,
+only slower), then `ready`, or `failed: <reason>` — use it as a readiness
+check if you'd rather not route traffic until models are loaded.
+
 Prometheus metrics are served at `/metrics` without authentication, and each
 run is wrapped in an OpenTelemetry span (`aegis.run`) on the process's global
 tracer provider. Aegis doesn't configure an exporter itself: install

@@ -70,6 +70,8 @@ Map of name → provider profile. Extra keys are allowed and passed through.
 | `model` | string | Required for `anthropic` and `openai_compatible`. For `anthropic`, a LiteLLM model string such as `anthropic/claude-sonnet-5`. |
 | `residency` | `{region, jurisdiction?, source_url?}` | Declared location of the endpoint. |
 | `complete_response` | string | `fake` only — the canned reply. |
+| `cost_per_request` | float | `fake` only — cost reported for each completion, so [budgets](/packs/budgets) can be exercised. Default `0`. |
+| `tool_calls` | list of turns | `fake` only — tool calls to request, one list per turn (`[[{name: search, arguments: {q: x}}], …]`). Turn *N* is used once the conversation holds *N* tool results; then `complete_response`. See [route `tools`](#routes). |
 
 ## `guardrails`
 
@@ -93,8 +95,8 @@ declared above (a dotted suffix such as `pii.unmask` is allowed).
 |---|---|---|
 | `ingress` | list | Runs before the provider call. |
 | `egress` | list | Runs on the response. |
-| `tool_call` | list | Not enforceable by `aegis serve` yet — it refuses to start if set (`AEG-POL-004`). |
-| `tool_result` | list | Not enforceable by `aegis serve` yet — it refuses to start if set (`AEG-POL-004`). |
+| `tool_call` | list | Reserved — `aegis serve` refuses to start if set (`AEG-POL-004`). Govern tools with a route's `tools` and `tool_guards`. |
+| `tool_result` | list | Reserved — as `tool_call`. |
 
 ## `routes`
 
@@ -109,6 +111,18 @@ or `model` (OpenAI-compatible API). Extra keys are allowed.
 | `owner` | string | Recorded in the ledger's `model_inventory`. |
 | `risk_rating` | `low` \| `medium` \| `high` | Recorded in `model_inventory`. |
 | `review_interval_days` | int | Sets the inventory's next review date. |
+| `tools` | map of name → tool | Tools the model may call on this route; declaring any turns on the [governed tool loop](/guide/tool-governance#tools-in-aegis-yaml). |
+| `tool_guards` | list | Built-in tool guards: `exfiltration` (blocks masked PII in tool arguments), `injection` (blocks tool results carrying instructions). |
+
+Each entry under `tools`:
+
+| Field | Type | Notes |
+|---|---|---|
+| `description` | string | What the model is told the tool does. |
+| `result` | string | What calling the tool returns — a static stand-in for a tool server. |
+| `parameters` | JSON Schema | The tool's arguments. Default: an object with no declared properties. |
+| `require_approval` | bool | Pause the run for a reviewer before the call; approving runs the call and continues. |
+| `deny` | bool | Any call to the tool blocks the run. |
 
 ## `auth`
 

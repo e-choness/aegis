@@ -12,11 +12,14 @@ class ToolPolicy:
     Attributes:
         name: Tool name as declared in the MCP server.
         require_approval: When ``True``, the run is paused for human review
-            before the tool is invoked (reuses step-09 HITL machinery).
+            before the tool is invoked (reuses step-09 HITL machinery); once
+            approved, the run resumes and the tool is called.
+        deny: When ``True``, any call to the tool blocks the run.
     """
 
     name: str
     require_approval: bool = False
+    deny: bool = False
 
 
 @dataclass

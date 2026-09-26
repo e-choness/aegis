@@ -32,6 +32,15 @@ class FakeProvider:
         complete_response: Text returned by :meth:`complete`.
         stream_chunks: List of strings yielded by :meth:`stream`.
         embed_response: Vector returned per text by :meth:`embed`.
+        cost_per_request: Cost reported in every completion's usage, so
+            budgets can be exercised without a real model.
+        tool_script: Tool calls to request, one list per turn, chosen by how
+            many tool results the conversation already holds — the first
+            turn requests ``tool_script[0]``, the turn after one tool result
+            ``tool_script[1]``, and so on; then :attr:`complete_response`.
+            Unlike ``tool_calls_sequence`` (by call count) this depends only
+            on the request, so a run that is paused and re-run after approval
+            gets the same answers.
     """
 
     name: str = "fake"
@@ -43,11 +52,19 @@ class FakeProvider:
         stream_chunks: list[str] | None = None,
         embed_response: list[float] | None = None,
         tool_calls_sequence: list[list[ToolCall]] | None = None,
+        cost_per_request: float = 0.0,
+        tool_script: list[list[ToolCall]] | None = None,
     ) -> None:
         self.name = name
+        self.cost_per_request = cost_per_request
+        self.tool_script: list[list[ToolCall]] = tool_script or []
         self.complete_response = complete_response
-        self.stream_chunks: list[str] = stream_chunks if stream_chunks is not None else ["hello", " from", " fake"]
-        self.embed_response: list[float] = embed_response if embed_response is not None else [0.1, 0.2, 0.3]
+        self.stream_chunks: list[str] = (
+            stream_chunks if stream_chunks is not None else ["hello", " from", " fake"]
+        )
+        self.embed_response: list[float] = (
+            embed_response if embed_response is not None else [0.1, 0.2, 0.3]
+        )
         # Each element is the list of ToolCalls returned on call N.
         # When an entry is non-empty, finish_reason is "tool_calls".
         # When exhausted or empty, returns text response.
@@ -61,6 +78,15 @@ class FakeProvider:
 
     async def complete(self, req: CompletionRequest) -> CompletionResult:
         self.complete_calls.append(req)
+        turn = sum(1 for m in req.messages if m.role == "tool")
+        if turn < len(self.tool_script) and self.tool_script[turn]:
+            return CompletionResult(
+                text="",
+                model=req.model or "fake-model",
+                usage=self._usage(),
+                finish_reason="tool_calls",
+                tool_calls=self.tool_script[turn],
+            )
         if self._call_index < len(self._tool_calls_sequence):
             tc = self._tool_calls_sequence[self._call_index]
             self._call_index += 1
@@ -68,7 +94,7 @@ class FakeProvider:
                 return CompletionResult(
                     text="",
                     model=req.model or "fake-model",
-                    usage=UsageInfo(prompt_tokens=5, completion_tokens=5, total_tokens=10),
+                    usage=self._usage(),
                     finish_reason="tool_calls",
                     tool_calls=tc,
                 )
@@ -77,8 +103,13 @@ class FakeProvider:
         return CompletionResult(
             text=self.complete_response,
             model=req.model or "fake-model",
-            usage=UsageInfo(prompt_tokens=5, completion_tokens=5, total_tokens=10),
+            usage=self._usage(),
             finish_reason="stop",
+        )
+
+    def _usage(self) -> UsageInfo:
+        return UsageInfo(
+            prompt_tokens=5, completion_tokens=5, total_tokens=10, cost=self.cost_per_request
         )
 
     async def stream(self, req: CompletionRequest) -> AsyncIterator[Chunk]:
@@ -184,7 +215,9 @@ class ProviderContractKit:
         assert info.name, "ProviderInfo.name must be non-empty"
         assert info.provider_type, "ProviderInfo.provider_type must be non-empty"
         assert isinstance(info.models, list), "ProviderInfo.models must be a list"
-        assert isinstance(info.residency, ResidencyInfo), "ProviderInfo.residency must be ResidencyInfo"
+        assert isinstance(info.residency, ResidencyInfo), (
+            "ProviderInfo.residency must be ResidencyInfo"
+        )
 
     # ------------------------------------------------------------------
     # Convenience

@@ -30,6 +30,10 @@ class PiiMaskGuard:
         if name is not None:
             self.name = name
 
+    def warmup(self) -> None:
+        """Load the NLP models at startup (called by the server)."""
+        self._detector.warmup()
+
     async def scan(self, state: RunState) -> Verdict:
         """Scan all messages; block if any PII entity is found."""
         for msg in state.messages:

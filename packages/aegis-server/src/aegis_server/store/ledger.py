@@ -38,6 +38,25 @@ def compute_hash(record_without_hash: dict) -> str:
     return "sha256:" + hashlib.sha256(_canonical(record_without_hash).encode()).hexdigest()
 
 
+def verify_chain(records: list[dict]) -> list[str]:
+    """Return one message per broken link in *records* (the full chain, in order).
+
+    Each record's ``hash`` must match its own content and its ``prev_hash``
+    the previous record's ``hash`` (``"genesis"`` for the first), so editing,
+    removing or reordering any record is detected. Empty list: intact.
+    """
+    errors: list[str] = []
+    prev_hash = "genesis"
+    for rec in records:
+        seq = rec.get("seq", "?")
+        if rec.get("prev_hash") != prev_hash:
+            errors.append(f"seq={seq}: prev_hash does not match the previous record's hash")
+        if rec.get("hash") != compute_hash({k: v for k, v in rec.items() if k != "hash"}):
+            errors.append(f"seq={seq}: hash does not match the record's content")
+        prev_hash = rec.get("hash", "")
+    return errors
+
+
 def redact_events(events: list[dict]) -> list[dict]:
     """Strip ``mask_map`` and raw ``messages`` values from event data before ledger storage.
 
@@ -234,9 +253,7 @@ class SqliteLedgerStore:
             # Determine next seq and prev_hash atomically within one connection.
             async with db.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM evidence") as cur:
                 next_seq: int = (await cur.fetchone())[0]  # type: ignore[index]
-            async with db.execute(
-                "SELECT hash FROM evidence ORDER BY seq DESC LIMIT 1"
-            ) as cur:
+            async with db.execute("SELECT hash FROM evidence ORDER BY seq DESC LIMIT 1") as cur:
                 head = await cur.fetchone()
             prev_hash: str = head[0] if head else "genesis"  # type: ignore[index]
 
@@ -272,8 +289,6 @@ class SqliteLedgerStore:
         import aiosqlite
 
         async with aiosqlite.connect(self._path) as db:
-            async with db.execute(
-                "SELECT record FROM evidence ORDER BY seq DESC LIMIT 1"
-            ) as cur:
+            async with db.execute("SELECT record FROM evidence ORDER BY seq DESC LIMIT 1") as cur:
                 row = await cur.fetchone()
         return json.loads(row[0]) if row else None

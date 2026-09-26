@@ -44,6 +44,35 @@ routes:
     provider: us_llm
 ```
 
+### Only when the request is sensitive
+
+By default the guard applies to every request on the route. With
+`apply_when: sensitive` it applies only to requests that carry personal or
+sensitive data, and everything else may use the endpoint wherever it is:
+
+```yaml
+guardrails:
+  pii:
+    pack: aegis.pii
+  residency_ca:
+    pack: aegis.residency
+    region: us-east-1
+    jurisdiction: US
+    allowed_regions: [ca-central-1]
+    require_approval: true
+    apply_when: sensitive            # default: always
+    # sensitive_labels: [pii, financial, secret, medical, legal, confidential]
+
+pipeline:
+  ingress: [pii, residency_ca]      # after PII masking, so it knows what was found
+```
+
+A request is sensitive when an earlier node **masked PII** — masked data is
+still personal data, so it counts — or when **any label** is in
+`sensitive_labels`. "What's our refund policy?" goes to the US endpoint; the
+same question with a SIN in it pauses for review. An undeclared endpoint is
+still blocked either way.
+
 Region comparison is case-insensitive. The guard's `region` applies to every
 route it is attached to — attach different residency guards via per-route
 `pipeline:` blocks when routes use endpoints in different regions.

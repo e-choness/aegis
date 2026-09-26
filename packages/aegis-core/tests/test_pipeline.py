@@ -28,6 +28,7 @@ from aegis_core.testing import FakeProvider
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_state(content: str = "hello", route: str = "default") -> RunState:
     return RunState(
         run_id=str(uuid.uuid4()),
@@ -55,6 +56,7 @@ class _TrackedNode:
 # RunState + RunStateDelta
 # ---------------------------------------------------------------------------
 
+
 class TestRunState:
     def test_defaults(self) -> None:
         s = RunState(run_id="r1", route="default", messages=[])
@@ -80,6 +82,7 @@ class TestRunStateDelta:
 # ---------------------------------------------------------------------------
 # Verdict
 # ---------------------------------------------------------------------------
+
 
 class TestVerdict:
     def test_allow(self) -> None:
@@ -117,6 +120,7 @@ class TestVerdict:
 # PipelineNode Protocol
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineNodeProtocol:
     def test_execute_node_satisfies_protocol(self) -> None:
         provider = FakeProvider()
@@ -135,6 +139,7 @@ class TestPipelineNodeProtocol:
 # ---------------------------------------------------------------------------
 # Golden path
 # ---------------------------------------------------------------------------
+
 
 class TestGoldenPath:
     def test_request_gets_response(self) -> None:
@@ -173,6 +178,7 @@ class TestGoldenPath:
 # ---------------------------------------------------------------------------
 # Node order
 # ---------------------------------------------------------------------------
+
 
 class TestNodeOrder:
     def test_ingress_before_execute_before_egress(self) -> None:
@@ -230,6 +236,7 @@ class TestNodeOrder:
 # Events
 # ---------------------------------------------------------------------------
 
+
 class TestEvents:
     def test_execute_node_appends_events(self) -> None:
         provider = FakeProvider()
@@ -248,6 +255,30 @@ class TestEvents:
         types = {e.event_type for e in execute_events}
         assert "node_start" in types
         assert "node_end" in types
+
+    def test_node_end_records_duration(self) -> None:
+        class _Slow:
+            name = "slow"
+
+            async def run(self, state: RunState) -> RunStateDelta:
+                await asyncio.sleep(0.02)
+                return RunStateDelta()
+
+        pipeline = PipelineAssembler().compile(ingress=[_Slow()], provider=FakeProvider())
+        result = asyncio.run(pipeline.run(_make_state()))
+
+        ends = {e.node: e.data for e in result.events if e.event_type == "node_end"}
+        assert ends["slow"]["duration_ms"] >= 20
+        assert ends["execute"]["duration_ms"] >= 0
+        assert ends["execute"]["status"] == "completed"
+
+    def test_streaming_ingress_records_duration(self) -> None:
+        pipeline = PipelineAssembler().compile(
+            ingress=[_TrackedNode("a", [])], provider=FakeProvider()
+        )
+        result = asyncio.run(pipeline.run_ingress(_make_state()))
+        (end,) = [e for e in result.events if e.event_type == "node_end"]
+        assert end.data["duration_ms"] >= 0
 
     def test_ingress_node_events_appended(self) -> None:
         log: list[str] = []
@@ -287,6 +318,7 @@ class TestEvents:
 # ---------------------------------------------------------------------------
 # Custom graph escape hatch (D2)
 # ---------------------------------------------------------------------------
+
 
 class TestCustomGraphEscapeHatch:
     def test_custom_graph_accepted(self) -> None:
@@ -361,6 +393,7 @@ class TestCustomGraphEscapeHatch:
 # Graph reuse
 # ---------------------------------------------------------------------------
 
+
 class TestGraphReuse:
     def test_same_compiled_pipeline_reused(self) -> None:
         executor = PipelineExecutor()
@@ -404,6 +437,7 @@ class TestGraphReuse:
 # Assembler validation
 # ---------------------------------------------------------------------------
 
+
 class TestAssemblerValidation:
     def test_no_nodes_raises(self) -> None:
         with pytest.raises(ValueError, match="at least one node"):
@@ -439,7 +473,9 @@ async def test_paused_run_keeps_the_verdict_that_paused_it() -> None:
     guards: list[Guardrail] = [_Review()]
     ingress: list[PipelineNode] = [GuardNode(guards, name="review")]
     executor.register("pay", provider=_FakeProvider(), ingress=ingress)
-    state = _RunState(run_id="r-1", route="pay", messages=[_Message(role="user", content="wire it")])
+    state = _RunState(
+        run_id="r-1", route="pay", messages=[_Message(role="user", content="wire it")]
+    )
 
     result = await executor.run("pay", state)
 
@@ -449,3 +485,62 @@ async def test_paused_run_keeps_the_verdict_that_paused_it() -> None:
     assert verdicts[0].data["reason"] == "large transfer needs sign-off"
     assert result.interrupt_value is not None
     assert "events" not in result.interrupt_value
+
+
+# ---------------------------------------------------------------------------
+# Warm-up
+# ---------------------------------------------------------------------------
+
+
+class _Warmable:
+    def __init__(self, name: str, log: list[str], is_async: bool = False) -> None:
+        self.name = name
+        self._log = log
+        if is_async:
+            self.warmup = self._async_warmup  # type: ignore[method-assign]
+
+    def warmup(self) -> None:
+        self._log.append(self.name)
+
+    async def _async_warmup(self) -> None:
+        self._log.append(self.name)
+
+    async def run(self, state: RunState) -> RunStateDelta:
+        return RunStateDelta()
+
+
+class TestWarmup:
+    def test_warms_nodes_and_guards_inside_guard_nodes_once(self) -> None:
+        from aegis_core.guardrails.spine import GuardNode
+        from aegis_core.pipeline import warm_up
+
+        log: list[str] = []
+        shared = _Warmable("shared", log)
+        guard = _Warmable("guard", log, is_async=True)
+        nodes = [shared, GuardNode([guard], name="g"), shared, _TrackedNode("plain", [])]  # type: ignore[list-item]
+
+        warmed = asyncio.run(warm_up(nodes))
+
+        assert warmed == ["shared", "guard"]
+        assert log == ["shared", "guard"]
+
+    def test_executor_warms_every_route(self) -> None:
+        log: list[str] = []
+        ex = PipelineExecutor()
+        ex.register("a", provider=FakeProvider(), ingress=[_Warmable("in", log)])
+        ex.register("b", provider=FakeProvider(), egress=[_Warmable("out", log)])
+
+        assert asyncio.run(ex.warmup()) == ["in", "out"]
+        assert log == ["in", "out"]
+
+    def test_warmup_errors_propagate(self) -> None:
+        from aegis_core.pipeline import warm_up
+
+        class _Broken:
+            name = "broken"
+
+            def warmup(self) -> None:
+                raise RuntimeError("no model")
+
+        with pytest.raises(RuntimeError, match="no model"):
+            asyncio.run(warm_up([_Broken()]))
