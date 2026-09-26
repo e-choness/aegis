@@ -1,5 +1,7 @@
 name: Deploy docs
 
+# GitHub Pages source: "GitHub Actions" (Settings → Pages). The site is built
+# here and deployed as a Pages artifact — no gh-pages branch involved.
 on:
   push:
     branches:
@@ -13,14 +15,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write # deploy to Pages
+  id-token: write # verify the deployment originates from this workflow
 
+# One deployment at a time; don't cancel an in-progress deploy mid-way.
 concurrency:
-  group: docs-deploy
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,15 +37,24 @@ jobs:
           node-version: 24
           cache: npm
 
+      - uses: actions/configure-pages@v6
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build VitePress site
         run: npm run docs:build
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/.vitepress/dist
-          force_orphan: true
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

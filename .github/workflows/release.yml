@@ -125,7 +125,7 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -fsS "https://pypi.org/pypi/aegis-gateway-cli/$VERSION/json" > /dev/null; then
               echo "aegis-gateway-cli $VERSION is live"; exit 0
             fi
