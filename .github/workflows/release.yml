@@ -153,6 +153,37 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.2.0
 
+      # huggingface_hub reports any auth failure as "repo not found", so check
+      # the token explicitly and fail with an actionable message.
+      - name: Check the Hugging Face token can write to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE: ${{ vars.HF_SPACE_ID }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN is empty in this job. Add it as a *repository* secret (Settings → Secrets and variables → Actions → Secrets); environment secrets aren't visible to this job."
+            exit 1
+          fi
+          uv run --no-project --with huggingface_hub python - <<'PY'
+          import os, sys
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space = os.environ["SPACE"]
+          try:
+              me = api.whoami()
+          except Exception as exc:
+              sys.exit(f"::error::HF_TOKEN was rejected by Hugging Face ({exc.__class__.__name__}). Create a new token with write access.")
+          print(f"Token belongs to: {me['name']}")
+          role = (me.get("auth", {}).get("accessToken", {}) or {}).get("role")
+          if role == "read":
+              sys.exit(f"::error::HF_TOKEN is read-only. Create a token with write access to {space}.")
+          owner = space.split("/")[0]
+          if owner not in {me["name"], *(o["name"] for o in me.get("orgs", []))}:
+              sys.exit(f"::error::HF_TOKEN belongs to {me['name']!r}, which can't write to {space!r}.")
+          api.space_info(space)  # fine-grained tokens without access to this Space fail here
+          print(f"OK: {me['name']} can reach {space}")
+          PY
+
       - name: Upload to the Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
