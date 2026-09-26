@@ -121,6 +121,7 @@ router = APIRouter()
 # Request / response models
 # ---------------------------------------------------------------------------
 
+
 class InvokeRequest(BaseModel):
     prompt: str
     route: str = "default"
@@ -229,7 +230,7 @@ _SHOWCASE_HTML = """\
         <label for="route" style="margin:0">Route</label>
         <select id="route" style="padding:.45rem .6rem;border-radius:6px;border:1px solid #d1d5db"><option>default</option></select>
         <button id="sendBtn" onclick="sendPrompt()">Send prompt</button>
-        <button class="secondary" onclick="refreshRuns()">Refresh runs</button>
+        <button class="secondary" id="refreshBtn" onclick="refreshRuns(true)">Refresh runs</button>
         <span id="busy" style="font-size:.85rem;color:#6b7280;display:none;">Running…</span>
       </div>
       <div id="msg"></div>
@@ -248,8 +249,8 @@ _SHOWCASE_HTML = """\
     </div>
 
     <div class="panel">
-      <h2>Recent runs</h2>
-      <div id="runsTable"><div class="empty">Loading…</div></div>
+      <h2>Recent runs <span id="runsUpdated" class="badge" style="font-weight:400"></span></h2>
+      <div id="runsTable" style="transition:opacity .15s"><div class="empty">Loading…</div></div>
     </div>
 
     <div class="panel">
@@ -356,12 +357,20 @@ _SHOWCASE_HTML = """\
       }
     }
 
-    async function refreshRuns() {
+    async function refreshRuns(manual = false) {
       const el = document.getElementById('runsTable');
+      const btn = document.getElementById('refreshBtn');
+      const stamp = document.getElementById('runsUpdated');
+      btn.disabled = true;
       try {
         const r = await fetch(`${BASE}/showcase/api/runs`);
+        if (!r.ok) throw new Error(r.status);
         const data = await r.json();
-        const runs = (data.runs || []).slice(0, 20);
+        const all = data.runs || [];  // newest first
+        const runs = all.slice(0, 20);
+        stamp.textContent = `${all.length} total · updated ${new Date().toLocaleTimeString()}`;
+        if (manual) { el.style.opacity = .4; setTimeout(() => { el.style.opacity = 1; }, 150); }
+        if (manual) refreshApprovals();
         if (!runs.length) { el.innerHTML = '<div class="empty">No runs yet.</div>'; return; }
         el.innerHTML = `<table>
           <thead><tr><th>Run ID</th><th>Route</th><th>Status</th><th>Created</th></tr></thead>
@@ -374,6 +383,8 @@ _SHOWCASE_HTML = """\
         </table>`;
       } catch {
         el.innerHTML = '<div class="empty">Failed to load runs.</div>';
+      } finally {
+        btn.disabled = false;
       }
     }
 
@@ -440,6 +451,7 @@ _SHOWCASE_HTML = """\
 # Routes
 # ---------------------------------------------------------------------------
 
+
 @router.get("/showcase", response_class=HTMLResponse, include_in_schema=False)
 async def showcase_page() -> str:
     return _SHOWCASE_HTML
@@ -454,7 +466,9 @@ async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse
     try:
         pipeline = executor.get(body.route)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"No pipeline for route '{body.route}'") from exc
+        raise HTTPException(
+            status_code=404, detail=f"No pipeline for route '{body.route}'"
+        ) from exc
 
     messages = [Message(role="user", content=body.prompt)]
     run_id = str(uuid.uuid4())
@@ -494,12 +508,17 @@ async def invoke_prompt(body: InvokeRequest, request: Request) -> InvokeResponse
 async def showcase_list_runs(request: Request) -> dict[str, list[dict[str, object]]]:
     run_store: RunStore = request.app.state.run_store  # type: ignore[attr-defined]
     records = await run_store.list_runs()
+    # Newest first: the page shows the latest 20, which must include the run just made.
+    records.sort(key=lambda r: r.created_at, reverse=True)
     return {"runs": [r.to_dict() for r in records]}
 
 
 @router.post("/showcase/api/runs/{run_id}/resume", include_in_schema=False)
-async def showcase_resume_run(run_id: str, body: dict[str, str], request: Request) -> dict[str, object]:
+async def showcase_resume_run(
+    run_id: str, body: dict[str, str], request: Request
+) -> dict[str, object]:
     from aegis_server.routes.hitl import ResumeRequest, resume_run as _hitl_resume  # noqa: I001
+
     req = ResumeRequest(decision=body.get("decision", "approved"))
     result = await _hitl_resume(run_id, req, request)
     return result.model_dump()

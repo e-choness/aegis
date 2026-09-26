@@ -9,6 +9,7 @@ terms that must never be masked (product names, your own company).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -40,6 +41,20 @@ DEFAULT_ENTITIES: tuple[str, ...] = (
 DEFAULT_THRESHOLD = 0.4
 
 ALL_ENTITIES = "ALL"
+
+#: A calendar date: 2026-09-26, 2026/09/26, 26/09/2026, 09-26-2026.
+_DATE = re.compile(
+    r"\b(?:(?:19|20)\d\d[-/.](?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])"
+    r"|(?:0?[1-9]|[12]\d|3[01])[-/.](?:0?[1-9]|[12]\d|3[01])[-/.](?:19|20)\d\d)\b"
+)
+
+
+def _is_date_not_phone(result: Any, text: str) -> bool:
+    """The phone recognizer is lenient: "2026-09-26 // 11" (a timestamp) parses
+    as a dialable number. A phone number never contains a calendar date."""
+    return result.entity_type == "PHONE_NUMBER" and bool(
+        _DATE.search(text[result.start : result.end])
+    )
 
 
 def deduplicate(results: Iterable[Any]) -> list[Any]:
@@ -129,4 +144,4 @@ class PiiDetector:
             score_threshold=self.threshold,
             allow_list=list(self.allow_list) or None,
         )
-        return deduplicate(results)
+        return deduplicate(r for r in results if not _is_date_not_phone(r, text))

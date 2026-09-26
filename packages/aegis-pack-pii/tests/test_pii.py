@@ -60,9 +60,7 @@ async def test_guard_allows_clean_text() -> None:
 
 async def test_guard_blocks_first_message_with_pii() -> None:
     guard = PiiMaskGuard()
-    verdict = await guard.scan(
-        _state("Hello world", "My email is user@example.com", "Goodbye")
-    )
+    verdict = await guard.scan(_state("Hello world", "My email is user@example.com", "Goodbye"))
     assert verdict.is_block
 
 
@@ -182,9 +180,7 @@ async def test_round_trip_pii_never_reaches_provider() -> None:
     probe_delta = await probe_node.run(probe_state)
     assert probe_delta.mask_map, "Expected PII to be detected in probe"
     # Pick the EMAIL_ADDRESS placeholder specifically (deduplication keeps it).
-    placeholder = next(
-        k for k in probe_delta.mask_map if "EMAIL" in k
-    )
+    placeholder = next(k for k in probe_delta.mask_map if "EMAIL" in k)
 
     # FakeProvider echoes back a response containing the placeholder
     fake = FakeProvider(complete_response=f"Got it, {placeholder}")
@@ -305,6 +301,20 @@ class TestDetectionAccuracy:
         assert "DATE_TIME" not in _types(text)
         assert "DATE_TIME" in _types(text, entities=["DATE_TIME"])
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "**TIMESTAMP:** 2026-09-26 // 11:35:00 UTC",
+            "Filed 2026/09/26 at 11",
+            "Due 26/09/2026 14",
+        ],
+    )
+    def test_timestamps_are_not_phone_numbers(self, text: str) -> None:
+        assert "PHONE_NUMBER" not in _types(text)
+
+    def test_phone_numbers_next_to_dates_still_masked(self) -> None:
+        assert _types("On 2026-09-26 call 416-555-0199.") == ["PHONE_NUMBER"]
+
     def test_all_entities(self) -> None:
         assert "DATE_TIME" in _types("See you on Monday.", entities="ALL")
 
@@ -338,11 +348,15 @@ class TestFactoryDetectionOptions:
     async def test_options_reach_the_mask_node(self) -> None:
         from aegis_pack_pii.factory import from_config
 
-        nodes = from_config("pii", self._cfg(entities=["EMAIL_ADDRESS"], allow_list=["ops@example.com"]))
+        nodes = from_config(
+            "pii", self._cfg(entities=["EMAIL_ADDRESS"], allow_list=["ops@example.com"])
+        )
         state = RunState(
             run_id="r",
             route="default",
-            messages=[Message(role="user", content="ops@example.com and jane@example.com, 416-555-0199")],
+            messages=[
+                Message(role="user", content="ops@example.com and jane@example.com, 416-555-0199")
+            ],
         )
         delta = await nodes["ingress"][0].run(state)
         assert delta.messages is not None
@@ -363,13 +377,17 @@ class TestPlaceholderConsistency:
             run_id="r",
             route="default",
             messages=[
-                Message(role="user", content="Please write to jane@example.com and bob@example.com."),
+                Message(
+                    role="user", content="Please write to jane@example.com and bob@example.com."
+                ),
                 Message(role="user", content="Did jane@example.com reply?"),
             ],
         )
         delta = await PiiMaskNode().run(state)
         assert delta.messages is not None
-        assert delta.messages[0].content == "Please write to <EMAIL_ADDRESS_0> and <EMAIL_ADDRESS_1>."
+        assert (
+            delta.messages[0].content == "Please write to <EMAIL_ADDRESS_0> and <EMAIL_ADDRESS_1>."
+        )
         assert delta.messages[1].content == "Did <EMAIL_ADDRESS_0> reply?"
         assert delta.mask_map == {
             "<EMAIL_ADDRESS_0>": "jane@example.com",
@@ -380,7 +398,9 @@ class TestPlaceholderConsistency:
         state = RunState(
             run_id="r",
             route="default",
-            messages=[Message(role="user", content="Also cc carol@example.com and jane@example.com.")],
+            messages=[
+                Message(role="user", content="Also cc carol@example.com and jane@example.com.")
+            ],
             mask_map={"<EMAIL_ADDRESS_0>": "jane@example.com"},
         )
         delta = await PiiMaskNode().run(state)
