@@ -137,7 +137,7 @@ through, and who signed off on the one that didn't?"* always has an answer.
 | 🧩 **Plugin-first** | Packs are entry-point plugins on public contracts — no built-in special cases. [→](https://e-choness.github.io/aegis/develop/plugins) |
 | 🧰 **Tooling** | `aegis` CLI, Python SDK, OpenAPI spec (generate a client in any language), contract test kits. |
 
-Aegis is **2.0.0a0 (alpha)**. The docs keep an honest
+Aegis is **alpha** software. The docs keep an honest
 [status table](https://e-choness.github.io/aegis/guide/#where-things-stand)
 of what's wired into `aegis serve` versus available as a Python API.
 

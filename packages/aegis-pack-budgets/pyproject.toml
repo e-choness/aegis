@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-pack-budgets"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Aegis policy pack: per-principal monthly spend caps."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = ["aegis-gateway-core==2.0.0a0"]
+dependencies = ["aegis-gateway-core==2.0.0a1"]
 
 [project.urls]
 Homepage = "https://e-choness.github.io/aegis/"

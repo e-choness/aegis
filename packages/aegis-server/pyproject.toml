@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-server"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Aegis HTTP server: OpenAI-compatible and native APIs, auth, approvals and evidence ledger."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "aegis-gateway-core==2.0.0a0",
+    "aegis-gateway-core==2.0.0a1",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sse-starlette>=2.1",

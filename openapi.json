@@ -428,7 +428,7 @@
       "url": "https://github.com/e-choness/aegis/blob/main/LICENSE"
     },
     "title": "Aegis AI Gateway",
-    "version": "2.0.0a0"
+    "version": "2.0.0a1"
   },
   "openapi": "3.1.0",
   "paths": {

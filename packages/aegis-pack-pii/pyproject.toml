@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-pack-pii"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Aegis policy pack: PII masking and unmasking with Microsoft Presidio."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = ["aegis-gateway-core==2.0.0a0"]
+dependencies = ["aegis-gateway-core==2.0.0a1"]
 
 [project.optional-dependencies]
 pii = [

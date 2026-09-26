@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Self-hosted AI gateway: guardrails, human approvals and a tamper-evident audit ledger behind an OpenAI-compatible API."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -20,14 +20,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "aegis-gateway-cli==2.0.0a0",
-    "aegis-gateway-core==2.0.0a0",
-    "aegis-gateway-server==2.0.0a0",
-    "aegis-gateway-pack-pii[pii]==2.0.0a0",
-    "aegis-gateway-pack-llm-guard==2.0.0a0",
-    "aegis-gateway-pack-classification==2.0.0a0",
-    "aegis-gateway-pack-residency==2.0.0a0",
-    "aegis-gateway-pack-budgets==2.0.0a0",
+    "aegis-gateway-cli==2.0.0a1",
+    "aegis-gateway-core==2.0.0a1",
+    "aegis-gateway-server==2.0.0a1",
+    "aegis-gateway-pack-pii[pii]==2.0.0a1",
+    "aegis-gateway-pack-llm-guard==2.0.0a1",
+    "aegis-gateway-pack-classification==2.0.0a1",
+    "aegis-gateway-pack-residency==2.0.0a1",
+    "aegis-gateway-pack-budgets==2.0.0a1",
 ]
 
 [project.urls]

@@ -1,7 +1,12 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { readFileSync } from 'node:fs'
 
 const repo = 'https://github.com/e-choness/aegis'
+
+// Every package shares one version (scripts/release.py); show the core's.
+const version = readFileSync(new URL('../../packages/aegis-core/pyproject.toml', import.meta.url), 'utf8')
+  .match(/^version = "([^"]+)"/m)?.[1] ?? 'dev'
 
 export default withMermaid(
   defineConfig({
@@ -40,7 +45,7 @@ export default withMermaid(
         { text: 'Develop', link: '/develop/codebase', activeMatch: '/develop/' },
         { text: 'Reference', link: '/reference/configuration', activeMatch: '/reference/' },
         {
-          text: 'v2.0.0a0',
+          text: `v${version}`,
           items: [
             { text: 'Changelog', link: '/changelog' },
             { text: 'Contributing', link: '/CONTRIBUTING' },

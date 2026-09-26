@@ -37,7 +37,7 @@ flowchart LR
 
 ## Where things stand
 
-Aegis is at **2.0.0a0 (alpha)**. The core request path is solid and tested;
+Aegis is **alpha** software. The core request path is solid and tested;
 some capabilities are available as Python APIs before they are reachable from
 `aegis.yaml`. This table is the honest map:
 

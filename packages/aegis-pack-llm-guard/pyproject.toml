@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-pack-llm-guard"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Aegis policy pack: LLM Guard scanners (prompt injection, toxicity, secrets)."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = ["aegis-gateway-core==2.0.0a0"]
+dependencies = ["aegis-gateway-core==2.0.0a1"]
 
 [project.optional-dependencies]
 llm-guard = ["llm-guard>=0.3"]

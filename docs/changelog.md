@@ -9,6 +9,8 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a1] - 2026-09-26
+
 Everything since the first public alpha. Upgrading from 2.0.0a0? Read
 **Breaking changes** first.
 

@@ -5,8 +5,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 conflicts = [[
@@ -59,7 +59,7 @@ dev = [
 
 [[package]]
 name = "aegis-gateway"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-gateway" }
 dependencies = [
     { name = "aegis-gateway-cli" },
@@ -87,7 +87,7 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-cli"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-cli" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -108,7 +108,7 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-core"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-core" }
 dependencies = [
     { name = "keyring" },
@@ -159,7 +159,7 @@ source = { editable = "packages/aegis-fixture-plugin" }
 
 [[package]]
 name = "aegis-gateway-pack-budgets"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-budgets" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -170,7 +170,7 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-pack-classification"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-classification" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -181,7 +181,7 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-pack-llm-guard"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-llm-guard" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -205,7 +205,7 @@ provides-extras = ["llm-guard", "all"]
 
 [[package]]
 name = "aegis-gateway-pack-pii"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-pii" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -235,7 +235,7 @@ provides-extras = ["pii", "all"]
 
 [[package]]
 name = "aegis-gateway-pack-residency"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-pack-residency" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -246,7 +246,7 @@ requires-dist = [{ name = "aegis-gateway-core", editable = "packages/aegis-core"
 
 [[package]]
 name = "aegis-gateway-sdk"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "sdk/python" }
 dependencies = [
     { name = "httpx" },
@@ -261,7 +261,7 @@ requires-dist = [
 
 [[package]]
 name = "aegis-gateway-server"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "packages/aegis-server" }
 dependencies = [
     { name = "aegis-gateway-core" },
@@ -1022,8 +1022,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -1065,8 +1065,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -1871,8 +1871,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -1898,8 +1898,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -3498,8 +3498,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6e/23/b4c886487ca212ca87768433a43e2b3099c1c2fa5d9e21d2fbce187cc3c2/phonenumbers-8.13.55.tar.gz", hash = "sha256:57c989dda3eabab1b5a9e3d24438a39ebd032fa0172bf68bfd90ab70b3d5e08b", size = 2296624, upload-time = "2025-02-15T08:06:03.465Z" }
@@ -3515,8 +3515,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b4/39/66db12a16eec873aa12411fc6da0fe052a86413fe117e208b51836b41740/phonenumbers-9.0.40.tar.gz", hash = "sha256:a0dd1bc98efa0b6f5839c7b1fface2ebdf0a811645dd8211ae3f037a17ec07ac", size = 2311069, upload-time = "2026-09-24T06:59:03.882Z" }
@@ -3610,8 +3610,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -3633,8 +3633,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -3660,8 +3660,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -3679,8 +3679,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -4430,8 +4430,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8e/5f/bd69653fbfb76cf8604468d3b4ec4c403197144c7bfe0e6a5fc9e02a07cb/regex-2024.11.6.tar.gz", hash = "sha256:7ab159b063c52a0333c884e4679f8d7a85112ee3078fe3d9004b2dd875585519", size = 399494, upload-time = "2024-11-06T20:12:31.635Z" }
@@ -4476,8 +4476,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/5c/f403115361de25809e8f785686ec7096e30fef73be9ae35aa51da4e80abb/regex-2026.9.10.tar.gz", hash = "sha256:1e321e2c84f0e52c457f5ea5944f796d6e8e09cb99738ea98dcc1bfe402a128d", size = 417072, upload-time = "2026-09-09T21:00:21.521Z" }
@@ -4807,9 +4807,9 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", version = "44.0.3", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-28-aegis-gateway-pack-llm-guard-all' or extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard'" },
-    { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-22-aegis-gateway-pack-pii-all' or extra == 'extra-22-aegis-gateway-pack-pii-pii' or (extra != 'extra-28-aegis-gateway-pack-llm-guard-all' and extra != 'extra-28-aegis-gateway-pack-llm-guard-llm-guard')" },
-    { name = "jeepney" },
+    { name = "cryptography", version = "44.0.3", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'win32' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (sys_platform != 'win32' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard') or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard')" },
+    { name = "cryptography", version = "48.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'win32' and extra == 'extra-22-aegis-gateway-pack-pii-all') or (sys_platform != 'win32' and extra == 'extra-22-aegis-gateway-pack-pii-pii') or (sys_platform != 'win32' and extra != 'extra-28-aegis-gateway-pack-llm-guard-all' and extra != 'extra-28-aegis-gateway-pack-llm-guard-llm-guard') or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard')" },
+    { name = "jeepney", marker = "sys_platform != 'win32' or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-all' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-all') or (extra == 'extra-22-aegis-gateway-pack-pii-pii' and extra == 'extra-28-aegis-gateway-pack-llm-guard-llm-guard')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -5248,8 +5248,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -5281,8 +5281,8 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform != 'win32'",
 ]
 dependencies = [

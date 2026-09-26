@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-cli"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "The aegis command-line tool: serve, lint, explain, approve and audit."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -20,9 +20,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "aegis-gateway-core==2.0.0a0",
-    "aegis-gateway-sdk==2.0.0a0",
-    "aegis-gateway-server==2.0.0a0",
+    "aegis-gateway-core==2.0.0a1",
+    "aegis-gateway-sdk==2.0.0a1",
+    "aegis-gateway-server==2.0.0a1",
     "typer>=0.12",
     "rich>=13",
 ]

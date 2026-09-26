@@ -1,6 +1,6 @@
 [project]
 name = "aegis-gateway-core"
-version = "2.0.0a0"
+version = "2.0.0a1"
 description = "Aegis kernel: typed config, plugin registry, guardrail pipeline and contract test kits."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"

@@ -2,7 +2,7 @@
 
 Usage (inside the dev container)::
 
-    uv run python scripts/release.py bump 2.0.0a1   # rewrite versions + internal pins
+    uv run python scripts/release.py bump 2.0.0a1   # versions, internal pins, changelog heading
     uv run python scripts/release.py check v2.0.0a1  # CI: tag must match the files
     uv run python scripts/release.py packages        # paths of publishable packages
     uv run python scripts/release.py notes v2.0.0a1  # this version's changelog section
@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
@@ -88,10 +89,19 @@ def bump(raw: str) -> None:
         path.write_text(text, encoding="utf-8")
 
     print(f"Set {len(PUBLISHED)} packages to {version}.")
-    print(
-        "Next: run `uv lock`, rename the changelog's Unreleased section to "
-        f"[{version}], commit, then tag v{version}"
-    )
+    if _roll_changelog(version):
+        print(f"docs/changelog.md: Unreleased → [{version}] - {date.today().isoformat()}")
+    print(f"Next: `uv lock`, commit, then `git tag v{version}` and push the tag.")
+
+
+def _roll_changelog(version: str) -> bool:
+    """Turn ``## [Unreleased]`` into this version's section and start a fresh one."""
+    text = CHANGELOG.read_text(encoding="utf-8")
+    if f"## [{version}]" in text or "## [Unreleased]" not in text:
+        return False
+    fresh = f"## [Unreleased]\n\n## [{version}] - {date.today().isoformat()}"
+    CHANGELOG.write_text(text.replace("## [Unreleased]", fresh, 1), encoding="utf-8")
+    return True
 
 
 def check(tag: str) -> None:

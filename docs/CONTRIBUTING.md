@@ -93,11 +93,10 @@ dc node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
 Every published package shares one version. To release `2.0.0a1`:
 
 ```bash
-dc uv run python scripts/release.py bump 2.0.0a1   # all pyproject.toml files + internal pins + TS SDK
+dc uv run python scripts/release.py bump 2.0.0a1   # versions, internal pins, changelog heading
 dc uv lock
-# in docs/changelog.md, rename "## [Unreleased]" to "## [2.0.0a1] - <date>" and add a fresh Unreleased
 git commit -am "chore(release): 2.0.0a1"
-git tag v2.0.0a1 && git push origin main v2.0.0a1
+git tag v2.0.0a1 && git push origin main v2.0.0a1   # tag the bump commit, not before it
 ```
 
 The tag triggers `.github/workflows/release.yml`, which:
