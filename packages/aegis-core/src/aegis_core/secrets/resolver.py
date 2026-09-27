@@ -40,8 +40,7 @@ class SecretResolver:
         provider = self._providers.get(ref.scheme)
         if provider is None:
             raise AegisSecretBackendError(
-                f"No SecretProvider registered for scheme {ref.scheme!r} "
-                f"(referenced by {uri!r}).",
+                f"No SecretProvider registered for scheme {ref.scheme!r} (referenced by {uri!r}).",
                 scheme=ref.scheme,
                 uri=uri,
                 available=list(self._providers),

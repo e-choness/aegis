@@ -46,8 +46,10 @@ def register_rag_route(executor: PipelineExecutor, provider, store, embedder) ->
 
 Place the retrieval node in **ingress** so the context is in place when the
 provider is called. It embeds the latest user message, queries the store,
-drops any chunk a guard blocks, and appends the survivors as a single
-`tool` message. Every per-chunk verdict is recorded in the run's events.
+withholds any chunk a guard rejects, and appends the survivors as a single
+`tool` message. Every per-chunk verdict is recorded in the run's events — a
+withheld chunk as `sanitize` (the run goes on without it), a clean one as
+`allow`.
 
 ## Stores and embedders
 

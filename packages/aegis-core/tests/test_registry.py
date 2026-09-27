@@ -14,6 +14,7 @@ from aegis_core.registry import PLUGIN_GROUPS, PluginInfo, PluginRegistry
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_ep(name: str, group: str, value: str, dist_name: str = "test-dist") -> MagicMock:
     """Build a mock entry point matching importlib.metadata.EntryPoint."""
     ep = MagicMock(spec=importlib.metadata.EntryPoint)

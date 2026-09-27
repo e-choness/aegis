@@ -247,9 +247,10 @@ class TestPiiFactory:
         result = from_config("pii", GuardrailConfig(pack="aegis.pii", mode="mask"))
         assert set(result.keys()) == {"ingress", "egress"}
         assert isinstance(result["ingress"][0], PiiMaskNode)
-        assert isinstance(result["egress"][0], PiiUnmaskNode)
+        # egress: redact what the model invented, then restore the user's values
+        assert isinstance(result["egress"][-1], PiiUnmaskNode)
         assert result["ingress"][0].name == "pii.mask"
-        assert result["egress"][0].name == "pii.unmask"
+        assert [n.name for n in result["egress"]] == ["pii.redact", "pii.unmask"]
 
     def test_detect_mode_returns_guard_node(self) -> None:
         from aegis_pack_pii.factory import from_config
@@ -507,3 +508,107 @@ def test_mask_node_and_guard_warm_up_their_detector() -> None:
         assert isinstance(obj, Warmable)
         obj.warmup()
     assert calls == ["warm", "warm"]
+
+
+async def test_mask_node_records_sanitize_verdict_without_values() -> None:
+    delta = await PiiMaskNode(name="pii").run(_state("Reach jane@example.com, SIN 046 454 286"))
+    verdicts = [e for e in delta.events or [] if e.event_type == "verdict"]
+    assert [v.data["verdict"] for v in verdicts] == ["sanitize"]
+    assert verdicts[0].node == "pii"
+    assert "CA_SIN" in verdicts[0].data["reason"]
+    assert "EMAIL_ADDRESS" in verdicts[0].data["reason"]
+    assert "jane@example.com" not in str(verdicts[0].data)
+    assert "046 454 286" not in str(verdicts[0].data)
+
+
+async def test_mask_node_records_nothing_when_nothing_is_masked() -> None:
+    delta = await PiiMaskNode().run(_state("What's the weather like?"))
+    assert not delta.events
+
+
+class TestRedactOutput:
+    """PII the model produced itself is redacted before the user's values are restored."""
+
+    async def test_redacts_new_pii_and_keeps_placeholders(self) -> None:
+        from aegis_pack_pii import PiiRedactNode
+
+        state = _state("q")
+        state.mask_map = {"<EMAIL_ADDRESS_0>": "jane@example.com"}
+        state.response = (
+            "Reply to <EMAIL_ADDRESS_0>, or call Bob on 416-555-0199 (bob@example.org)."
+        )
+        delta = await PiiRedactNode(name="pii.redact").run(state)
+
+        assert (
+            delta.response
+            == "Reply to <EMAIL_ADDRESS_0>, or call Bob on [PHONE_NUMBER] ([EMAIL_ADDRESS])."
+        )
+        (event,) = delta.events or []
+        assert event.data["verdict"] == "sanitize"
+        assert (
+            event.data["reason"]
+            == "redacted 1 EMAIL_ADDRESS, 1 PHONE_NUMBER the model produced itself"
+        )
+        assert "416-555-0199" not in str(event.data)
+
+    async def test_names_are_not_redacted_by_default(self) -> None:
+        from aegis_pack_pii import PiiRedactNode
+
+        state = _state("q")
+        state.response = "Pride and Prejudice was written by Jane Austen."
+        assert (await PiiRedactNode().run(state)).response is None  # unchanged
+
+    def test_factory_orders_redact_before_unmask_and_can_turn_it_off(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+
+        on = from_config("pii", GuardrailConfig.model_validate({"pack": "aegis.pii"}))
+        off = from_config(
+            "pii", GuardrailConfig.model_validate({"pack": "aegis.pii", "redact_output": False})
+        )
+        assert [n.name for n in on["egress"]] == ["pii.redact", "pii.unmask"]
+        assert [n.name for n in off["egress"]] == ["pii.unmask"]
+
+    def test_bad_redact_entities_is_a_config_error(self) -> None:
+        from aegis_pack_pii.factory import from_config
+
+        from aegis_core.config.models import GuardrailConfig
+        from aegis_core.errors import AegisConfigValidationError
+
+        cfg = GuardrailConfig.model_validate({"pack": "aegis.pii", "redact_entities": ["NOPE"]})
+        with pytest.raises(AegisConfigValidationError, match="redact_entities"):
+            from_config("pii", cfg)
+
+
+def _pii_route(tmp_path, reply: str, **route: object):  # type: ignore[no-untyped-def]
+    import json
+    import textwrap
+
+    from aegis_core.config.build import build_executor
+    from aegis_core.config.loader import load_config
+
+    path = tmp_path / "aegis.yaml"
+    path.write_text(
+        textwrap.dedent(
+            f"""
+            providers: {{fake: {{type: fake, complete_response: {json.dumps(reply)}}}}}
+            guardrails: {{pii: {{pack: aegis.pii}}}}
+            routes:
+              default: {json.dumps({"provider": "fake", "pipeline": {"ingress": ["pii"], "egress": ["pii"]}, **route})}
+            """
+        )
+    )
+    return build_executor(load_config(path))
+
+
+async def test_reply_restores_user_values_and_redacts_invented_ones(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    executor = _pii_route(tmp_path, "Sent to <EMAIL_ADDRESS_0>. Our fraud line is 416-555-0199.")
+    result = await executor.run("default", _state("Email jane@example.com the report"))
+    assert result.response == "Sent to jane@example.com. Our fraud line is [PHONE_NUMBER]."
+
+
+async def test_unmask_response_false_keeps_placeholders(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    executor = _pii_route(tmp_path, "Sent to <EMAIL_ADDRESS_0>.", unmask_response=False)
+    result = await executor.run("default", _state("Email jane@example.com the report"))
+    assert result.response == "Sent to <EMAIL_ADDRESS_0>."

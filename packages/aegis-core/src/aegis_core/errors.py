@@ -131,7 +131,9 @@ class AegisProviderNotFoundError(AegisProviderError):
     code = "AEG-PRV-005"
     what = "Provider profile not found"
     why = "No provider profile with the given name exists in the profile store."
-    fix = "Run `aegis provider list` to see available profiles, or add one with `aegis provider add`."
+    fix = (
+        "Run `aegis provider list` to see available profiles, or add one with `aegis provider add`."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -152,10 +154,7 @@ class AegisPolicyBrokenRefError(AegisPolicyError):
     code = "AEG-POL-001"
     what = "Broken guardrail reference in pipeline"
     why = "The pipeline section references a guardrail name not declared in the guardrails section."
-    fix = (
-        "Add the guardrail to the guardrails section, "
-        "or remove the reference from the pipeline."
-    )
+    fix = "Add the guardrail to the guardrails section, or remove the reference from the pipeline."
 
 
 class AegisPolicyMissingPackError(AegisPolicyError):
@@ -190,7 +189,9 @@ class AegisMcpResultBlockedError(AegisMcpError):
     code = "AEG-MCP-003"
     what = "Tool result blocked by injection guard"
     why = "The tool result contained content detected as a prompt-injection attempt."
-    fix = "Review the MCP server's output and ensure tool results do not contain injection patterns."
+    fix = (
+        "Review the MCP server's output and ensure tool results do not contain injection patterns."
+    )
 
 
 class AegisMcpToolNotFoundError(AegisMcpError):
@@ -209,7 +210,9 @@ class AegisRagError(AegisError):
     code = "AEG-RAG-001"
     what = "RAG backend connection error"
     why = "The vector store or embedding provider could not be reached."
-    fix = "Check the vector store connection string, network access, and that the service is running."
+    fix = (
+        "Check the vector store connection string, network access, and that the service is running."
+    )
 
 
 class AegisRagNamespaceError(AegisRagError):

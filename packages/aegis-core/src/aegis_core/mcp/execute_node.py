@@ -12,7 +12,7 @@ LangGraph interrupt machinery as Step 09 HITL.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 from aegis_core.mcp.protocol import ToolCallGuard, ToolResultGuard
 from aegis_core.mcp.tool_policy import ToolPolicy
@@ -39,6 +39,10 @@ class McpExecuteNode:
         tool_policies: Per-tool policy map (tool name → :class:`ToolPolicy`).
         name: Node identifier shown in run events.
         max_iterations: Safety cap on the tool-calling loop.
+        on_unsafe_result: When a result guard rejects a tool result:
+            ``"withhold"`` (default) keeps it from the model, tells the model
+            it was withheld and continues — recorded as ``sanitize``;
+            ``"block"`` stops the run.
     """
 
     def __init__(
@@ -50,8 +54,10 @@ class McpExecuteNode:
         tool_policies: dict[str, ToolPolicy] | None = None,
         name: str = "mcp_execute",
         max_iterations: int = 10,
+        on_unsafe_result: Literal["withhold", "block"] = "withhold",
     ) -> None:
         self.name = name
+        self._on_unsafe_result = on_unsafe_result
         self._provider = provider
         self._session = session
         self._tool_call_guards: list[ToolCallGuard] = tool_call_guards or []
@@ -199,21 +205,32 @@ class McpExecuteNode:
                 )
 
                 # ── 4. Tool-result guards (injection scan) ──────────────────
+                # An unsafe result is withheld by default: the model is told the
+                # result was withheld and carries on (a sanitize). With
+                # on_unsafe_result="block" the whole run stops instead.
                 for guard in self._tool_result_guards:
                     verdict = await guard.scan_result(tool_call.name, tool_result_text, state)
+                    kind = verdict.kind.value
+                    reason = verdict.reason
+                    if verdict.is_block and self._on_unsafe_result == "withhold":
+                        kind = "sanitize"
+                        reason = f"result withheld from the model — {verdict.reason}"
+                        tool_result_text = (
+                            f"[result withheld by {guard.name}: it looked like it contained "
+                            "instructions, not data]"
+                        )
+                    elif verdict.is_sanitize:
+                        tool_result_text = verdict.replacement or ""
+                        reason = reason or "result replaced before the model saw it"
                     events.append(
                         RunEvent(
                             stage="mcp_tool_result_guard",
                             node=guard.name,
                             event_type="verdict",
-                            data={
-                                "verdict": verdict.kind.value,
-                                "tool": tool_call.name,
-                                "reason": verdict.reason,
-                            },
+                            data={"verdict": kind, "tool": tool_call.name, "reason": reason},
                         )
                     )
-                    if verdict.is_block:
+                    if kind == "block":
                         return RunStateDelta(status="blocked", events=events)
 
                 # ── 5. Feed result back into message history ─────────────────

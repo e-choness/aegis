@@ -78,12 +78,18 @@ class GuardNode:
                 return RunStateDelta(status="paused", events=events)
 
             if verdict.is_sanitize:
+                # Replace the latest user message — what guards scan — and
+                # leave the system prompt and earlier turns alone.
                 replacement = verdict.replacement or ""
-                current_messages = [
-                    Message(role=m.role, content=replacement)
-                    for m in current_messages
-                ]
-                sanitized = True
+                last_user = max(
+                    (i for i, m in enumerate(current_messages) if m.role == "user"), default=None
+                )
+                if last_user is not None:
+                    current_messages = [
+                        Message(role=m.role, content=replacement) if i == last_user else m
+                        for i, m in enumerate(current_messages)
+                    ]
+                    sanitized = True
 
             # allow → continue to next guard
 

@@ -48,15 +48,10 @@ class LangChainVectorStoreAdapter:
         from langchain_core.documents import Document as LCDoc
 
         store = self._get_store(namespace)
-        lc_docs = [
-            LCDoc(page_content=d.text, id=d.id, metadata=d.metadata or {})
-            for d in docs
-        ]
+        lc_docs = [LCDoc(page_content=d.text, id=d.id, metadata=d.metadata or {}) for d in docs]
         await store.aadd_documents(lc_docs)
 
-    async def query(
-        self, vector: list[float], namespace: str, k: int
-    ) -> list[Doc]:
+    async def query(self, vector: list[float], namespace: str, k: int) -> list[Doc]:
         """Return up to *k* docs from *namespace* nearest to *vector*."""
         store = self._get_store(namespace)
         results = await store.asimilarity_search_by_vector(vector, k=k)

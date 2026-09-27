@@ -22,8 +22,7 @@ try:
     import yaml  # type: ignore[import-untyped]
 except ModuleNotFoundError as exc:  # pragma: no cover
     raise ImportError(
-        "PyYAML is required to load aegis.yaml. "
-        "Install it with: uv add pyyaml"
+        "PyYAML is required to load aegis.yaml. Install it with: uv add pyyaml"
     ) from exc
 
 
@@ -106,7 +105,7 @@ def _apply_env_overrides(data: dict[str, Any], prefix: str) -> dict[str, Any]:
     for key, value in os.environ.items():
         if not key.upper().startswith(prefix_upper):
             continue
-        remainder = key[len(prefix_upper):]
+        remainder = key[len(prefix_upper) :]
         parts = [p.lower() for p in remainder.split("__")]
         _set_nested(data, parts, value)
     return data

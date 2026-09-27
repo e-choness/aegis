@@ -51,8 +51,6 @@ class VectorStoreProvider(Protocol):
         """Embed and index *docs* in *namespace*."""
         ...
 
-    async def query(
-        self, vector: list[float], namespace: str, k: int
-    ) -> list[Doc]:
+    async def query(self, vector: list[float], namespace: str, k: int) -> list[Doc]:
         """Return up to *k* :class:`Doc` objects closest to *vector* in *namespace*."""
         ...

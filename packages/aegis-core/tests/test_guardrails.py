@@ -297,3 +297,34 @@ class TestPipelineShortCircuit:
 
         assert result.status == "blocked"
         assert len(fake.complete_calls) == 0
+
+
+async def test_sanitize_replaces_only_the_latest_user_message() -> None:
+    from aegis_core.guardrails import GuardNode
+    from aegis_core.providers.models import Message
+
+    class _SanitizeGuard:
+        name = "sanitizer"
+        streaming: ClassVar[Literal["none", "incremental"]] = "incremental"
+
+        async def scan(self, state: RunState) -> Verdict:
+            return Verdict.sanitize("[REDACTED]")
+
+    state = RunState(
+        run_id="r",
+        route="x",
+        messages=[
+            Message(role="system", content="You are helpful."),
+            Message(role="user", content="first question"),
+            Message(role="assistant", content="first answer"),
+            Message(role="user", content="my password is hunter2"),
+        ],
+    )
+    delta = await GuardNode([_SanitizeGuard()]).run(state)  # type: ignore[list-item]
+    assert delta.messages is not None
+    assert [m.content for m in delta.messages] == [
+        "You are helpful.",
+        "first question",
+        "first answer",
+        "[REDACTED]",
+    ]

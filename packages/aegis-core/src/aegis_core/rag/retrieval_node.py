@@ -76,19 +76,26 @@ class RetrievalNode:
             blocked = False
             for guard in self._tool_result_guards:
                 verdict = await guard.scan_result("rag_retrieval", doc.text, state)
+                # A rejected passage is withheld and the run goes on with the
+                # rest: for the request that is a sanitize, not a block.
+                withheld = verdict.is_block
                 events.append(
                     RunEvent(
                         stage="retrieval_guard",
                         node=guard.name,
                         event_type="verdict",
                         data={
-                            "verdict": verdict.kind.value,
+                            "verdict": "sanitize" if withheld else verdict.kind.value,
                             "doc_id": doc.id,
-                            "reason": verdict.reason,
+                            "reason": (
+                                f"passage {doc.id} withheld from the model — {verdict.reason}"
+                                if withheld
+                                else verdict.reason
+                            ),
                         },
                     )
                 )
-                if verdict.is_block:
+                if withheld:
                     blocked = True
                     break
             if not blocked:
@@ -98,8 +105,6 @@ class RetrievalNode:
         if not passing_texts:
             return RunStateDelta(events=events)
 
-        context = "\n\n".join(
-            f"[Context {i + 1}]: {text}" for i, text in enumerate(passing_texts)
-        )
+        context = "\n\n".join(f"[Context {i + 1}]: {text}" for i, text in enumerate(passing_texts))
         new_messages = [*state.messages, Message(role="tool", content=context)]
         return RunStateDelta(messages=new_messages, events=events)

@@ -29,7 +29,9 @@ class IncrementalGuardrail(Guardrail, Protocol):
 
         Called for every token/delta emitted by the provider.
         Return :meth:`~aegis_core.pipeline.verdict.Verdict.block` to
-        immediately stop the stream.
+        immediately stop the stream, or
+        :meth:`~aegis_core.pipeline.verdict.Verdict.sanitize` to send its
+        replacement instead of this chunk (later guards see the replacement).
         """
         ...
 
@@ -39,6 +41,8 @@ class IncrementalGuardrail(Guardrail, Protocol):
         Called once after all chunks have been received.  A block here
         triggers a late-violation event; the stream is truncated and the
         client receives a ``content_filter`` finish reason instead of
-        ``stop``.
+        ``stop``. ``sanitize`` can't apply here — the text has already been
+        sent — so it is recorded and otherwise treated as ``allow``; rewrite
+        text in :meth:`scan_chunk` instead.
         """
         ...

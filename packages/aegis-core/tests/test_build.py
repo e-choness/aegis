@@ -328,3 +328,46 @@ async def test_fake_provider_reports_configured_cost() -> None:
         CompletionRequest(messages=[Message(role="user", content="x")], model="")
     )
     assert result.usage.cost == 0.25
+
+
+def test_dotted_names_place_one_node_of_a_pack(tmp_path: Path) -> None:
+    """egress: [pii.unmask] used to validate and then build nothing."""
+    import asyncio
+
+    from aegis_core.pipeline.state import RunState
+    from aegis_core.providers.models import Message
+
+    path = _write_yaml(
+        tmp_path,
+        """
+        providers: {fake: {type: fake, complete_response: "Hi <EMAIL_ADDRESS_0>"}}
+        guardrails:
+          pii: {pack: aegis.pii}
+        routes:
+          default:
+            provider: fake
+            pipeline: {ingress: [pii], egress: [pii.unmask]}
+        """,
+    )
+    executor = build_executor(load_config(path))
+    state = RunState(
+        run_id="r",
+        route="default",
+        messages=[Message(role="user", content="mail jane@example.com")],
+    )
+    assert asyncio.run(executor.run("default", state)).response == "Hi jane@example.com"
+
+
+def test_dotted_name_that_matches_no_node_fails_at_startup(tmp_path: Path) -> None:
+    path = _write_yaml(
+        tmp_path,
+        """
+        providers: {fake: {type: fake}}
+        guardrails:
+          pii: {pack: aegis.pii}
+        routes:
+          default: {provider: fake, pipeline: {ingress: [pii], egress: [pii.unmaks]}}
+        """,
+    )
+    with pytest.raises(AegisConfigValidationError, match=r"no node of that name.*pii\.unmask"):
+        build_executor(load_config(path))

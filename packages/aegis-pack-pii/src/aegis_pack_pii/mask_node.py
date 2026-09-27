@@ -35,4 +35,4 @@ class PiiMaskNode:
 
     async def run(self, state: RunState) -> RunStateDelta:
         """Mask PII in all messages; return updated messages and mask_map."""
-        return mask_messages(state, self._detector.find)
+        return mask_messages(state, self._detector.find, node=self.name)

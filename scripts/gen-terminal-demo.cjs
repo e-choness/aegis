@@ -36,6 +36,7 @@ const script = [
   ['out', 'config=sha256:3fc4c49815668ae0b7364b246258f4904762966ea2ff5a24f56ff12efde7a521', C.dim],
   ['rule'],
   ['out', '  guard         no_secrets                ALLOW', C.green],
+  ['out', '  ingress       pii.mask                  SANITIZE  reason=masked 1 CA_SIN — the model sees placeholders, never the values', C.cyan],
   ['out', "  guard         residency_ca              REQUIRE_APPROVAL  reason=residency: region 'us-east-1' for route", C.amber],
   ['out', "                                          'underwriting' is not in the allowed set ['ca-central-1']", C.amber],
   ['out', '  ingress       residency_ca              DENIED  reason=run denied by reviewer', C.red],

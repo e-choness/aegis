@@ -77,8 +77,6 @@ class PgVectorStore:
         """Embed and index *docs* into *namespace*."""
         await self._adapter.add(docs, namespace)
 
-    async def query(
-        self, vector: list[float], namespace: str, k: int
-    ) -> list[Doc]:
+    async def query(self, vector: list[float], namespace: str, k: int) -> list[Doc]:
         """Return the *k* most similar docs from *namespace*."""
         return await self._adapter.query(vector, namespace, k)

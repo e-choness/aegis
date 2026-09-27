@@ -19,7 +19,7 @@ guardrails:
 
 pipeline:
   ingress: [pii]    # PiiMaskNode   → "pii.mask"
-  egress: [pii]     # PiiUnmaskNode → "pii.unmask"
+  egress: [pii]     # PiiRedactNode → "pii.redact", then PiiUnmaskNode → "pii.unmask"
 ```
 
 | Step | Text |
@@ -39,6 +39,62 @@ gets the same placeholder, so the model can tell two mentions are the same
 person. When detections overlap, the most confident one wins — pattern
 matches such as emails, cards and SINs beat spaCy's statistical name guesses —
 and ties go to the wider span.
+
+### Personal data the model produces itself
+
+On the way out, `pii.redact` looks at the reply **before** the user's values
+are restored. At that point everything the user sent is still a placeholder,
+so any personal data it finds came from the model — a phone number from its
+training data, an address from a retrieved document. Each one is replaced
+with a label that is never restored, and the run records a `sanitize`:
+
+| Step | Text |
+|---|---|
+| Model replies | `Sent to <EMAIL_ADDRESS_0>. Our fraud line is 416-555-0199.` |
+| After `pii.redact` | `Sent to <EMAIL_ADDRESS_0>. Our fraud line is [PHONE_NUMBER].` |
+| Client receives | `Sent to jane@example.com. Our fraud line is [PHONE_NUMBER].` |
+
+```yaml
+guardrails:
+  pii:
+    pack: aegis.pii
+    redact_output: true                       # default
+    redact_entities: [EMAIL_ADDRESS, CA_SIN]  # default: the default entities except PERSON
+```
+
+Names aren't redacted by default: models mention them constantly (authors,
+public figures, "Jane" in an example) and name detection is the least precise.
+Add `PERSON` to `redact_entities` for routes that must never name anyone.
+`redact_output: false` turns the step off.
+
+### Where the restore happens
+
+`egress: [pii]` places redact and unmask together. To run another egress
+check on the reply while it still holds placeholders — so that check never
+sees the user's personal data — name the two steps separately and put it
+between them:
+
+```yaml
+pipeline:
+  ingress: [pii]
+  egress: [pii.redact, my_output_check, pii.unmask]
+```
+
+To keep the placeholders in the reply — a route whose output goes to a third
+party rather than back to the person who wrote the prompt — set
+`unmask_response: false` on the route. It removes every restore step (this
+pack's and the [content pack](./content)'s); redaction still runs.
+
+```yaml
+providers:
+  llm:
+    type: fake
+
+routes:
+  outbound_email:
+    provider: llm
+    unmask_response: false
+```
 
 ## Tuning detection
 

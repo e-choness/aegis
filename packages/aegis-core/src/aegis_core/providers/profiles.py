@@ -68,8 +68,7 @@ class ProviderProfileStore:
         raw = json.loads(self._path.read_text(encoding="utf-8"))
         self._default = raw.get("default")
         self._profiles = {
-            name: ProviderProfile.from_dict(data)
-            for name, data in raw.get("profiles", {}).items()
+            name: ProviderProfile.from_dict(data) for name, data in raw.get("profiles", {}).items()
         }
 
     def save(self) -> None:

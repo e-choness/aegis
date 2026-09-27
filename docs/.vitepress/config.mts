@@ -103,6 +103,7 @@ export default withMermaid(
               { text: 'Codebase tour', link: '/develop/codebase' },
               { text: 'Write a plugin', link: '/develop/plugins' },
               { text: 'Testing', link: '/develop/testing' },
+              { text: 'Design notes', link: '/develop/design-notes' },
               { text: 'Contributing', link: '/CONTRIBUTING' },
             ],
           },

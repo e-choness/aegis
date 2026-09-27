@@ -22,9 +22,41 @@ becomes the version's entry and its GitHub Release notes.
 - `backend: stub` for the content pack: no model, no entities, the first value
   for every label — for tests, CI and offline runs. CI's demo smoke test uses
   it via `AEGIS__GUARDRAILS__<NAME>__BACKEND=stub`.
+- PII redaction in replies: `pii.redact` checks the model's reply before the
+  user's values are restored, so anything it finds came from the model; each
+  hit becomes an irreversible `[ENTITY]` label, recorded as `sanitize`. On by
+  default for every default entity except `PERSON` (`redact_output`,
+  `redact_entities`). The PII pack's egress is now `[pii.redact, pii.unmask]`.
+- `unmask_response: false` on a route keeps placeholders in the reply, for
+  output that goes to third parties.
+- A *Design notes* page in the docs (Develop), starting with restoring values
+  at the server edge — deferred, with what would make it worth revisiting.
+
+### Changed
+
+- `sanitize` now shows up in real runs. Masking by the PII and content packs
+  records a `sanitize` verdict naming what was masked (types and counts,
+  never values), and a RAG passage withheld by a guard is recorded as
+  `sanitize` instead of `block` — the run goes on without it, so `aegis
+  explain` no longer shows BLOCK on a completed run. The showcase says what
+  was sanitized on a run that went through.
+- A tool result that a guard rejects (e.g. it carries "ignore all previous
+  instructions") is now **withheld** instead of blocking the run: the model is
+  told the result was withheld and carries on, recorded as `sanitize`. Set
+  `on_unsafe_tool_result: block` on a route (or `on_unsafe_result="block"` on
+  `McpExecuteNode`) for the old behaviour.
 
 ### Fixed
 
+- A dotted name in a stage list, e.g. `egress: [pii.unmask]`, passed
+  validation and `aegis policy lint` but built nothing — so the reply kept its
+  placeholders. It now places that one node of the pack, and a name matching
+  no node fails at startup.
+- A guard returning `Verdict.sanitize` replaced every message in the
+  conversation — system prompt and earlier turns included — with the
+  replacement; it now replaces the latest user message, the one guards scan.
+- On a true-streaming route, a chunk a guard sanitized was sent unchanged;
+  the replacement is now sent, and the verdict recorded.
 - Docs diagrams could show "Syntax error in text" instead of rendering: the
   mermaid plugin re-rendered every diagram on any change to the page's root
   element, and overlapping renders clobbered each other. Diagrams now render

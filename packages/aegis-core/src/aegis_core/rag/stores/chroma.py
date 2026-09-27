@@ -37,9 +37,7 @@ class ChromaVectorStore:
         self.name = name
         self._embedder = embedder
         self._client: Any = (
-            chromadb.EphemeralClient()
-            if path is None
-            else chromadb.PersistentClient(path=path)
+            chromadb.EphemeralClient() if path is None else chromadb.PersistentClient(path=path)
         )
         self._collections: dict[str, Any] = {}
 
@@ -66,9 +64,7 @@ class ChromaVectorStore:
             metadatas=[d.metadata if d.metadata else None for d in docs],
         )
 
-    async def query(
-        self, vector: list[float], namespace: str, k: int
-    ) -> list[Doc]:
+    async def query(self, vector: list[float], namespace: str, k: int) -> list[Doc]:
         """Return the *k* most similar docs from *namespace*."""
         col = self._get_collection(namespace)
         count = col.count()

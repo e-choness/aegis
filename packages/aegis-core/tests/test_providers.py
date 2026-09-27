@@ -82,7 +82,9 @@ class TestFakeProvider:
 
     def test_stream_yields_chunks(self) -> None:
         p = FakeProvider(stream_chunks=["a", "b", "c"])
-        req = CompletionRequest(messages=[Message(role="user", content="x")], model="m", stream=True)
+        req = CompletionRequest(
+            messages=[Message(role="user", content="x")], model="m", stream=True
+        )
 
         async def _collect() -> list[Chunk]:
             gen = await p.stream(req)
@@ -226,7 +228,9 @@ class TestLiteLLMProvider:
     def test_complete_passes_max_tokens(self) -> None:
         stub = _make_litellm_stub()
         p = self._provider()
-        req = CompletionRequest(messages=[Message(role="user", content="hi")], model="gpt-4o", max_tokens=100)
+        req = CompletionRequest(
+            messages=[Message(role="user", content="hi")], model="gpt-4o", max_tokens=100
+        )
         with patch("aegis_core.providers.litellm_provider._import_litellm", return_value=stub):
             asyncio.run(p.complete(req))
         _, kwargs = stub.acompletion.call_args
@@ -235,7 +239,9 @@ class TestLiteLLMProvider:
     def test_stream_yields_chunks(self) -> None:
         stub = _make_stream_stub(["tok1", "tok2"])
         p = self._provider()
-        req = CompletionRequest(messages=[Message(role="user", content="hi")], model="gpt-4o", stream=True)
+        req = CompletionRequest(
+            messages=[Message(role="user", content="hi")], model="gpt-4o", stream=True
+        )
 
         async def _collect() -> list[Chunk]:
             with patch("aegis_core.providers.litellm_provider._import_litellm", return_value=stub):
@@ -338,13 +344,20 @@ class TestProviderProfileStore:
     def test_add_overwrite_true_replaces(self, tmp_path: Path) -> None:
         store = ProviderProfileStore(path=tmp_path / "providers.json")
         store.add(ProviderProfile(name="p", provider_type="openai_compatible", model="old"))
-        store.add(ProviderProfile(name="p", provider_type="openai_compatible", model="new"), overwrite=True)
+        store.add(
+            ProviderProfile(name="p", provider_type="openai_compatible", model="new"),
+            overwrite=True,
+        )
         assert store.get("p").model == "new"
 
     def test_persistence_roundtrip(self, tmp_path: Path) -> None:
         path = tmp_path / "providers.json"
         store1 = ProviderProfileStore(path=path)
-        store1.add(ProviderProfile(name="x", provider_type="openai_compatible", model="m1", base_url="http://local"))
+        store1.add(
+            ProviderProfile(
+                name="x", provider_type="openai_compatible", model="m1", base_url="http://local"
+            )
+        )
         store2 = ProviderProfileStore(path=path)
         got = store2.get("x")
         assert got.base_url == "http://local"
@@ -403,14 +416,22 @@ class TestProviderProfileStore:
     def test_api_key_persisted_as_uri(self, tmp_path: Path) -> None:
         path = tmp_path / "providers.json"
         store = ProviderProfileStore(path=path)
-        store.add(ProviderProfile(name="p", provider_type="anthropic", model="m", api_key="secret://env/ANTHROPIC"))
+        store.add(
+            ProviderProfile(
+                name="p", provider_type="anthropic", model="m", api_key="secret://env/ANTHROPIC"
+            )
+        )
         raw = json.loads(path.read_text())
         assert raw["profiles"]["p"]["api_key"] == "secret://env/ANTHROPIC"
 
     def test_residency_persisted(self, tmp_path: Path) -> None:
         path = tmp_path / "providers.json"
         store = ProviderProfileStore(path=path)
-        store.add(ProviderProfile(name="p", provider_type="openai_compatible", model="m", residency={"region": "us"}))
+        store.add(
+            ProviderProfile(
+                name="p", provider_type="openai_compatible", model="m", residency={"region": "us"}
+            )
+        )
         raw = json.loads(path.read_text())
         assert raw["profiles"]["p"]["residency"] == {"region": "us"}
 
@@ -422,16 +443,22 @@ class TestProviderProfileStore:
 
 class TestOpenAICompatibleProvider:
     def test_satisfies_protocol(self) -> None:
-        p = OpenAICompatibleProvider(name="local", model="qwen2.5", base_url="http://localhost:11434/v1")
+        p = OpenAICompatibleProvider(
+            name="local", model="qwen2.5", base_url="http://localhost:11434/v1"
+        )
         assert isinstance(p, ModelProvider)
 
     def test_info_provider_type(self) -> None:
-        p = OpenAICompatibleProvider(name="local", model="qwen2.5", base_url="http://localhost:11434/v1")
+        p = OpenAICompatibleProvider(
+            name="local", model="qwen2.5", base_url="http://localhost:11434/v1"
+        )
         assert p.info().provider_type == "openai_compatible"
 
     def test_complete_passes_base_url(self) -> None:
         stub = _make_litellm_stub()
-        p = OpenAICompatibleProvider(name="local", model="qwen2.5", base_url="http://localhost:11434/v1")
+        p = OpenAICompatibleProvider(
+            name="local", model="qwen2.5", base_url="http://localhost:11434/v1"
+        )
         req = CompletionRequest(messages=[Message(role="user", content="hi")], model="qwen2.5")
         with patch("aegis_core.providers.litellm_provider._import_litellm", return_value=stub):
             asyncio.run(p.complete(req))
