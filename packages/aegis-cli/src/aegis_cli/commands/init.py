@@ -47,10 +47,13 @@ guardrails:
     pack: aegis.pii
     mode: mask
 
-  # llm_guard:
-  #   pack: aegis.llm_guard
-  #   scanners: [PromptInjection]
-  #   threshold: 0.8
+  # classify:                  # label requests (secret, pii, financial, …)
+  #   pack: aegis.classification
+  # content_policy:            # …and decide what each label means here
+  #   pack: aegis.policy
+  #   rules:
+  #     - when: {label: classification, in: [secret]}
+  #       verdict: block
 
   # residency:
   #   pack: aegis.residency

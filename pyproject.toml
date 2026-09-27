@@ -17,7 +17,7 @@ dev = [
     # spaCy model the PII pack loads by default. Not on PyPI, so it's pinned by
     # URL here for the dev env; users install it with `python -m spacy download`.
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
-    "aegis-gateway-pack-llm-guard",
+    "aegis-gateway-pack-content",
     "aegis-gateway-core[rag]",
     "aegis-gateway-pack-classification",
     "aegis-gateway-pack-residency",
@@ -28,34 +28,22 @@ dev = [
     # Changelog drafting
     "git-cliff>=2.0",
 ]
+models = ["aegis-gateway-pack-content[model]"]
 
 [tool.uv]
-# LLM Guard (last released May 2025) pins exact, vulnerable versions of
-# transformers and json-repair, and an old Presidio that caps cryptography.
-# Resolving its extra separately keeps those pins from holding back the rest of
-# the workspace. Its tests stub the library, so the dev env doesn't install it.
-conflicts = [
-    [
-        { package = "aegis-gateway-pack-llm-guard", extra = "llm-guard" },
-        { package = "aegis-gateway-pack-pii", extra = "pii" },
-    ],
-    [
-        { package = "aegis-gateway-pack-llm-guard", extra = "all" },
-        { package = "aegis-gateway-pack-pii", extra = "pii" },
-    ],
-    [
-        { package = "aegis-gateway-pack-llm-guard", extra = "llm-guard" },
-        { package = "aegis-gateway-pack-pii", extra = "all" },
-    ],
-    [
-        { package = "aegis-gateway-pack-llm-guard", extra = "all" },
-        { package = "aegis-gateway-pack-pii", extra = "all" },
-    ],
-]
+# `uv sync --group models` adds the content pack's model backend (GLiNER2 +
+# PyTorch, ~2 GB) for local evals; the default dev env and CI stub the model.
+
+[[tool.uv.index]]
+# CPU-only PyTorch wheels (the PyPI ones bundle CUDA, ~3 GB). Only packages
+# that name this index in [tool.uv.sources] use it.
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.uv.sources]
 aegis-gateway-pack-pii = { workspace = true }
-aegis-gateway-pack-llm-guard = { workspace = true }
+aegis-gateway-pack-content = { workspace = true }
 aegis-gateway-core = { workspace = true }
 aegis-gateway-pack-classification = { workspace = true }
 aegis-gateway-pack-residency = { workspace = true }

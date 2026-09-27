@@ -82,8 +82,7 @@ Extra keys are passed to the pack's factory.
 |---|---|---|
 | `pack` | string, **required** | An `aegis.packs` entry point, e.g. `aegis.pii`. |
 | `mode` | string | Pack-specific (`aegis.pii`: `mask` \| `detect`). |
-| `scanners` | list of strings | Pack-specific (`aegis.llm_guard`). |
-| `threshold` | float | Pack-specific (`aegis.pii`, `aegis.llm_guard`). |
+| `threshold` | float | Pack-specific (`aegis.pii`, `aegis.content`). |
 | *other* | any | See each [pack's page](/packs/). |
 
 ## `pipeline`

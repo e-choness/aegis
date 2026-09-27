@@ -4,7 +4,7 @@ root_packages =
     aegis_server
     aegis_cli
     aegis_pack_pii
-    aegis_pack_llm_guard
+    aegis_pack_content
     aegis_pack_classification
     aegis_pack_residency
     aegis_pack_budgets
@@ -14,7 +14,7 @@ name = Policy packs import only public aegis_core APIs
 type = forbidden
 source_modules =
     aegis_pack_pii
-    aegis_pack_llm_guard
+    aegis_pack_content
     aegis_pack_classification
     aegis_pack_residency
     aegis_pack_budgets

@@ -92,7 +92,7 @@ export default withMermaid(
               { text: 'Classification', link: '/packs/classification' },
               { text: 'Label policy', link: '/packs/policy' },
               { text: 'Budgets', link: '/packs/budgets' },
-              { text: 'LLM Guard', link: '/packs/llm-guard' },
+              { text: 'Content (model-based)', link: '/packs/content' },
             ],
           },
         ],

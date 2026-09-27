@@ -92,5 +92,5 @@ pipeline:
 ```
 
 The rules are intentionally cheap and conservative; for richer detection,
-combine with [PII masking](./pii) or [LLM Guard](./llm-guard), or write a
+combine with [PII masking](./pii) or the [content pack](./content), or write a
 node with your own classifier.

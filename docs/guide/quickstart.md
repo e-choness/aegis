@@ -4,6 +4,12 @@ In a few minutes you will run a local gateway, send it a request that gets
 PII-masked on the way in, read the verdict trail, and then swap in a real
 model.
 
+::: tip Just want to look first?
+The [live demo](https://huggingface.co/spaces/echoness/aegis-server) runs the same pipeline in your browser against a
+mock model: PII masking, a residency pause you can approve or deny, and
+blocked credentials — each with its verdict trail.
+:::
+
 ## 1. Install
 
 Aegis needs **Python 3.12+**.

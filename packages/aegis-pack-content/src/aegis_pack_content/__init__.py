@@ -1,5 +1,6 @@
-"""Aegis LLM Guard policy pack — wraps llm-guard scanners as Guardrails."""
+"""aegis-pack-content — model-based content inspection (labels and entity masking)."""
 
-from aegis_pack_llm_guard.adapter import LlmGuardAdapter
+from aegis_pack_content.backend import Analysis, ContentModel, Entity, Label
+from aegis_pack_content.node import ContentNode
 
-__all__ = ["LlmGuardAdapter"]
+__all__ = ["Analysis", "ContentModel", "ContentNode", "Entity", "Label"]

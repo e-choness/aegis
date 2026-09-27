@@ -233,9 +233,55 @@ def _classification() -> Detector:
     return Detector("classification", predict)
 
 
+CONTENT_CONFIG = ROOT / "evals" / "content.yaml"
+#: aegis.content placeholder types → the probe vocabulary.
+_CONTENT_ENTITIES = {"CREDENTIAL": "CREDENTIAL", "INTERNAL_HOSTNAME": "INTERNAL_HOST"}
+
+
+def _content() -> Detector:
+    """The model-backed pack, configured exactly as ``evals/content.yaml`` (needs ``--group models``)."""
+    import yaml
+    from aegis_pack_content.factory import from_config
+    from aegis_pack_content.node import ContentNode, entity_type
+
+    from aegis_core.config.models import GuardrailConfig
+
+    raw = yaml.safe_load(CONTENT_CONFIG.read_text(encoding="utf-8"))["guardrails"]["content"]
+    node = from_config("content", GuardrailConfig.model_validate(raw))["ingress"][0]
+    assert isinstance(node, ContentNode)
+
+    # Score only what the config asks the model for.
+    supported = frozenset(
+        _CONTENT_ENTITIES[t]
+        for label in node.entities
+        if (t := entity_type(label)) in _CONTENT_ENTITIES
+    )
+
+    def predict(text: str) -> Prediction:
+        analysis = node.model.analyze(text, node.entities, node.tasks)
+        found = frozenset(
+            _CONTENT_ENTITIES[t]
+            for e in analysis.entities
+            if (t := entity_type(e.label)) in _CONTENT_ENTITIES
+        )
+        intent = analysis.labels.get("intent")
+        sensitivity = analysis.labels.get("sensitivity")
+        return Prediction(
+            entities=found,
+            secret=("CREDENTIAL" in found) if "CREDENTIAL" in supported else None,
+            attack=None
+            if "intent" not in node.tasks
+            else (intent is not None and "injection" in intent.value),
+            sensitivity=sensitivity.value if sensitivity else None,
+        )
+
+    return Detector("content", predict, supported)
+
+
 DETECTORS: dict[str, Callable[[], Detector]] = {
     "pii": _pii,
     "classification": _classification,
+    "content": _content,
 }
 
 

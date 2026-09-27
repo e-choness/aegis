@@ -77,9 +77,11 @@ in `evals/baseline.json`.
 - `scripts/audit-deps.sh` runs in CI and fails on any known advisory. The few
   accepted ones are listed in the script with the reason they don't reach
   Aegis — remove an entry as soon as a fixed release is usable.
-- LLM Guard's extra is resolved separately in `uv.lock` (`[tool.uv] conflicts`
-  in the root `pyproject.toml`) so its exact pins can't hold back the rest of
-  the workspace; its tests stub the library.
+- The content pack's model backend (GLiNER2 + PyTorch) is the `models`
+  dependency group, not part of the default dev env: its tests stub the
+  model. `uv sync --all-packages --group models` installs it (CPU-only
+  PyTorch, from the index declared in the root `pyproject.toml`) for
+  `scripts/eval_guards.py content`.
 - `package.json` overrides Vite to a patched 7.x: VitePress 1.6 still pins
   Vite 5, whose dev server has unfixed advisories. Drop the override once
   VitePress 2 is stable.
@@ -145,7 +147,7 @@ The tag triggers `.github/workflows/release.yml`, which:
 **One-time setup.** On PyPI, add a *trusted publisher* (project → Settings →
 Publishing) to **every one** of the ten projects — `aegis-gateway`,
 `aegis-gateway-core`, `-server`, `-cli`, `-sdk`, `-pack-pii`,
-`-pack-llm-guard`, `-pack-classification`, `-pack-residency`,
+`-pack-content`, `-pack-classification`, `-pack-residency`,
 `-pack-budgets` — with owner `e-choness`, repository `aegis`, workflow
 `release.yml`, environment `pypi`. A project without one rejects the upload
 (403). Components are published first and `aegis-gateway` last, so a failure

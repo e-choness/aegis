@@ -1,0 +1,14 @@
+# The aegis.content settings scored by `scripts/eval_guards.py content`.
+# The demo Space uses this same block, so what's measured is what ships.
+# Chosen by sweeping wordings and thresholds over evals/probes.jsonl: GLiNER2
+# finds internal hostnames reliably; credentials are left to the
+# classification pack's rules (1.00/1.00 vs ≤0.56 precision here).
+guardrails:
+  content:
+    pack: aegis.content
+    model: fastino/gliner2-base-v1
+    threshold: 0.7
+    entities:
+      internal hostname: an internal server hostname like db.internal
+    labels:
+      intent: [normal request, prompt injection or jailbreak attempt]

@@ -37,7 +37,7 @@ PUBLISHED = [
     "sdk/python",
     "packages/aegis-cli",
     "packages/aegis-pack-pii",
-    "packages/aegis-pack-llm-guard",
+    "packages/aegis-pack-content",
     "packages/aegis-pack-classification",
     "packages/aegis-pack-residency",
     "packages/aegis-pack-budgets",

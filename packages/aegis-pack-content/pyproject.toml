@@ -1,12 +1,12 @@
 [project]
-name = "aegis-gateway-pack-llm-guard"
+name = "aegis-gateway-pack-content"
 dynamic = ["version"]
-description = "Aegis policy pack: LLM Guard scanners (prompt injection, toxicity, secrets)."
+description = "Aegis policy pack: model-based content inspection — secrets, custom entities, sensitivity and prompt-attack labels."
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
 readme = "README.md"
 authors = [{ name = "Aegis contributors" }]
-keywords = ["llm", "ai-gateway", "guardrails", "openai", "governance", "audit", "pii"]
+keywords = ["llm", "ai-gateway", "guardrails", "prompt-injection", "secrets", "gliner", "governance"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -22,18 +22,23 @@ classifiers = [
 dependencies = ["aegis-gateway-core"]
 
 [project.optional-dependencies]
-llm-guard = ["llm-guard>=0.3"]
-all = ["aegis-gateway-pack-llm-guard[llm-guard]"]
+# The default backend: GLiNER2 (zero-shot entities + classification). PyTorch
+# comes with it; on CPU-only machines install it from the CPU index first —
+# see the README.
+model = ["gliner2>=2.0,<3", "peft>=0.13", "torch>=2.4"]
+all = ["aegis-gateway-pack-content[model]"]
 
 [project.urls]
 Homepage = "https://e-choness.github.io/aegis/"
-Documentation = "https://e-choness.github.io/aegis/"
+Documentation = "https://e-choness.github.io/aegis/packs/content"
 Repository = "https://github.com/e-choness/aegis"
 Changelog = "https://e-choness.github.io/aegis/changelog"
 Issues = "https://github.com/e-choness/aegis/issues"
 
 [tool.uv.sources]
 aegis-gateway-core = { workspace = true }
+# CPU wheels in the workspace: the default PyPI wheels bundle CUDA (~3 GB).
+torch = { index = "pytorch-cpu" }
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -45,10 +50,12 @@ source = "vcs"
 raw-options = { root = "../..", local_scheme = "no-local-version", fallback_version = "0.0.0.dev0" }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/aegis_pack_llm_guard"]
-
-[project.entry-points."aegis.guardrails"]
-llm_guard = "aegis_pack_llm_guard:LlmGuardAdapter"
+packages = ["src/aegis_pack_content"]
 
 [project.entry-points."aegis.packs"]
-"aegis.llm_guard" = "aegis_pack_llm_guard.factory:from_config"
+"aegis.content" = "aegis_pack_content.factory:from_config"
+
+# Model backends, selected with `backend:` in aegis.yaml. A plugin can register
+# another one here: a callable (model_id, options) -> ContentModel.
+[project.entry-points."aegis.content_models"]
+gliner2 = "aegis_pack_content.gliner:Gliner2Model"

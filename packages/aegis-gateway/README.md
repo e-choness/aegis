@@ -71,7 +71,7 @@ aegis audit export -o ledger.jsonl && aegis audit verify ledger.jsonl
 | [`aegis-gateway-pack-residency`](https://pypi.org/project/aegis-gateway-pack-residency/) | Data-residency enforcement |
 | [`aegis-gateway-pack-classification`](https://pypi.org/project/aegis-gateway-pack-classification/) | Content labelling |
 | [`aegis-gateway-pack-budgets`](https://pypi.org/project/aegis-gateway-pack-budgets/) | Per-principal monthly spend caps |
-| [`aegis-gateway-pack-llm-guard`](https://pypi.org/project/aegis-gateway-pack-llm-guard/) | LLM Guard scanners |
+| [`aegis-gateway-pack-content`](https://pypi.org/project/aegis-gateway-pack-content/) | Model-based content inspection (opt-in model: `pip install "aegis-gateway[content]"`) |
 
 Install a subset instead if you only need part of it — e.g. `pip install
 aegis-gateway-core` to build a plugin.

@@ -11,8 +11,7 @@ FROM python:3.12-slim
 
 ARG AEGIS_VERSION=__AEGIS_VERSION__
 
-# Only what the demo uses — the umbrella package would also pull in LLM Guard
-# (and PyTorch), which the demo config doesn't enable.
+# Only what the demo uses, rather than the umbrella package.
 RUN pip install --no-cache-dir \
         "aegis-gateway-cli==${AEGIS_VERSION}" \
         "aegis-gateway-pack-pii[pii]==${AEGIS_VERSION}" \

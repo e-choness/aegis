@@ -9,6 +9,29 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+### Added
+
+- `aegis-gateway-pack-content` (`pack: aegis.content`): a local model labels
+  requests and masks entities no pattern can describe (e.g. internal
+  hostnames). GLiNER2 by default, swappable through the
+  `aegis.content_models` entry point; install the model with
+  `pip install "aegis-gateway[content]"`. Its measured accuracy is on the
+  [pack page](/packs/content).
+- `aegis_core.masking`: one placeholder scheme and `mask_map` shared by every
+  masking pack; a single unmask on egress restores everything.
+
+### Changed
+
+- Labels written by different packs are merged instead of the last one
+  replacing the rest.
+
+### Removed
+
+- `aegis-gateway-pack-llm-guard`. LLM Guard pinned vulnerable dependencies,
+  conflicted with the PII extra and reloaded its model on every request;
+  model-based detection moves to the content pack. Its last release stays on
+  PyPI.
+
 ## [2.0.0a3] - 2026-09-26
 
 ### Changed

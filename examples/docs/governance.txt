@@ -20,9 +20,9 @@ an unmask node restores the original values in the response.
 
 Prompt Injection Detection
 --------------------------
-The LLM Guard adapter integrates scanner-based injection detection. Retrieved
-RAG chunks and MCP tool results also pass through injection detection before
-being fed to the model.
+The content pack labels prompts that look like injection attempts, and the
+label policy decides what happens to them. Retrieved RAG chunks and MCP tool
+results also pass through injection detection before being fed to the model.
 
 Residency Enforcement
 ---------------------

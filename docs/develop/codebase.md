@@ -16,9 +16,9 @@ packages/
   aegis-gateway/         umbrella package — depends on everything below
   aegis-pack-pii/        Presidio mask/unmask            → aegis.pii
   aegis-pack-residency/  region allow-list guard         → aegis.residency
-  aegis-pack-classification/ regex labeller              → aegis.classification
+  aegis-pack-classification/ regex labeller + policy     → aegis.classification, aegis.policy
   aegis-pack-budgets/    per-principal spend cap         → aegis.budgets
-  aegis-pack-llm-guard/  LLM Guard scanner adapter       → aegis.llm_guard
+  aegis-pack-content/    model-based labels + entities   → aegis.content
   aegis-fixture-plugin/  test-only plugin for registry tests
 sdk/
   python/                aegis-gateway-sdk (httpx; sync + async clients)
