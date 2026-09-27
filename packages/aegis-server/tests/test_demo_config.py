@@ -89,7 +89,7 @@ EXPECTED = {
     ("underwriting", "Applicant with a SIN"): "paused",
     ("underwriting", "Card on file"): "paused",
     ("agent", "Harmless request"): "paused",
-    ("agent_poisoned", "Harmless request"): "blocked",
+    ("agent_poisoned", "Harmless request"): "completed",  # poisoned result withheld
     ("metered", "Spend a cent"): "completed",
 }
 

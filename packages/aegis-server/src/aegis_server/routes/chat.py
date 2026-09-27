@@ -117,7 +117,9 @@ def _verdict_event(guard: Any, verdict: Any, position: str) -> RunEvent:
         data={
             "verdict": verdict.kind.value,
             "guard": guard.name,
-            "reason": verdict.reason,
+            "reason": verdict.reason
+            or verdict.prompt
+            or ("chunk replaced before it was sent" if verdict.is_sanitize else None),
             "position": position,
         },
     )
@@ -199,21 +201,26 @@ async def _true_stream_gen(
             req = CompletionRequest(messages=pre.messages, model="", stream=True)
             accumulated = ""
             async for chunk in await pipeline._provider.stream(req):
+                text = chunk.text
                 for guard in pipeline._incremental_egress_guards:
-                    v = await guard.scan_chunk(chunk.text)
+                    v = await guard.scan_chunk(text)
                     if v.is_block:
                         result.events.append(_verdict_event(guard, v, "chunk"))
                         violation = "stream_violation"
                         break
+                    if v.is_sanitize:
+                        # Send the guard's replacement instead of this chunk.
+                        result.events.append(_verdict_event(guard, v, "chunk"))
+                        text = v.replacement or ""
                 if violation:
                     break
-                accumulated += chunk.text
+                accumulated += text
                 # Hold back the stop reason until finalize passes.
                 yield {
                     "data": _chunk_frame(
                         completion_id,
                         model,
-                        chunk.text,
+                        text,
                         finish_reason=None
                         if chunk.finish_reason == "stop"
                         else chunk.finish_reason,

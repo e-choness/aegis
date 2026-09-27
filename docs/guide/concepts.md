@@ -90,7 +90,7 @@ Every guardrail returns exactly one verdict:
 | Verdict | Constructor | Effect |
 |---|---|---|
 | <Verdict kind="allow" /> | `Verdict.allow()` | Continue unchanged. |
-| <Verdict kind="sanitize" /> | `Verdict.sanitize(replacement)` | Continue, with message content replaced by `replacement`. |
+| <Verdict kind="sanitize" /> | `Verdict.sanitize(replacement)` | Continue, with the latest user message replaced by `replacement`. |
 | <Verdict kind="block" /> | `Verdict.block(reason)` | Stop. Run status `blocked`; the provider is never called if it happens on ingress. |
 | <Verdict kind="require_approval" /> | `Verdict.require_approval(prompt)` | Checkpoint and pause. Run status `paused` until a reviewer resumes it. |
 
@@ -109,10 +109,21 @@ stateDiagram-v2
 Every verdict — **including `allow`** — becomes an event in the run's log
 and in the ledger, so "which guard let this through?" is answerable.
 
+A run that goes through with something changed on the way records a
+`sanitize`, whatever did the changing:
+
+| Where | Recorded as `sanitize` when |
+|---|---|
+| [PII masking](/packs/pii), [content pack](/packs/content) entities | values were replaced by placeholders — the reason lists types and counts (`masked 1 CA_SIN, 1 EMAIL_ADDRESS`), never the values |
+| RAG retrieval | a passage failed a guard and was withheld from the model; the other passages still go |
+| A guard returning `Verdict.sanitize` | the latest user message was replaced |
+| A streaming guard's `scan_chunk` | a chunk was replaced before it was sent |
+
 ::: tip Targeted rewrites belong in nodes
-`sanitize` replaces message content wholesale. For surgical edits (masking a
-single entity, redacting a span) write a pipeline node that returns
-rewritten `messages` in its `RunStateDelta` — that is how the PII pack works.
+`Verdict.sanitize` replaces the whole latest user message. For surgical
+edits (masking a single entity, redacting a span) write a pipeline node that
+returns rewritten `messages` in its `RunStateDelta` — the PII pack does, and
+records its own `sanitize` event (see `aegis_core.masking`).
 :::
 
 ## RunState

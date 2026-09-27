@@ -97,6 +97,12 @@ class RouteConfig(_StrictModel):
     #: Built-in tool guards: ``exfiltration`` (blocks masked PII in tool
     #: arguments) and ``injection`` (blocks tool results that carry instructions).
     tool_guards: list[Literal["exfiltration", "injection"]] = Field(default_factory=list)
+    #: What a rejected tool result does: ``withhold`` it from the model and carry
+    #: on (default, recorded as ``sanitize``), or ``block`` the run.
+    on_unsafe_tool_result: Literal["withhold", "block"] = "withhold"
+    #: Restore masked values in the reply (default). ``false`` keeps the
+    #: placeholders — for routes whose output goes to third parties.
+    unmask_response: bool = True
     owner: str | None = None
     risk_rating: Literal["low", "medium", "high"] | None = None
     review_interval_days: int | None = None

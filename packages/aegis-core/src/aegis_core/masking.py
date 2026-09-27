@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from aegis_core.pipeline.state import RunState, RunStateDelta
+from aegis_core.pipeline.state import RunEvent, RunState, RunStateDelta
 from aegis_core.providers.models import Message
 
 _PLACEHOLDER = re.compile(r"<([A-Z0-9_]+)_(\d+)>")
@@ -95,11 +95,18 @@ def mask_text(
     return masked, partial
 
 
-def mask_messages(state: RunState, find: Callable[[str], Sequence[Span]]) -> RunStateDelta:
+def mask_messages(
+    state: RunState,
+    find: Callable[[str], Sequence[Span]],
+    node: str | None = None,
+    stage: str = "ingress",
+) -> RunStateDelta:
     """Mask every message in *state* with the spans *find* returns.
 
     Returns the delta for a masking node: new messages and the merged
-    ``mask_map`` — or an empty delta when nothing was found.
+    ``mask_map`` — or an empty delta when nothing was found. With *node*, the
+    delta also records a ``sanitize`` verdict naming the masked entity types
+    and counts (never the values: events go to the evidence ledger).
     """
     placeholders = Placeholders(state.mask_map)
     messages: list[Message] = []
@@ -110,7 +117,29 @@ def mask_messages(state: RunState, find: Callable[[str], Sequence[Span]]) -> Run
         found.update(partial)
     if not found:
         return RunStateDelta()
-    return RunStateDelta(messages=messages, mask_map={**state.mask_map, **found})
+    new = {p: v for p, v in found.items() if p not in state.mask_map}
+    events = [sanitize_event(node, stage, new)] if node and new else None
+    return RunStateDelta(messages=messages, mask_map={**state.mask_map, **found}, events=events)
+
+
+def sanitize_event(node: str, stage: str, masked: dict[str, str]) -> RunEvent:
+    """A ``sanitize`` verdict for values replaced by placeholders — types and counts only."""
+    counts: dict[str, int] = {}
+    for placeholder in masked:
+        m = _PLACEHOLDER.fullmatch(placeholder)
+        etype = m.group(1) if m else placeholder
+        counts[etype] = counts.get(etype, 0) + 1
+    summary = ", ".join(f"{n} {etype}" for etype, n in sorted(counts.items()))
+    return RunEvent(
+        stage=stage,
+        node=node,
+        event_type="verdict",
+        data={
+            "verdict": "sanitize",
+            "guard": node,
+            "reason": f"masked {summary} — the model sees placeholders, never the values",
+        },
+    )
 
 
 def unmask(text: str, mask_map: dict[str, str]) -> str:

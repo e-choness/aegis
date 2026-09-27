@@ -229,6 +229,10 @@
       denied: 'A reviewer denied it.',
     };
     function decisiveReason(events, status) {
+      if (status === 'completed') {  // went through — say what was changed on the way
+        const sanitized = events.filter(e => e.event_type === 'verdict' && (e.data || {}).verdict === 'sanitize');
+        return sanitized.map(e => `sanitized by ${e.node}: ${e.data.reason || ''}`).join(' · ');
+      }
       const kinds = status === 'paused' ? ['require_approval'] : status === 'blocked' || status === 'denied' ? ['block', 'denied'] : [];
       const ev = [...events].reverse().find(e => e.event_type === 'verdict' && kinds.includes((e.data || {}).verdict));
       return ev ? `${ev.node}: ${ev.data.reason || ''}` : '';

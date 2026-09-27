@@ -35,6 +35,7 @@ def _import_litellm() -> object:
     in environments where litellm is not installed."""
     try:
         import litellm  # intentional single import point
+
         return litellm
     except ImportError as exc:
         raise AegisProviderError(

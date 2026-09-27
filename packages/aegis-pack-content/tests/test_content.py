@@ -86,10 +86,15 @@ class TestNode:
             "<CREDENTIAL_0>": "AUTH-TOK-1",
             "<INTERNAL_HOSTNAME_0>": "vault.internal",
         }
-        (event,) = delta.events or []
+        event, verdict = delta.events or []
         assert event.event_type == "labels"
         assert event.data["masked"] == ["CREDENTIAL", "INTERNAL_HOSTNAME"]
         assert event.data["confidence"]["sensitivity"] == pytest.approx(0.87)
+        # Masking is recorded as a sanitize verdict — types and counts, no values.
+        assert verdict.event_type == "verdict"
+        assert verdict.data["verdict"] == "sanitize"
+        assert verdict.data["reason"].startswith("masked 1 CREDENTIAL, 1 INTERNAL_HOSTNAME")
+        assert "AUTH-TOK-1" not in str(verdict.data)
 
     async def test_keeps_placeholders_other_packs_made(self) -> None:
         node = ContentNode(KeywordModel(), entities=ENTITIES)

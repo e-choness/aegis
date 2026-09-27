@@ -113,9 +113,7 @@ class TestExfiltrationGuard:
     async def test_blocks_when_placeholder_in_args(self) -> None:
         state = _make_state()
         state.mask_map["original_name"] = "<PERSON_0>"
-        verdict = await self.guard.scan_call(
-            "get_data", {"key": "<PERSON_0>"}, state
-        )
+        verdict = await self.guard.scan_call("get_data", {"key": "<PERSON_0>"}, state)
         assert verdict.is_block
         assert "PERSON_0" in (verdict.reason or "")
 
@@ -174,7 +172,9 @@ class TestMcpExecuteNodeGoldenPath:
         stub = _make_stub_server()
         provider = FakeProvider(
             complete_response="The weather is sunny.",
-            tool_calls_sequence=[[ToolCall(id="tc1", name="get_weather", arguments={"city": "Paris"})]],
+            tool_calls_sequence=[
+                [ToolCall(id="tc1", name="get_weather", arguments={"city": "Paris"})]
+            ],
         )
 
         async with create_connected_server_and_client_session(stub._mcp_server) as session:
@@ -225,7 +225,9 @@ class TestMcpExecuteNodeGoldenPath:
         stub = _make_stub_server()
         provider = FakeProvider(
             complete_response="final",
-            tool_calls_sequence=[[ToolCall(id="tc1", name="get_weather", arguments={"city": "Rome"})]],
+            tool_calls_sequence=[
+                [ToolCall(id="tc1", name="get_weather", arguments={"city": "Rome"})]
+            ],
         )
 
         async with create_connected_server_and_client_session(stub._mcp_server) as session:
@@ -238,15 +240,15 @@ class TestMcpExecuteNodeGoldenPath:
 
 
 # ---------------------------------------------------------------------------
-# McpExecuteNode — injection in tool result is blocked
+# McpExecuteNode — injection in a tool result is withheld (or blocks the run)
 # ---------------------------------------------------------------------------
 
 
 class TestMcpExecuteNodeInjectionBlocked:
-    async def test_injection_in_tool_result_is_blocked(self) -> None:
+    async def test_injection_in_tool_result_is_withheld_by_default(self) -> None:
         stub = _make_injection_server()
         provider = FakeProvider(
-            complete_response="never reached",
+            complete_response="I couldn't read that document.",
             tool_calls_sequence=[
                 [ToolCall(id="tc1", name="fetch_document", arguments={"doc_id": "evil"})]
             ],
@@ -260,11 +262,37 @@ class TestMcpExecuteNodeInjectionBlocked:
             )
             delta = await node.run(_make_state())
 
+        assert delta.status == "completed"
+        assert delta.response == "I couldn't read that document."
+        # The model's second call saw the withheld notice, never the injected text.
+        tool_msg = provider.complete_calls[1].messages[-1]
+        assert tool_msg.role == "tool"
+        assert "result withheld" in tool_msg.content
+        assert "ignore" not in tool_msg.content.lower()
+
+    async def test_block_mode_stops_the_run(self) -> None:
+        stub = _make_injection_server()
+        provider = FakeProvider(
+            complete_response="never reached",
+            tool_calls_sequence=[
+                [ToolCall(id="tc1", name="fetch_document", arguments={"doc_id": "evil"})]
+            ],
+        )
+
+        async with create_connected_server_and_client_session(stub._mcp_server) as session:
+            node = McpExecuteNode(
+                provider=provider,
+                session=session,
+                tool_result_guards=[ToolResultInjectionGuard()],
+                on_unsafe_result="block",
+            )
+            delta = await node.run(_make_state())
+
         assert delta.status == "blocked"
         # Blocked before second LLM call
         assert len(provider.complete_calls) == 1
 
-    async def test_blocked_event_recorded(self) -> None:
+    async def test_withheld_result_recorded_as_sanitize(self) -> None:
         stub = _make_injection_server()
         provider = FakeProvider(
             complete_response="never",
@@ -282,11 +310,10 @@ class TestMcpExecuteNodeInjectionBlocked:
             delta = await node.run(_make_state())
 
         assert delta.events is not None
-        result_guard_events = [
-            e for e in delta.events if e.stage == "mcp_tool_result_guard"
-        ]
+        result_guard_events = [e for e in delta.events if e.stage == "mcp_tool_result_guard"]
         assert result_guard_events
-        assert result_guard_events[0].data["verdict"] == "block"
+        assert result_guard_events[0].data["verdict"] == "sanitize"
+        assert result_guard_events[0].data["reason"].startswith("result withheld from the model")
 
 
 # ---------------------------------------------------------------------------
@@ -340,9 +367,7 @@ class TestMcpExecuteNodeExfiltration:
             )
             delta = await node.run(state)
 
-        call_guard_events = [
-            e for e in (delta.events or []) if e.stage == "mcp_tool_call_guard"
-        ]
+        call_guard_events = [e for e in (delta.events or []) if e.stage == "mcp_tool_call_guard"]
         assert call_guard_events
         assert call_guard_events[0].data["verdict"] == "block"
 
@@ -403,9 +428,7 @@ class TestMcpExecuteNodePerToolApproval:
         stub = _make_stub_server()
         provider = FakeProvider(
             complete_response="ok",
-            tool_calls_sequence=[
-                [ToolCall(id="tc1", name="get_data", arguments={"key": "x"})]
-            ],
+            tool_calls_sequence=[[ToolCall(id="tc1", name="get_data", arguments={"key": "x"})]],
         )
         # Only get_weather requires approval — get_data should pass freely
         policies = {"get_weather": ToolPolicy(name="get_weather", require_approval=True)}

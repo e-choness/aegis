@@ -12,7 +12,8 @@ flowchart LR
     TCG -- require_approval --> HOLD([paused])
     TOOL -- result --> TRG{Tool-result guards<br/>injection scan}
     TRG -- allow --> LLM
-    TRG -- block --> STOP
+    TRG -- unsafe: withheld (sanitize) --> LLM
+    TRG -. on_unsafe_tool_result: block .-> STOP
 ```
 
 ## Tools in `aegis.yaml`
@@ -51,8 +52,10 @@ What happens on this route:
 2. `send_email` pauses the run. The approval shows the tool and its
    arguments, so a reviewer sees *where* the email goes. Approving runs the
    call and the run completes; denying ends it without calling the tool.
-3. A result containing "ignore all previous instructions" would block the
-   run before the model sees it.
+3. A result containing "ignore all previous instructions" is **withheld**: the
+   model gets "[result withheld …]" instead and carries on, and the run
+   records a `sanitize`. Set `on_unsafe_tool_result: block` on the route to
+   stop the run instead.
 
 A tool's `result` is fixed text — a stand-in for a tool server, the way the
 `fake` provider stands in for a model — which is enough to configure, test
@@ -88,7 +91,7 @@ instead. Two guards ship in the box:
 | Guard | Position | What it does |
 |---|---|---|
 | `ExfiltrationGuard` | tool call | Blocks arguments containing any PII placeholder from the run's `mask_map`. |
-| `ToolResultInjectionGuard` | tool result | Blocks results containing common instruction-hijack phrases. Pair with the [content pack](/packs/content) for model-based detection. |
+| `ToolResultInjectionGuard` | tool result | Rejects results containing common instruction-hijack phrases — withheld from the model by default, or the run blocks (`on_unsafe_tool_result: block`). Pair with the [content pack](/packs/content) for model-based detection. |
 
 ## Wiring the governed tool loop
 

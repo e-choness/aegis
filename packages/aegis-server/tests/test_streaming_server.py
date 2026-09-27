@@ -516,3 +516,37 @@ class TestStreamDowngradeLint:
         issues = lint_policy(cfg)
         pol003 = [i for i in issues if i.code == "AEG-POL-003"]
         assert any("my_regex" in i.message for i in pol003)
+
+
+class _RedactSecretChunks:
+    """Rewrites any chunk containing 'secret' — the streaming form of sanitize."""
+
+    name = "redact_chunks"
+    streaming: ClassVar[Literal["none", "incremental"]] = "incremental"
+
+    async def scan(self, state: RunState) -> Verdict:
+        return Verdict.allow()
+
+    async def scan_chunk(self, chunk: str) -> Verdict:
+        return Verdict.sanitize(" [redacted]") if "secret" in chunk else Verdict.allow()
+
+    async def finalize(self, accumulated: str) -> Verdict:
+        return Verdict.allow()
+
+
+def test_chunk_sanitize_sends_the_replacement() -> None:
+    client, _ = _make_streaming_client(
+        egress_guards=[_RedactSecretChunks()],  # type: ignore[list-item]
+        stream_chunks=["the code", " is secret-42", " ok"],
+    )
+    resp = client.post(
+        "/v1/chat/completions",
+        json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+    )
+    text = "".join(
+        f["choices"][0]["delta"].get("content") or ""
+        for f in _parse_sse(resp.text)
+        if not f.get("_done")
+    )
+    assert text == "the code [redacted] ok"
+    assert "secret-42" not in resp.text

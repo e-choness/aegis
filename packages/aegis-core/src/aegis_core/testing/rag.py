@@ -99,9 +99,7 @@ class FakeVectorStore:
         ns = self._store.setdefault(namespace, [])
         ns.extend(docs)
 
-    async def query(
-        self, vector: list[float], namespace: str, k: int = 4
-    ) -> list[Doc]:
+    async def query(self, vector: list[float], namespace: str, k: int = 4) -> list[Doc]:
         """Return up to *k* docs from *namespace* (insertion order)."""
         self.query_calls.append((list(vector), namespace, k))
         return list(self._store.get(namespace, []))[:k]

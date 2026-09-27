@@ -46,7 +46,9 @@ def route_yaml(cfg: AegisConfig, route_name: str) -> str:
     safe = cfg.safe_dict()
     route = cfg.routes[route_name]
     stages = route.pipeline if route.pipeline is not None else cfg.pipeline
-    route_dict = {k: v for k, v in safe["routes"][route_name].items() if k != "showcase" and v}
+    # Only what the route sets — not every default (routes hold no secrets).
+    set_fields = route.model_dump(mode="json", exclude_defaults=True)
+    route_dict = {k: v for k, v in set_fields.items() if k != "showcase" and v}
     snippet: dict[str, Any] = {
         "providers": {route.provider: _compact(safe["providers"][route.provider])},
     }

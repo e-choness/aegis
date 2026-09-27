@@ -77,6 +77,7 @@ def _tool_node(route_name: str, route: RouteConfig, provider: Any) -> PipelineNo
             for n, t in route.tools.items()
         },
         name="execute",
+        on_unsafe_result=route.on_unsafe_tool_result,
     )
 
 
@@ -260,12 +261,39 @@ def _collect(
     contributions: dict[str, dict[str, list[PipelineNode]]],
     stage: str,
 ) -> list[PipelineNode]:
-    """Collect nodes for *stage* from named guardrails in declaration order."""
+    """Collect nodes for *stage* from named guardrails in declaration order.
+
+    ``pii`` places every node the ``pii`` guardrail contributes to *stage*;
+    ``pii.unmask`` places only its node named ``pii.unmask`` — so one pack's
+    nodes can sit at different points of a stage, e.g.
+    ``egress: [pii.redact, toxicity, pii.unmask]``.
+    """
     result: list[PipelineNode] = []
     for name in names:
-        nodes = contributions.get(name, {}).get(stage, [])
-        result.extend(nodes)
+        if name in contributions:
+            result.extend(contributions[name].get(stage, []))
+            continue
+        base = name.split(".", 1)[0]
+        candidates = contributions.get(base, {}).get(stage, [])
+        chosen = [n for n in candidates if n.name == name]
+        if not chosen:
+            available = ", ".join(n.name for n in candidates) or "none"
+            raise AegisConfigValidationError(
+                f"{stage} lists {name!r}, but guardrail {base!r} has no node of that name "
+                f"in {stage} (its {stage} nodes: {available}).",
+                guardrail=base,
+            )
+        result.extend(chosen)
     return result
+
+
+def _egress(route: RouteConfig, nodes: list[PipelineNode]) -> list[PipelineNode]:
+    """Drop every unmask step when the route keeps placeholders (``unmask_response: false``)."""
+    if route.unmask_response:
+        return nodes
+    from aegis_core.masking import UnmaskNode
+
+    return [n for n in nodes if not isinstance(n, UnmaskNode)]
 
 
 def build_executor(
@@ -325,7 +353,7 @@ def build_executor(
             provider=provider,
             execute=_tool_node(rname, route, provider) if route.tools else None,
             ingress=_collect(stages.ingress, contributions, "ingress") or None,
-            egress=_collect(stages.egress, contributions, "egress") or None,
+            egress=_egress(route, _collect(stages.egress, contributions, "egress")) or None,
         )
     return ex
 

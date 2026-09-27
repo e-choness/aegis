@@ -75,7 +75,9 @@ class ContentNode:
             analyses = {
                 m.content: await asyncio.to_thread(self._analyze, m.content) for m in state.messages
             }
-            delta = mask_messages(state, lambda text: _non_overlapping(analyses[text]))
+            delta = mask_messages(
+                state, lambda text: _non_overlapping(analyses[text]), node=self.name
+            )
 
         new_placeholders = set(delta.mask_map or {}) - set(state.mask_map)
         masked = sorted({p.strip("<>").rsplit("_", 1)[0] for p in new_placeholders})
@@ -97,7 +99,7 @@ class ContentNode:
             labels=labels or None,
             messages=delta.messages,
             mask_map=delta.mask_map,
-            events=[event],
+            events=[event, *(delta.events or [])],  # + a sanitize verdict if it masked
         )
 
 

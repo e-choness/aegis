@@ -71,3 +71,22 @@ async def test_unmask_node_restores_everything_and_is_idempotent() -> None:
     assert delta.response == "alpha/beta"
     state.response = delta.response
     assert (await UnmaskNode().run(state)).response == "alpha/beta"
+
+
+def test_named_masking_records_a_sanitize_verdict_without_values() -> None:
+    state = _state("mail a@x.io and b@x.io, key tok-1", mask_map={"<EMAIL_0>": "old@x.io"})
+    delta = mask_messages(
+        state, _finder(**{"a@x.io": "EMAIL", "b@x.io": "EMAIL", "tok-1": "CREDENTIAL"}), node="pii"
+    )
+    (event,) = delta.events or []
+    assert event.event_type == "verdict"
+    assert event.node == "pii"
+    assert event.data["verdict"] == "sanitize"
+    assert event.data["reason"].startswith("masked 1 CREDENTIAL, 2 EMAIL")
+    assert "a@x.io" not in str(event.data)
+    assert "tok-1" not in str(event.data)
+
+
+def test_unnamed_masking_records_nothing() -> None:
+    delta = mask_messages(_state("a@x.io"), _finder(**{"a@x.io": "EMAIL"}))
+    assert delta.events is None

@@ -112,7 +112,9 @@ or `model` (OpenAI-compatible API). Extra keys are allowed.
 | `review_interval_days` | int | Sets the inventory's next review date. |
 | `tools` | map of name → tool | Tools the model may call on this route; declaring any turns on the [governed tool loop](/guide/tool-governance#tools-in-aegis-yaml). |
 | `showcase` | map | Puts the route on a tab of the `/showcase` page: `tab`, `title`, `order`, `blurb`, `label`, `presets` (list of `{label, prompt}`). See [Public demos](/guide/deployment#public-demos). |
-| `tool_guards` | list | Built-in tool guards: `exfiltration` (blocks masked PII in tool arguments), `injection` (blocks tool results carrying instructions). |
+| `tool_guards` | list | Built-in tool guards: `exfiltration` (blocks masked PII in tool arguments), `injection` (rejects tool results carrying instructions). |
+| `unmask_response` | bool | Restore masked values in the reply (default `true`). `false` keeps the placeholders — for routes whose output goes to third parties. See [where the restore happens](/packs/pii#where-the-restore-happens). |
+| `on_unsafe_tool_result` | `withhold` \| `block` | What a rejected tool result does. `withhold` (default): the model is told the result was withheld and carries on — recorded as `sanitize`. `block`: the run stops. |
 
 Each entry under `tools`:
 
