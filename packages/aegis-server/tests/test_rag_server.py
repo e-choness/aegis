@@ -123,7 +123,9 @@ class TestRagQueryEndpoint:
         return FakeVectorStore(), FakeEmbeddingProvider()
 
     @pytest.fixture
-    def client(self, store_and_embedder: tuple[FakeVectorStore, FakeEmbeddingProvider]) -> TestClient:
+    def client(
+        self, store_and_embedder: tuple[FakeVectorStore, FakeEmbeddingProvider]
+    ) -> TestClient:
         store, embedder = store_and_embedder
         return _make_client(rag_store=store, embedding_provider=embedder)
 
@@ -137,6 +139,7 @@ class TestRagQueryEndpoint:
         import asyncio
 
         from aegis_core.rag.protocol import Doc
+
         asyncio.run(store.add([Doc(id="d1", text="Paris is the capital.")], "cities"))
         resp = client.post(
             "/v1/rag/query",

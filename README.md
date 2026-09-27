@@ -16,8 +16,8 @@
 [Quickstart](https://e-choness.github.io/aegis/guide/quickstart) ·
 [Policy packs](https://e-choness.github.io/aegis/packs/) ·
 [Write a plugin](https://e-choness.github.io/aegis/develop/plugins) ·
-[Examples](examples/)
-[Demo](https://huggingface.co/spaces/echoness/aegis-server)
+[Examples](examples/) ·
+[Live demo](https://huggingface.co/spaces/echoness/aegis-server)
 
 </div>
 
@@ -33,6 +33,15 @@ A loan-underwriting request carrying a Canadian SIN is routed to a US-region
 model. The residency guardrail doesn't block it outright — it **pauses for a
 named reviewer**, who denies it. `aegis explain` shows why, and the exported
 ledger verifies offline.
+
+> **Try it in your browser — nothing to install.**
+> [![Open in Hugging Face Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg)](https://huggingface.co/spaces/echoness/aegis-server)
+>
+> The demo runs the real guardrails against a mock model. Paste a prompt, pick a route, and watch the verdicts:
+>
+> - `Please email jane@example.com about SIN 046 454 286` — masked before the model sees it, restored in the reply.
+> - The same prompt on the **underwriting** route — pauses for approval (personal data, US endpoint); approve or deny it in the queue.
+> - `api_key: 8f14e45fceea167a5a36dedd4bea2543` — blocked: credentials never reach a model.
 
 <p align="center">
   <img src="images/terminal-demo.svg" alt="Terminal replay: aegis runs create pauses for approval, aegis runs deny, aegis explain shows the verdict trail, aegis audit verify confirms the chain is intact" width="100%">
@@ -132,7 +141,7 @@ through, and who signed off on the one that didn't?"* always has an answer.
 | | |
 |---|---|
 | 🔌 **OpenAI-compatible API** | `/v1/chat/completions` with SSE streaming, plus a native `/v1/runs` API with approvers and background runs. |
-| 🛡️ **Policy packs** | [PII masking](https://e-choness.github.io/aegis/packs/pii) · [residency](https://e-choness.github.io/aegis/packs/residency) · [classification](https://e-choness.github.io/aegis/packs/classification) · [budgets](https://e-choness.github.io/aegis/packs/budgets) · [LLM Guard](https://e-choness.github.io/aegis/packs/llm-guard) |
+| 🛡️ **Policy packs** | [PII masking](https://e-choness.github.io/aegis/packs/pii) · [residency](https://e-choness.github.io/aegis/packs/residency) · [classification](https://e-choness.github.io/aegis/packs/classification) · [budgets](https://e-choness.github.io/aegis/packs/budgets) · [label policy](https://e-choness.github.io/aegis/packs/policy) · [content (model-based)](https://e-choness.github.io/aegis/packs/content) |
 | ⏸️ **Human-in-the-loop** | Checkpointed pauses; resume from the CLI, REST, or the `/approvals` page. [→](https://e-choness.github.io/aegis/guide/approvals) |
 | 🔗 **Evidence ledger** | Hash-chained route inventory and run evidence; `aegis audit export`/`verify`; forward records to a SIEM or archive. [→](https://e-choness.github.io/aegis/guide/audit) |
 | 🧩 **Plugin-first** | Packs are entry-point plugins on public contracts — no built-in special cases. [→](https://e-choness.github.io/aegis/develop/plugins) |

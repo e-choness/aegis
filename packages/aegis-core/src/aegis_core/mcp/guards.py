@@ -60,7 +60,7 @@ class ToolResultInjectionGuard:
     """Blocks tool results that contain prompt-injection patterns.
 
     Checks for common instruction-hijack phrases in the tool's output string.
-    This is a lightweight fast-path guard; pair with LLM Guard for
+    This is a lightweight fast-path guard; pair with the content pack for
     model-assisted detection.
     """
 

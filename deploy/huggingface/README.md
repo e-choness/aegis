@@ -13,17 +13,24 @@ short_description: Self-hosted AI gateway — guardrails, approvals, audit
 
 A running [Aegis](https://github.com/e-choness/aegis) gateway. No API keys and
 no real model: every provider is a mock, but the guardrails, human approvals
-and the hash-chained audit ledger are real.
+and the hash-chained audit ledger are real — and every tab shows the
+`aegis.yaml` that produces it.
 
-- **`/showcase`** — try prompts against the governed routes
-- **`/approvals`** — approve or deny runs paused by the residency guardrail
-- **`/docs`** — interactive API reference
-- **`/v1/chat/completions`** — OpenAI-compatible endpoint (`model` = route: `default` or `underwriting`)
+| Tab | What it shows |
+|---|---|
+| **Privacy** | PII, addresses and internal hostnames masked before the model sees them, restored in the reply |
+| **Content policy** | Labels → verdicts: credentials blocked, payment data waits for a reviewer |
+| **Prompt attacks** | A local model flags suspected injections for review — with its measured accuracy, false alarms included |
+| **Residency + approval** | Personal data headed to a US endpoint pauses for sign-off; clean questions go through |
+| **Agent tools** | A compromised mock model tries to email data out; the tool policy holds it for a reviewer |
+| **Budgets** | A per-visitor spend cap that blocks the sixth run |
+| **Audit** | Explain any run, verify the hash chain, download the evidence |
 
-Try the `underwriting` route with a message containing a SIN (e.g.
-`Applicant SIN is 046-454-286`): PII is masked, and the residency guardrail
-pauses the run for approval instead of sending Canadian data to a US region.
+Also: **`/docs`** (interactive API reference) and **`/v1/chat/completions`**
+(OpenAI-compatible; `model` = route name, e.g. `privacy`).
 
+The first minute after the Space wakes up is spent loading the content model
+(the header shows "loading models…"); requests work meanwhile, just slower.
 Requests are rate-limited per visitor, and data resets whenever the Space
 restarts.
 

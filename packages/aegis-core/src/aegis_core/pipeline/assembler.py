@@ -72,12 +72,18 @@ def _collect_incremental_guards(egress_nodes: list[PipelineNode]) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 
+def _merge_labels(current: dict[str, str], update: dict[str, str]) -> dict[str, str]:
+    return {**(current or {}), **(update or {})}
+
+
 class _PipelineStateDict(TypedDict):
     run_id: str
     route: str
     messages: list[dict[str, str]]
     principal: str | None
-    labels: dict[str, str]
+    # Merged, not replaced: several packs write labels (classification,
+    # content, …) and one must not erase another's.
+    labels: Annotated[dict[str, str], _merge_labels]
     mask_map: dict[str, str]
     events: Annotated[list[dict[str, Any]], operator.add]
     prompt_tokens: int
@@ -400,7 +406,7 @@ class CompiledPipeline:
             started = time.perf_counter()
             delta = await node.run(current)
             if delta.labels is not None:
-                current.labels = delta.labels
+                current.labels = _merge_labels(current.labels, delta.labels)
             if delta.mask_map is not None:
                 current.mask_map = delta.mask_map
             if delta.messages is not None:

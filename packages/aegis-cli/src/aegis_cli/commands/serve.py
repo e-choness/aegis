@@ -68,6 +68,7 @@ def serve(
     from aegis_server.app import AEGServError, create_app
     from aegis_server.auth import ApiKeyAuthenticator
     from aegis_server.keys import KeyStore
+    from aegis_server.showcase_tabs import build_showcase
     from aegis_server.store.exporting import ExportingLedgerStore
     from aegis_server.store.ledger import LedgerStore, SqliteLedgerStore
     from aegis_server.store.run_store import SqliteRunStore
@@ -143,6 +144,7 @@ def serve(
                     ledger_store=ledger_store,
                     run_store=SqliteRunStore(str(runs_db)),
                     route_metadata=route_metadata,
+                    showcase_tabs=build_showcase(cfg),
                 )
             except AEGServError as exc:
                 _console.print(f"[red]{exc}[/red]")

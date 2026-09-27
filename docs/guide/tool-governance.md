@@ -88,7 +88,7 @@ instead. Two guards ship in the box:
 | Guard | Position | What it does |
 |---|---|---|
 | `ExfiltrationGuard` | tool call | Blocks arguments containing any PII placeholder from the run's `mask_map`. |
-| `ToolResultInjectionGuard` | tool result | Blocks results containing common instruction-hijack phrases. Pair with [LLM Guard](/packs/llm-guard) for model-based detection. |
+| `ToolResultInjectionGuard` | tool result | Blocks results containing common instruction-hijack phrases. Pair with the [content pack](/packs/content) for model-based detection. |
 
 ## Wiring the governed tool loop
 

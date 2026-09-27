@@ -89,7 +89,33 @@ to the Space after every PyPI release.
 instance: each visitor (identified by the first `X-Forwarded-For` hop) may
 run 10 prompts a minute, with a rolling cap of 600 an hour across everyone.
 Reads, pages and `/v1/health` are never limited. Only use it behind a proxy
-you trust to set `X-Forwarded-For`.
+you trust to set `X-Forwarded-For`. Each anonymous visitor also gets their own
+principal (a hash of their address), so budgets and runs are per visitor.
+
+The page at `/showcase` has one tab per scenario, built from the config: add a
+`showcase:` block to a route to put it on a tab, with presets visitors can
+click. Every tab shows the YAML behind the route and a `curl` for it, and an
+Audit tab explains any run and verifies the ledger. Without `showcase:` blocks
+each route gets a plain tab.
+
+```yaml
+routes:
+  underwriting:
+    provider: us_llm
+    pipeline: {ingress: [pii, residency_ca]}
+    showcase:
+      tab: residency              # routes with the same tab share it
+      title: Residency + approval
+      order: 4
+      blurb: Personal data headed to a US endpoint waits for a reviewer.
+      presets:
+        - {label: No personal data, prompt: What is our refund policy?}
+        - {label: Applicant with a SIN, prompt: "Assess applicant SIN 046 454 286."}
+```
+
+`deploy/huggingface/` in the repository is the [live demo](https://huggingface.co/spaces/echoness/aegis-server)'s
+complete source: that config plus a Dockerfile that bakes the content model
+into the image.
 
 ## Behind a reverse proxy
 

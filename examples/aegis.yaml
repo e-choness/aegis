@@ -17,16 +17,19 @@ guardrails:
   pii:
     pack: aegis.pii
     mode: mask
-  injection:
-    pack: aegis.llm_guard
-    scanners: [PromptInjection]
-    threshold: 0.8
+  classify:
+    pack: aegis.classification
+  content_policy:
+    pack: aegis.policy
+    rules:
+      - when: {label: classification, in: [secret]}
+        verdict: block
+        reason: credentials must not be sent to a model
 
 pipeline:
-  ingress: [pii, injection]
+  ingress: [classify, content_policy, pii]
   egress: [pii]
-  # tool_call / tool_result aren't enforced by `aegis serve` yet (it refuses to
-  # start if they are set) — govern MCP tools in Python with McpExecuteNode.
+  # Tools are governed per route: see `tools:` / `tool_guards:` in the docs.
 
 routes:
   default:

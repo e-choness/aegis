@@ -73,10 +73,7 @@ def _get_rag(request: Request) -> tuple[Any, Any]:
 async def rag_index(body: IndexRequest, request: Request) -> IndexResponse:
     """Index documents into a namespace."""
     rag_store, _embedding_provider = _get_rag(request)
-    docs = [
-        Doc(id=str(uuid.uuid4()), text=d.text, metadata=d.metadata)
-        for d in body.documents
-    ]
+    docs = [Doc(id=str(uuid.uuid4()), text=d.text, metadata=d.metadata) for d in body.documents]
     await rag_store.add(docs, body.namespace)
     return IndexResponse(indexed=len(docs), namespace=body.namespace)
 

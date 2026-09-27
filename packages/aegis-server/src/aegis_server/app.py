@@ -51,6 +51,7 @@ def create_app(
     config_path: str | None = None,
     ledger_store: LedgerStore | None = None,
     route_metadata: dict[str, dict] | None = None,
+    showcase_tabs: list[dict] | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -154,6 +155,9 @@ def create_app(
     app.state.config_path = config_path
     app.state.ledger_store = ledger_store
     app.state.route_metadata = _route_metadata
+    # Built from the config by `aegis serve` (aegis_server.showcase_tabs); None
+    # means one plain tab per route.
+    app.state.showcase_tabs = showcase_tabs
     app.add_middleware(AuthMiddleware, authenticator=authenticator)
 
     @app.get("/", include_in_schema=False)

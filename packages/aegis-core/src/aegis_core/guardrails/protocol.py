@@ -30,6 +30,6 @@ class Guardrail(Protocol):
         """Scan the request/response state and return a Verdict.
 
         Must not call any external model provider.  For guards that wrap
-        a model (e.g. LLM Guard), stub or mock the provider in tests.
+        a model (e.g. the content pack), stub or mock the model in tests.
         """
         ...

@@ -17,7 +17,7 @@ answer.
 | **Guardrail pipeline** | Ordered `ingress` and `egress` guard lists, per route or global. |
 | **Human-in-the-loop** | `require_approval` checkpoints the run; a named principal resumes it. |
 | **Evidence ledger** | Hash-chained, append-only SQLite ledger of route inventory and run evidence, verifiable offline. |
-| **Policy packs** | PII masking (Presidio), residency, classification, budgets, LLM Guard. |
+| **Policy packs** | PII masking (Presidio), residency, classification and label policy, budgets, model-based content inspection. |
 | **Plugin contracts** | Providers, guardrails, nodes, exporters, secret backends — discovered via Python entry points. |
 | **Tooling** | `aegis` CLI, Python SDK, OpenAPI spec for generating clients in any language, contract test kits. |
 

@@ -11,5 +11,11 @@
     "secret.precision": 1.0,
     "secret.recall": 1.0,
     "sensitivity.accuracy": 0.68
+  },
+  "content": {
+    "entities.precision": 1.0,
+    "entities.recall": 1.0,
+    "attack.precision": 0.69,
+    "attack.recall": 0.69
   }
 }

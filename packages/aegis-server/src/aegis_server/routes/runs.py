@@ -13,6 +13,7 @@ from aegis_core.pipeline.executor import PipelineExecutor
 from aegis_core.pipeline.state import RunState
 from aegis_core.providers.models import Message
 from aegis_server.auth.protocol import Principal
+from aegis_server.recording import record_run
 from aegis_server.store.ledger import LedgerStore
 from aegis_server.store.run_store import RunRecord, RunStore
 from aegis_server.telemetry import run_span
@@ -46,7 +47,9 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
     try:
         pipeline = executor.get(body.route)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"No pipeline for route '{body.route}'") from exc
+        raise HTTPException(
+            status_code=404, detail=f"No pipeline for route '{body.route}'"
+        ) from exc
     messages = [Message(role=m["role"], content=m["content"]) for m in body.messages]
     run_id = str(uuid.uuid4())
     state = RunState(
@@ -108,28 +111,18 @@ async def create_run(body: RunRequest, request: Request) -> RunResponse:
         span.set_attribute("run.status", result.status)
         status_holder[0] = result.status
 
-    config_digest = getattr(request.app.state, "config_digest", None)
     events_dicts = [e.to_dict() for e in result.events]
-    await run_store.update_status(run_id, result.status)
-    await run_store.update_events(run_id, events_dicts, config_digest)
-
-    ledger_store = getattr(request.app.state, "ledger_store", None)
-    if ledger_store is not None:
-        import types
-        from datetime import UTC, datetime
-
-        from aegis_server.store.ledger import make_run_evidence
-        ev_ns = types.SimpleNamespace(
-            run_id=run_id,
-            route=body.route,
-            principal_id=principal.id,
-            config_digest=config_digest,
-            created_at=getattr(record, "created_at", ""),
-            status=result.status,
-            events=events_dicts,
-        )
-        ev_body = make_run_evidence(ev_ns, datetime.now(tz=UTC).isoformat())
-        await ledger_store.append(run_id, ev_body)
+    await record_run(
+        run_store=run_store,
+        ledger_store=getattr(request.app.state, "ledger_store", None),
+        run_id=run_id,
+        route=body.route,
+        principal_id=principal.id,
+        created_at=getattr(record, "created_at", ""),
+        config_digest=getattr(request.app.state, "config_digest", None),
+        status=result.status,
+        events=events_dicts,
+    )
 
     return RunResponse(
         run_id=result.run_id,
@@ -157,29 +150,26 @@ async def _run_background(
     _tracer = tracer if tracer is not None else None  # type: ignore[assignment]
     await run_store.update_status(run_id, "running")
     try:
-        async with run_span(route, run_id, state.principal or "", tracer=_tracer) as (span, status_holder):  # type: ignore[arg-type]
+        async with run_span(
+            route,
+            run_id,
+            state.principal or "",
+            tracer=_tracer,  # type: ignore[arg-type]
+        ) as (span, status_holder):
             result = await pipeline.run(state)  # type: ignore[union-attr]
             span.set_attribute("run.status", result.status)
             status_holder[0] = result.status
-        events_dicts = [e.to_dict() for e in result.events]
-        await run_store.update_status(run_id, result.status)
-        await run_store.update_events(run_id, events_dicts, config_digest)
-        if ledger_store is not None:
-            import types
-            from datetime import UTC, datetime
-
-            from aegis_server.store.ledger import make_run_evidence
-            ev_ns = types.SimpleNamespace(
-                run_id=run_id,
-                route=route,
-                principal_id=principal_id,
-                config_digest=config_digest,
-                created_at=created_at,
-                status=result.status,
-                events=events_dicts,
-            )
-            ev_body = make_run_evidence(ev_ns, datetime.now(tz=UTC).isoformat())
-            await ledger_store.append(run_id, ev_body)
+        await record_run(
+            run_store=run_store,
+            ledger_store=ledger_store,
+            run_id=run_id,
+            route=route,
+            principal_id=principal_id,
+            created_at=created_at,
+            config_digest=config_digest,
+            status=result.status,
+            events=[e.to_dict() for e in result.events],
+        )
     except Exception:
         await run_store.update_status(run_id, "error")
         raise

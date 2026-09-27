@@ -41,7 +41,7 @@ class KeyStore:
         Returns the plaintext key (``aeg-<64-hex-chars>``).
         The plaintext is **not** retained anywhere in the store.
         """
-        raw = secrets.token_hex(32)           # 64 hex chars
+        raw = secrets.token_hex(32)  # 64 hex chars
         key = f"aeg-{raw}"
         key_hash = hashlib.sha256(key.encode()).hexdigest()
         entry: dict[str, object] = {

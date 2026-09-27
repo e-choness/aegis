@@ -349,7 +349,9 @@ async def test_hitl_postgres_smoke() -> None:
             )
             app = create_app(ex, authenticator=ApiKeyAuthenticator(ks), run_store=run_store)
 
-            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:  # type: ignore[arg-type]
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test"
+            ) as client:  # type: ignore[arg-type]
                 r1 = await client.post(
                     "/v1/runs",
                     headers={"Authorization": f"Bearer {api_key}"},

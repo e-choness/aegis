@@ -55,7 +55,9 @@ class JsonlExporter:
     async def export(self, records: list[dict]) -> None:
         if not records:
             return
-        lines = "".join(json.dumps(r, sort_keys=True, separators=(",", ":")) + "\n" for r in records)
+        lines = "".join(
+            json.dumps(r, sort_keys=True, separators=(",", ":")) + "\n" for r in records
+        )
 
         def _write() -> None:
             self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -103,5 +105,7 @@ class WebhookExporter:
         import httpx
 
         async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
-            response = await client.post(self._url, json={"records": records}, headers=self._headers)
+            response = await client.post(
+                self._url, json={"records": records}, headers=self._headers
+            )
             response.raise_for_status()

@@ -127,7 +127,11 @@ class TestTrueStreamingRoute:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         assert resp.status_code == 200
         assert "text/event-stream" in resp.headers["content-type"]
@@ -140,11 +144,19 @@ class TestTrueStreamingRoute:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         # Each chunk + a stop frame + [DONE]
-        chunk_frames = [f for f in frames if not f.get("_done") and f.get("choices", [{}])[0].get("delta", {}).get("content")]
+        chunk_frames = [
+            f
+            for f in frames
+            if not f.get("_done") and f.get("choices", [{}])[0].get("delta", {}).get("content")
+        ]
         assert len(chunk_frames) == 3
 
     def test_frames_are_valid_openai_sse(self) -> None:
@@ -153,7 +165,11 @@ class TestTrueStreamingRoute:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         data_frames = [f for f in frames if not f.get("_done")]
@@ -169,7 +185,11 @@ class TestTrueStreamingRoute:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         assert frames[-1] == {"_done": True}
@@ -180,7 +200,11 @@ class TestTrueStreamingRoute:
         )
         client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         assert len(fake.stream_calls) == 1
         assert len(fake.complete_calls) == 0
@@ -190,7 +214,11 @@ class TestTrueStreamingRoute:
         client, fake = _make_streaming_client()
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         assert resp.status_code == 200
         assert "text/event-stream" in resp.headers["content-type"]
@@ -211,7 +239,11 @@ class TestBufferedStreamingRoute:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         assert resp.status_code == 200
         assert "text/event-stream" in resp.headers["content-type"]
@@ -222,7 +254,11 @@ class TestBufferedStreamingRoute:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         data_frames = [f for f in frames if not f.get("_done")]
@@ -237,7 +273,11 @@ class TestBufferedStreamingRoute:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         assert frames[-1] == {"_done": True}
@@ -253,7 +293,11 @@ class TestBufferedStreamingRoute:
         fake.complete_response = "safe response"
         client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         assert len(fake.complete_calls) == 1
         assert len(fake.stream_calls) == 0
@@ -269,7 +313,11 @@ class TestBufferedStreamingRoute:
         client = TestClient(app, raise_server_exceptions=True)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         data_frames = [f for f in frames if not f.get("_done")]
@@ -290,15 +338,15 @@ class TestLateViolationStream:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         data_frames = [f for f in frames if not f.get("_done")]
-        finish_reasons = [
-            f["choices"][0]["finish_reason"]
-            for f in data_frames
-            if f.get("choices")
-        ]
+        finish_reasons = [f["choices"][0]["finish_reason"] for f in data_frames if f.get("choices")]
         assert "content_filter" in finish_reasons
 
     def test_late_violation_has_aegis_event(self) -> None:
@@ -306,7 +354,11 @@ class TestLateViolationStream:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         aegis_events = [f.get("aegis_event") for f in frames if f.get("aegis_event")]
@@ -317,7 +369,11 @@ class TestLateViolationStream:
         client, _ = _make_streaming_client(egress_guards=guards)
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         assert frames[-1] == {"_done": True}
@@ -332,7 +388,11 @@ class TestLateViolationStream:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": True},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            },
         )
         frames = _parse_sse(resp.text)
         aegis_events = [f.get("aegis_event") for f in frames if f.get("aegis_event")]
@@ -353,7 +413,11 @@ class TestNonStreamingStillWorks:
         )
         resp = client.post(
             "/v1/chat/completions",
-            json={"model": "default", "messages": [{"role": "user", "content": "hi"}], "stream": False},
+            json={
+                "model": "default",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": False,
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -378,7 +442,9 @@ class TestStreamDowngradeLint:
     def test_non_incremental_egress_reports_pol003(self, tmp_path: Path) -> None:
         from aegis_cli.commands.policy import lint_policy
 
-        cfg = self._write_config(tmp_path, """
+        cfg = self._write_config(
+            tmp_path,
+            """
             guardrails:
               regex_guard:
                 pack: aegis_core
@@ -387,7 +453,8 @@ class TestStreamDowngradeLint:
               my_route:
                 pipeline:
                   egress: [regex_guard]
-        """)
+        """,
+        )
         issues = lint_policy(cfg)
         codes = [i.code for i in issues]
         assert "AEG-POL-003" in codes
@@ -395,7 +462,9 @@ class TestStreamDowngradeLint:
     def test_incremental_egress_no_pol003(self, tmp_path: Path) -> None:
         from aegis_cli.commands.policy import lint_policy
 
-        cfg = self._write_config(tmp_path, """
+        cfg = self._write_config(
+            tmp_path,
+            """
             guardrails:
               inc_guard:
                 pack: aegis_core
@@ -404,7 +473,8 @@ class TestStreamDowngradeLint:
               my_route:
                 pipeline:
                   egress: [inc_guard]
-        """)
+        """,
+        )
         issues = lint_policy(cfg)
         pol003 = [i for i in issues if i.code == "AEG-POL-003"]
         assert not pol003
@@ -412,14 +482,17 @@ class TestStreamDowngradeLint:
     def test_global_pipeline_egress_downgrade(self, tmp_path: Path) -> None:
         from aegis_cli.commands.policy import lint_policy
 
-        cfg = self._write_config(tmp_path, """
+        cfg = self._write_config(
+            tmp_path,
+            """
             guardrails:
               regex_guard:
                 pack: aegis_core
                 streaming: none
             pipeline:
               egress: [regex_guard]
-        """)
+        """,
+        )
         issues = lint_policy(cfg)
         codes = [i.code for i in issues]
         assert "AEG-POL-003" in codes
@@ -427,7 +500,9 @@ class TestStreamDowngradeLint:
     def test_pol003_message_names_guard(self, tmp_path: Path) -> None:
         from aegis_cli.commands.policy import lint_policy
 
-        cfg = self._write_config(tmp_path, """
+        cfg = self._write_config(
+            tmp_path,
+            """
             guardrails:
               my_regex:
                 pack: aegis_core
@@ -436,7 +511,8 @@ class TestStreamDowngradeLint:
               r:
                 pipeline:
                   egress: [my_regex]
-        """)
+        """,
+        )
         issues = lint_policy(cfg)
         pol003 = [i for i in issues if i.code == "AEG-POL-003"]
         assert any("my_regex" in i.message for i in pol003)

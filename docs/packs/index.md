@@ -5,8 +5,8 @@ First-party packs use exactly the same entry-point contract as third-party
 ones — an import-linter rule in CI stops them from reaching into Aegis
 internals — so anything they do, your plugin can do too.
 
-All five ship with `pip install aegis-gateway`. LLM Guard's model library is
-opt-in — see [LLM Guard](./llm-guard).
+All of them ship with `pip install aegis-gateway`. The content pack's model
+backend (GLiNER2 and PyTorch, ~2 GB) is opt-in — see [Content](./content).
 
 | Pack | `pack:` | Adds | Kind | Options |
 |---|---|---|---|---|
@@ -15,7 +15,7 @@ opt-in — see [LLM Guard](./llm-guard).
 | [Classification](./classification) | `aegis.classification` | ingress node | node | — |
 | [Label policy](./policy) | `aegis.policy` | ingress guard | guard | `rules` |
 | [Budgets](./budgets) | `aegis.budgets` | ingress guard + egress recorder | guard / node | `default_cap` |
-| [LLM Guard](./llm-guard) | `aegis.llm_guard` | ingress guard | guard | `scanners`, `threshold` |
+| [Content](./content) | `aegis.content` | ingress node (+ egress unmask) | node | `model`, `entities`, `labels`, `threshold` |
 
 ## How a pack plugs in
 
