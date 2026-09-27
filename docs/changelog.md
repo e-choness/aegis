@@ -9,6 +9,16 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a5] - 2026-09-27
+
+### Fixed
+
+- 2.0.0a4's `aegis-gateway-server` was published without three new files
+  (`recording.py`, `showcase_tabs.py`, `static/showcase.html`) and fails at
+  import; install 2.0.0a5 instead. The release now installs the built wheels
+  in a clean environment, imports every module and serves a request before
+  anything is published.
+
 ## [2.0.0a4] - 2026-09-27
 
 ### Added
