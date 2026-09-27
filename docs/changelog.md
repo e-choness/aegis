@@ -9,6 +9,8 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a4] - 2026-09-27
+
 ### Added
 
 - `aegis-gateway-pack-content` (`pack: aegis.content`): a local model labels
@@ -19,11 +21,26 @@ becomes the version's entry and its GitHub Release notes.
   [pack page](/packs/content).
 - `aegis_core.masking`: one placeholder scheme and `mask_map` shared by every
   masking pack; a single unmask on egress restores everything.
+- The showcase has one tab per scenario — privacy, content policy, prompt
+  attacks, residency and approval, agent tools, budgets, audit — built from
+  the config: a route's `showcase:` block puts it on a tab with click-to-try
+  presets. Every result shows each step's timing, labels, masked values, tool
+  calls and budget, plus the YAML behind the route and a `curl` for it; the
+  Audit tab explains runs, verifies the chain and downloads the evidence.
+- Budget events report `spent` and `cap`.
+- A *Model evals* CI workflow scores the content pack's model against
+  `evals/baseline.json`.
 
 ### Changed
 
 - Labels written by different packs are merged instead of the last one
   replacing the rest.
+
+### Fixed
+
+- Showcase runs were missing from the audit trail: they now store their
+  events and append evidence to the ledger like `/v1/runs`, so they can be
+  explained and verified.
 
 ### Removed
 

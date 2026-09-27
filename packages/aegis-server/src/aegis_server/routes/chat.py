@@ -73,36 +73,40 @@ class ChatCompletionResponse(BaseModel):
 
 
 def _chunk_frame(completion_id: str, model: str, content: str, finish_reason: str | None) -> str:
-    return json.dumps({
-        "id": completion_id,
-        "object": "chat.completion.chunk",
-        "created": int(time.time()),
-        "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"role": "assistant", "content": content} if content else {},
-                "finish_reason": finish_reason,
-            }
-        ],
-    })
+    return json.dumps(
+        {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"role": "assistant", "content": content} if content else {},
+                    "finish_reason": finish_reason,
+                }
+            ],
+        }
+    )
 
 
 def _violation_frame(completion_id: str, model: str, aegis_event: str) -> str:
-    return json.dumps({
-        "id": completion_id,
-        "object": "chat.completion.chunk",
-        "created": int(time.time()),
-        "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "delta": {},
-                "finish_reason": "content_filter",
-            }
-        ],
-        "aegis_event": aegis_event,
-    })
+    return json.dumps(
+        {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "content_filter",
+                }
+            ],
+            "aegis_event": aegis_event,
+        }
+    )
 
 
 def _verdict_event(guard: Any, verdict: Any, position: str) -> RunEvent:
@@ -210,7 +214,9 @@ async def _true_stream_gen(
                         completion_id,
                         model,
                         chunk.text,
-                        finish_reason=None if chunk.finish_reason == "stop" else chunk.finish_reason,
+                        finish_reason=None
+                        if chunk.finish_reason == "stop"
+                        else chunk.finish_reason,
                     )
                 }
 

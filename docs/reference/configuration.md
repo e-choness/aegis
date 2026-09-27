@@ -111,6 +111,7 @@ or `model` (OpenAI-compatible API). Extra keys are allowed.
 | `risk_rating` | `low` \| `medium` \| `high` | Recorded in `model_inventory`. |
 | `review_interval_days` | int | Sets the inventory's next review date. |
 | `tools` | map of name → tool | Tools the model may call on this route; declaring any turns on the [governed tool loop](/guide/tool-governance#tools-in-aegis-yaml). |
+| `showcase` | map | Puts the route on a tab of the `/showcase` page: `tab`, `title`, `order`, `blurb`, `label`, `presets` (list of `{label, prompt}`). See [Public demos](/guide/deployment#public-demos). |
 | `tool_guards` | list | Built-in tool guards: `exfiltration` (blocks masked PII in tool arguments), `injection` (blocks tool results carrying instructions). |
 
 Each entry under `tools`:

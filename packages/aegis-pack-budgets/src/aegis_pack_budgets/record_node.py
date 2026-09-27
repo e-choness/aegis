@@ -30,6 +30,7 @@ class BudgetRecordNode:
         if state.principal is None:
             return RunStateDelta()
         self._guard.record(state)
+        spent, cap = self._guard.standing(state.principal)
         return RunStateDelta(
             events=[
                 RunEvent(
@@ -40,6 +41,8 @@ class BudgetRecordNode:
                         "principal": state.principal,
                         "tokens": state.usage.total_tokens,
                         "cost": state.usage.cost,
+                        "spent": round(spent, 6),
+                        "cap": cap,
                     },
                 )
             ]

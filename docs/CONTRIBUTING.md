@@ -81,7 +81,9 @@ in `evals/baseline.json`.
   dependency group, not part of the default dev env: its tests stub the
   model. `uv sync --all-packages --group models` installs it (CPU-only
   PyTorch, from the index declared in the root `pyproject.toml`) for
-  `scripts/eval_guards.py content`.
+  `scripts/eval_guards.py content`. The *Model evals* workflow runs that
+  check (with the model and PyTorch cached) when the content pack, `evals/` or
+  `uv.lock` change, and weekly.
 - `package.json` overrides Vite to a patched 7.x: VitePress 1.6 still pins
   Vite 5, whose dev server has unfixed advisories. Drop the override once
   VitePress 2 is stable.

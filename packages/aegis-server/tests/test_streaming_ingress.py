@@ -62,7 +62,10 @@ class _MaskSecret:
     name: str = "mask_secret"
 
     async def run(self, state: RunState) -> RunStateDelta:
-        masked = [Message(role=m.role, content=m.content.replace("hunter2", "<SECRET_0>")) for m in state.messages]
+        masked = [
+            Message(role=m.role, content=m.content.replace("hunter2", "<SECRET_0>"))
+            for m in state.messages
+        ]
         return RunStateDelta(messages=masked, mask_map={"<SECRET_0>": "hunter2"})
 
 
@@ -76,7 +79,9 @@ class _Unmask:
         return RunStateDelta(response=(state.response or "").replace("<SECRET_0>", "hunter2"))
 
 
-def _client(ingress: list, *, checkpointer: object | None = None) -> tuple[TestClient, FakeProvider]:
+def _client(
+    ingress: list, *, checkpointer: object | None = None
+) -> tuple[TestClient, FakeProvider]:
     fake = FakeProvider(stream_chunks=["hello", " world"])
     executor = PipelineExecutor(checkpointer=checkpointer)
     executor.register(
@@ -93,7 +98,11 @@ def _client(ingress: list, *, checkpointer: object | None = None) -> tuple[TestC
 def _stream(client: TestClient, content: str = "hi") -> list[dict]:
     resp = client.post(
         "/v1/chat/completions",
-        json={"model": "default", "messages": [{"role": "user", "content": content}], "stream": True},
+        json={
+            "model": "default",
+            "messages": [{"role": "user", "content": content}],
+            "stream": True,
+        },
     )
     assert resp.status_code == 200
     frames = []
@@ -134,7 +143,9 @@ def test_provider_streams_ingress_processed_messages() -> None:
 
 
 def test_ingress_pause_on_stream_is_checkpointed_and_resumable() -> None:
-    client, fake = _client([GuardNode([_NeedsApproval()], name="review")], checkpointer=make_memory_checkpointer())
+    client, fake = _client(
+        [GuardNode([_NeedsApproval()], name="review")], checkpointer=make_memory_checkpointer()
+    )
 
     frames = _stream(client)
 

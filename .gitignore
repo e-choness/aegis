@@ -86,6 +86,7 @@ build/
 *.egg
 .venv/
 .uv-cache/
+.hf-cache/
 .tmp/
 .ruff_cache/
 

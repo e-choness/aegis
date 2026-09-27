@@ -324,3 +324,23 @@ async def test_budget_trips_with_metered_fake_provider(tmp_path) -> None:  # typ
 
     assert [await run("alice") for _ in range(4)] == ["completed"] * 3 + ["blocked"]
     assert await run("bob") == "completed"  # caps are per principal
+
+
+async def test_record_event_reports_spend_and_cap() -> None:
+    from aegis_pack_budgets.factory import from_config
+
+    from aegis_core.config.models import GuardrailConfig
+    from aegis_core.pipeline.state import RunState
+    from aegis_core.providers.models import UsageInfo
+
+    stages = from_config(
+        "budget", GuardrailConfig.model_validate({"pack": "aegis.budgets", "default_cap": 1.0})
+    )
+    recorder = stages["egress"][0]
+    state = RunState(run_id="r", route="x", messages=[], principal="alice")
+    state.usage = UsageInfo(total_tokens=10, cost=0.25)
+    await recorder.run(state)
+    delta = await recorder.run(state)
+    (event,) = delta.events or []
+    assert event.data["spent"] == 0.5
+    assert event.data["cap"] == 1.0

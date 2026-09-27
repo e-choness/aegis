@@ -138,9 +138,7 @@ _SELECT_SQL = (
     " FROM runs WHERE run_id = ?"
 )
 _UPDATE_SQL = "UPDATE runs SET status = ? WHERE run_id = ?"
-_UPDATE_EVENTS_SQL = (
-    "UPDATE runs SET events = ?, config_digest = ? WHERE run_id = ?"
-)
+_UPDATE_EVENTS_SQL = "UPDATE runs SET events = ?, config_digest = ? WHERE run_id = ?"
 _PENDING_SQL = (
     "SELECT run_id, route, principal_id, status, approvers, created_at, events, config_digest"
     " FROM runs WHERE status = 'paused'"

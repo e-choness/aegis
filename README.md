@@ -39,7 +39,7 @@ ledger verifies offline.
 >
 > The demo runs the real guardrails against a mock model. Paste a prompt, pick a route, and watch the verdicts:
 >
-> - `Email jane@example.com about SIN 046 454 286` — masked before the model sees it, restored in the reply.
+> - `Please email jane@example.com about SIN 046 454 286` — masked before the model sees it, restored in the reply.
 > - The same prompt on the **underwriting** route — pauses for approval (personal data, US endpoint); approve or deny it in the queue.
 > - `api_key: 8f14e45fceea167a5a36dedd4bea2543` — blocked: credentials never reach a model.
 

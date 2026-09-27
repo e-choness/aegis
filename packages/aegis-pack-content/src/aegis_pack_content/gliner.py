@@ -22,6 +22,22 @@ def ensure_installed() -> None:
         raise ValueError(f"the gliner2 backend needs the [model] extra — {INSTALL_HINT}")
 
 
+# Loaded weights, shared by every guardrail that names the same model — two
+# aegis.content entries (say, entities on one route, labels on another) cost
+# one model in memory and one warm-up.
+_LOADED: dict[str, Any] = {}
+_LOCK = threading.Lock()
+
+
+def _load(model_id: str) -> Any:
+    with _LOCK:
+        if model_id not in _LOADED:
+            from gliner2 import GLiNER2  # type: ignore[import-not-found]
+
+            _LOADED[model_id] = GLiNER2.from_pretrained(model_id)
+        return _LOADED[model_id]
+
+
 class Gliner2Model:
     """:class:`~aegis_pack_content.backend.ContentModel` backed by GLiNER2.
 
@@ -36,15 +52,9 @@ class Gliner2Model:
     ) -> None:
         self.model_id = model_id
         self.threshold = float((options or {}).get("threshold", 0.5))
-        self._model: Any = None
-        self._lock = threading.Lock()
 
     def warmup(self) -> None:
-        with self._lock:
-            if self._model is None:
-                from gliner2 import GLiNER2  # type: ignore[import-not-found]
-
-                self._model = GLiNER2.from_pretrained(self.model_id)
+        _load(self.model_id)
 
     def analyze(
         self,
@@ -52,14 +62,14 @@ class Gliner2Model:
         entities: Mapping[str, str],
         tasks: Mapping[str, Sequence[str]],
     ) -> Analysis:
-        self.warmup()
-        schema = self._model.create_schema()
+        model = _load(self.model_id)
+        schema = model.create_schema()
         if entities:
             schema = schema.entities(dict(entities))
         for task, values in tasks.items():
             schema = schema.classification(task, list(values))
-        with self._lock:  # one inference at a time: the model isn't thread-safe
-            raw = self._model.extract(
+        with _LOCK:  # one inference at a time: the model isn't thread-safe
+            raw = model.extract(
                 text,
                 schema,
                 threshold=self.threshold,
