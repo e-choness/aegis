@@ -9,6 +9,8 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+## [2.0.0a6] - 2026-09-27
+
 ### Added
 
 - `scripts/cli-tour.sh` (config `examples/cli-tour.yaml`): the session the
