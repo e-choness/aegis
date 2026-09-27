@@ -1,0 +1,56 @@
+name: Model evals
+
+# Scores the content pack's model (GLiNER2) on evals/probes.jsonl and fails
+# below the floors in evals/baseline.json. Separate from CI because it needs
+# the model (~830 MB) and PyTorch; both are cached between runs.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/aegis-pack-content/**"
+      - "packages/aegis-core/src/aegis_core/masking.py"
+      - "evals/**"
+      - "scripts/eval_guards.py"
+      - "uv.lock"
+      - ".github/workflows/model-evals.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/aegis-pack-content/**"
+      - "packages/aegis-core/src/aegis_core/masking.py"
+      - "evals/**"
+      - "scripts/eval_guards.py"
+      - "uv.lock"
+      - ".github/workflows/model-evals.yml"
+  schedule:
+    - cron: "17 6 * * 1" # weekly, so the cache (evicted after 7 unused days) stays warm
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  content:
+    name: Content pack (GLiNER2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache the model and Python packages
+        uses: actions/cache@v5
+        with:
+          path: |
+            .hf-cache
+            .uv-cache
+          key: model-evals-${{ hashFiles('uv.lock', 'evals/content.yaml') }}
+          restore-keys: model-evals-
+
+      - name: Install the workspace with the model backend
+        run: docker compose run --rm dev uv sync --all-packages --group models
+
+      - name: Score the content pack (fails below evals/baseline.json)
+        # 2 threads, like the free Hugging Face Space the demo runs on.
+        run: >
+          docker compose run --rm -e HF_HOME=/workspace/.hf-cache -e OMP_NUM_THREADS=2
+          dev uv run --group models python scripts/eval_guards.py content --check

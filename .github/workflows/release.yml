@@ -62,6 +62,19 @@ jobs:
       - name: Check metadata renders on PyPI
         run: uvx twine check --strict dist/*
 
+      # The built wheels — not the checkout — must work: a file that exists
+      # locally but was never committed is missing from them (2.0.0a4 shipped
+      # without aegis_server/recording.py this way).
+      - name: Smoke-test the wheels in a clean environment
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          uv venv /tmp/smoke
+          uv pip install --python /tmp/smoke/bin/python --find-links dist \
+            "aegis-gateway==$VERSION" "aegis-gateway-sdk==$VERSION"
+          /tmp/smoke/bin/python scripts/smoke_wheels.py
+          /tmp/smoke/bin/aegis --help > /dev/null
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist

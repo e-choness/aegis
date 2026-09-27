@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis — Pipeline Showcase</title>
+  <style>
+    :root {
+      --ink: #111827; --muted: #6b7280; --line: #e5e7eb; --bg: #f7f7fb; --card: #fff;
+      --brand: #4f46e5; --brand-soft: #e0e7ff; --dark: #1a1a2e;
+      --ok: #166534; --ok-bg: #dcfce7; --bad: #991b1b; --bad-bg: #fee2e2;
+      --wait: #3730a3; --wait-bg: #e0e7ff; --warn: #854d0e; --warn-bg: #fef9c3;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           margin: 0; color: var(--ink); background: var(--bg); }
+    header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; gap: 16px;
+             align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    header h1 { font-size: 1.15rem; margin: 0; font-weight: 650; }
+    header h1 span { color: #a5b4fc; font-weight: 500; }
+    header nav a { color: #c7d2fe; text-decoration: none; font-size: .88rem; margin-left: 14px; }
+    header nav a:hover { text-decoration: underline; }
+    .pill { font-size: .75rem; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
+    .pill.ready { background: #14532d; color: #bbf7d0; }
+    .pill.warming { background: #713f12; color: #fde68a; }
+    .pill.failed { background: #7f1d1d; color: #fecaca; }
+    main { max-width: 1180px; margin: 0 auto; padding: 18px 20px 40px; }
+    .intro { color: var(--muted); font-size: .92rem; margin: 4px 0 14px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+    .tabs button { background: none; color: var(--muted); border: none; border-bottom: 3px solid transparent;
+                   padding: 10px 12px; font-weight: 600; font-size: .92rem; cursor: pointer; border-radius: 0; }
+    .tabs button.active { color: var(--brand); border-bottom-color: var(--brand); }
+    .tabs button:hover { color: var(--ink); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+            margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .card h2 { margin: 0 0 8px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+    .card h3 { margin: 14px 0 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .blurb { color: #374151; font-size: .93rem; line-height: 1.5; margin: 0 0 12px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip { background: #f3f4f6; color: var(--ink); border: 1px solid var(--line); border-radius: 999px;
+            padding: 5px 11px; font-size: .82rem; cursor: pointer; font-weight: 500; }
+    .chip:hover { border-color: var(--brand); color: var(--brand); }
+    textarea { width: 100%; min-height: 96px; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+               font: inherit; resize: vertical; }
+    textarea:focus, select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px var(--brand-soft); }
+    select { padding: 7px 9px; border-radius: 7px; border: 1px solid #d1d5db; font: inherit; font-size: .88rem; }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    button { padding: 8px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;
+             font-size: .88rem; background: var(--brand); color: #fff; }
+    button:hover:not(:disabled) { background: #4338ca; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    button.ghost { background: #eef0f4; color: var(--ink); }
+    button.ghost:hover:not(:disabled) { background: #e2e5ec; }
+    button.danger { background: #dc2626; } button.danger:hover:not(:disabled) { background: #b91c1c; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    .banner { border-radius: 8px; padding: 10px 12px; font-size: .92rem; margin-bottom: 10px; }
+    .banner b { text-transform: uppercase; letter-spacing: .04em; margin-right: 6px; }
+    .banner.completed { background: var(--ok-bg); color: var(--ok); }
+    .banner.blocked, .banner.denied { background: var(--bad-bg); color: var(--bad); }
+    .banner.paused { background: var(--wait-bg); color: var(--wait); }
+    .trace { display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: #f3f4f6; margin: 4px 0; }
+    .trace div { min-width: 3px; border-right: 1px solid #fff; }
+    .trace .ingress { background: #818cf8; } .trace .execute { background: #34d399; }
+    .trace .egress { background: #fbbf24; } .trace .other { background: #9ca3af; }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: #374151; }
+    .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px; overflow: auto;
+          font-size: .82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; margin: 6px 0; }
+    code { font-size: .84em; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { font-weight: 600; color: #374151; background: #f9fafb; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; }
+    tr.clickable { cursor: pointer; } tr.clickable:hover td { background: #f5f3ff; }
+    .v { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: .78rem; font-weight: 700; }
+    .v.allow, .v.completed, .v.approved { background: var(--ok-bg); color: var(--ok); }
+    .v.block, .v.blocked, .v.denied { background: var(--bad-bg); color: var(--bad); }
+    .v.require_approval, .v.paused { background: var(--wait-bg); color: var(--wait); }
+    .v.sanitize { background: var(--warn-bg); color: var(--warn); }
+    .labels { display: flex; flex-wrap: wrap; gap: 6px; }
+    .labels span { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; border-radius: 6px; padding: 2px 8px; font-size: .82rem; }
+    .meter { height: 12px; background: #f3f4f6; border-radius: 6px; overflow: hidden; margin: 6px 0; }
+    .meter div { height: 100%; background: #10b981; } .meter div.full { background: #ef4444; }
+    details { margin-top: 10px; } summary { cursor: pointer; font-weight: 600; font-size: .88rem; color: #374151; }
+    .empty { color: #9ca3af; font-size: .88rem; padding: 10px 0; }
+    .queue-item { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; font-size: .85rem; }
+    .queue-item .why { color: #374151; margin: 4px 0 8px; word-break: break-word; }
+    #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff;
+             padding: 9px 16px; border-radius: 8px; font-size: .88rem; display: none; z-index: 10; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Aegis <span>— live demo</span></h1>
+    <div>
+      <span id="health" class="pill warming" title="Model warm-up state (/v1/health)">starting…</span>
+      <nav style="display:inline">
+        <a href="https://e-choness.github.io/aegis/" target="_blank" rel="noopener">Docs</a>
+        <a href="/docs" target="_blank">API</a>
+        <a href="https://github.com/e-choness/aegis" target="_blank" rel="noopener">Source (AGPL-3.0)</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <p class="intro">Every tab is a real route running real guardrails against a <b>mock model</b> — nothing you type
+      reaches an LLM. Pick a preset or write your own, then read the verdicts, the timing of each step and the
+      configuration that produced them.</p>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="layout">
+      <section id="view"></section>
+      <aside>
+        <div class="card">
+          <h2>Approval queue</h2>
+          <p class="muted" style="margin:0 0 8px">Runs paused for a human. Approve to let them continue, deny to stop them.</p>
+          <div id="queue"><div class="empty">Loading…</div></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <div id="toast"></div>
+
+  <script>
+    const BASE = window.location.origin;
+    const state = { tabs: [], tab: null, route: {}, results: {} };
+
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const $ = (id) => document.getElementById(id);
+    function toast(text) {
+      const el = $('toast'); el.textContent = text; el.style.display = 'block';
+      clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+    async function api(path, options) {
+      const r = await fetch(BASE + path, options);
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : `HTTP ${r.status}`);
+      return data;
+    }
+    const post = (path, body) => api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    // ── Health ──────────────────────────────────────────────────────────────
+    async function pollHealth() {
+      try {
+        const h = await api('/v1/health');
+        const w = h.warmup || 'ready';
+        const el = $('health');
+        el.className = 'pill ' + (w === 'ready' ? 'ready' : w === 'warming' ? 'warming' : 'failed');
+        el.textContent = w === 'ready' ? 'models ready' : w === 'warming' ? 'loading models… (first runs are slower)' : 'warm-up failed';
+        el.title = w;
+        state.digest = h.config_digest;
+        if (w === 'warming') setTimeout(pollHealth, 3000);
+      } catch { setTimeout(pollHealth, 5000); }
+    }
+
+    // ── Tabs ────────────────────────────────────────────────────────────────
+    function renderTabs() {
+      const all = [...state.tabs, { id: '__audit', title: 'Audit' }];
+      $('tabs').innerHTML = all.map(t =>
+        `<button class="${t.id === state.tab ? 'active' : ''}" onclick="selectTab('${esc(t.id)}')">${esc(t.title)}</button>`).join('');
+    }
+    function selectTab(id) {
+      state.tab = id; renderTabs();
+      history.replaceState(null, '', '#' + id);
+      if (id === '__audit') return renderAudit();
+      renderScenario();
+    }
+    const currentTab = () => state.tabs.find(t => t.id === state.tab);
+    function currentRoute() {
+      const tab = currentTab();
+      const name = state.route[tab.id] || tab.routes[0].route;
+      return tab.routes.find(r => r.route === name) || tab.routes[0];
+    }
+
+    function renderScenario() {
+      const tab = currentTab(); const route = currentRoute();
+      const routePicker = tab.routes.length > 1
+        ? `<label class="muted">Route <select onchange="state.route['${esc(tab.id)}']=this.value; renderScenario()">${
+            tab.routes.map(r => `<option value="${esc(r.route)}" ${r.route === route.route ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></label>`
+        : `<span class="muted">Route <code>${esc(route.route)}</code></span>`;
+      const presets = route.presets.map((p, i) =>
+        `<button class="chip" onclick="usePreset(${i})" title="${esc(p.prompt)}">${esc(p.label || p.prompt.slice(0, 40))}</button>`).join('');
+      $('view').innerHTML = `
+        <div class="card">
+          <h2>${esc(tab.title)}</h2>
+          ${tab.blurb ? `<p class="blurb">${esc(tab.blurb)}</p>` : ''}
+          ${presets ? `<div class="presets">${presets}</div>` : ''}
+          <textarea id="prompt" placeholder="Type a prompt, or pick a preset above">${esc(route.presets[0]?.prompt || '')}</textarea>
+          <div class="row">
+            <button id="send" onclick="send()">Run it</button>
+            ${routePicker}
+            <span id="busy" class="muted" style="display:none">Running…</span>
+          </div>
+          <details><summary>Configuration behind this route</summary>
+            <pre>${esc(route.config || '(not available — start the server with aegis serve)')}</pre>
+          </details>
+          <details><summary>Call it yourself (OpenAI-compatible API)</summary><pre id="curl"></pre></details>
+        </div>
+        <div id="result">${state.results[route.route] || ''}</div>`;
+      updateCurl();
+      $('prompt').addEventListener('input', updateCurl);
+    }
+    function usePreset(i) { $('prompt').value = currentRoute().presets[i].prompt; updateCurl(); }
+    function updateCurl() {
+      const body = JSON.stringify({ model: currentRoute().route, messages: [{ role: 'user', content: $('prompt').value }] });
+      $('curl').textContent = `curl -s ${BASE}/v1/chat/completions \\\n  -H 'Content-Type: application/json' \\\n  -d '${body.replace(/'/g, "'\\''")}'`;
+    }
+
+    async function send() {
+      const route = currentRoute().route;
+      $('send').disabled = true; $('busy').style.display = 'inline';
+      try {
+        const data = await post('/showcase/api/invoke', { prompt: $('prompt').value, route });
+        state.results[route] = renderResult(data);
+        if (currentRoute().route === route) $('result').innerHTML = state.results[route];
+      } catch (e) {
+        $('result').innerHTML = `<div class="card"><div class="banner blocked"><b>error</b>${esc(e.message)}</div></div>`;
+      } finally {
+        $('send').disabled = false; $('busy').style.display = 'none';
+        refreshQueue();
+      }
+    }
+
+    // ── Result ──────────────────────────────────────────────────────────────
+    const STATUS_TEXT = {
+      completed: 'The request went through.',
+      blocked: 'Blocked before the model answered.',
+      paused: 'Paused for a human — see the approval queue.',
+      denied: 'A reviewer denied it.',
+    };
+    function decisiveReason(events, status) {
+      const kinds = status === 'paused' ? ['require_approval'] : status === 'blocked' || status === 'denied' ? ['block', 'denied'] : [];
+      const ev = [...events].reverse().find(e => e.event_type === 'verdict' && kinds.includes((e.data || {}).verdict));
+      return ev ? `${ev.node}: ${ev.data.reason || ''}` : '';
+    }
+    function renderTrace(events) {
+      const steps = events.filter(e => e.event_type === 'node_end' && typeof (e.data || {}).duration_ms === 'number');
+      if (!steps.length) return '';
+      const total = steps.reduce((s, e) => s + e.data.duration_ms, 0) || 1;
+      const cls = (stage) => ['ingress', 'execute', 'egress'].includes(stage) ? stage : 'other';
+      const bar = steps.map(e => `<div class="${cls(e.stage)}" style="flex:${Math.max(e.data.duration_ms / total, .02)}" title="${esc(e.stage)} / ${esc(e.node)}: ${e.data.duration_ms.toFixed(1)} ms"></div>`).join('');
+      const legend = steps.map(e => `<span><i class="${cls(e.stage)}" style="background:${{ingress:'#818cf8',execute:'#34d399',egress:'#fbbf24'}[e.stage] || '#9ca3af'}"></i>${esc(e.node)} ${e.data.duration_ms.toFixed(1)} ms</span>`).join('');
+      return `<h3>Time per step — ${total.toFixed(1)} ms in the pipeline</h3><div class="trace">${bar}</div><div class="legend">${legend}</div>`;
+    }
+    function renderLabels(labels) {
+      const keys = Object.keys(labels || {}).filter(k => !k.endsWith('.confidence'));
+      if (!keys.length) return '';
+      return `<h3>Labels</h3><div class="labels">${keys.map(k => {
+        const c = labels[k + '.confidence'];
+        return `<span>${esc(k)} = <b>${esc(labels[k])}</b>${c ? ` · ${(parseFloat(c) * 100).toFixed(0)}%` : ''}</span>`;
+      }).join('')}</div>`;
+    }
+    function renderMasks(maskMap) {
+      const pairs = Object.entries(maskMap || {});
+      if (!pairs.length) return '';
+      return `<h3>Masked before the model saw it</h3><table><thead><tr><th>Placeholder the model sees</th><th>Original (never sent)</th></tr></thead><tbody>${
+        pairs.map(([p, o]) => `<tr><td><code>${esc(p)}</code></td><td>${esc(o)}</td></tr>`).join('')}</tbody></table>`;
+    }
+    function renderTools(events) {
+      const rows = events.filter(e => (e.stage || '').startsWith('mcp_') && (e.event_type === 'verdict' || e.event_type === 'node_start'));
+      if (!rows.length) return '';
+      return `<h3>Tool calls</h3><table><tbody>${rows.map(e => {
+        const d = e.data || {};
+        const what = e.event_type === 'node_start' ? `called <code>${esc(d.tool)}</code>` : `<span class="v ${esc(d.verdict)}">${esc(d.verdict)}</span> ${esc(d.reason || '')}`;
+        return `<tr><td style="white-space:nowrap">${esc(e.stage.replace('mcp_', '').replace(/_/g, ' '))}</td><td>${what}${d.arguments ? `<div class="muted">arguments: <code>${esc(JSON.stringify(d.arguments))}</code></div>` : ''}</td></tr>`;
+      }).join('')}</tbody></table>`;
+    }
+    function renderBudget(events) {
+      const ev = [...events].reverse().find(e => e.event_type === 'budget_recorded');
+      if (!ev || ev.data.cap == null) return '';
+      const pct = Math.min(100, (ev.data.spent / ev.data.cap) * 100);
+      return `<h3>Your budget (per visitor)</h3><div class="meter"><div class="${pct >= 100 ? 'full' : ''}" style="width:${pct}%"></div></div>
+        <div class="muted">$${ev.data.spent.toFixed(2)} of $${ev.data.cap.toFixed(2)} spent this month — this run cost $${(ev.data.cost || 0).toFixed(2)}</div>`;
+    }
+    function renderEvents(events) {
+      const rows = events.filter(e => e.event_type !== 'node_start');
+      return `<details><summary>Full event log (${rows.length})</summary><table><tbody>${rows.map(e => {
+        const d = e.data || {};
+        const extra = Object.entries(d).filter(([k]) => !['verdict'].includes(k)).map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join('  ');
+        return `<tr><td class="muted" style="white-space:nowrap">${esc(e.stage)} / ${esc(e.node)}</td><td>${esc(e.event_type)} ${d.verdict ? `<span class="v ${esc(d.verdict)}">${esc(d.verdict)}</span>` : ''}<div class="muted">${esc(extra)}</div></td></tr>`;
+      }).join('')}</tbody></table></details>`;
+    }
+    function renderResult(data) {
+      const events = data.events || [];
+      const reason = decisiveReason(events, data.status);
+      return `<div class="card">
+        <div class="banner ${esc(data.status)}"><b>${esc(data.status)}</b>${esc(STATUS_TEXT[data.status] || '')}${reason ? `<div style="margin-top:4px">${esc(reason)}</div>` : ''}</div>
+        ${data.response != null && data.status === 'completed' ? `<h3>Reply (after unmasking)</h3><pre>${esc(data.response)}</pre>` : ''}
+        ${renderTrace(events)}${renderLabels(data.labels)}${renderMasks(data.mask_map)}${renderTools(events)}${renderBudget(events)}
+        ${renderEvents(events)}
+        <p class="muted" style="margin:10px 0 0">Run <code>${esc(data.run_id.slice(0, 8))}</code> — recorded in the evidence ledger; see the Audit tab.</p>
+      </div>`;
+    }
+
+    // ── Approval queue ──────────────────────────────────────────────────────
+    async function refreshQueue() {
+      try {
+        const { runs } = await api('/showcase/api/runs');
+        const paused = (runs || []).filter(r => r.status === 'paused').slice(0, 8);
+        $('queue').innerHTML = paused.length ? paused.map(r => {
+          const why = decisiveReason(r.events || [], 'paused');
+          return `<div class="queue-item"><div><code>${esc(r.run_id.slice(0, 8))}</code> · ${esc(r.route)}</div>
+            <div class="why">${esc(why || 'approval required')}</div>
+            <button onclick="decide('${esc(r.run_id)}','approved')">Approve</button>
+            <button class="danger" onclick="decide('${esc(r.run_id)}','denied')">Deny</button></div>`;
+        }).join('') : '<div class="empty">Nothing waiting.</div>';
+      } catch { $('queue').innerHTML = '<div class="empty">Could not load the queue.</div>'; }
+    }
+    async function decide(runId, decision) {
+      try {
+        const data = await post(`/showcase/api/runs/${runId}/resume`, { decision });
+        toast(`Run ${runId.slice(0, 8)} ${decision} → ${data.status}`);
+        const { runs } = await api('/showcase/api/runs');
+        const run = (runs || []).find(r => r.run_id === runId);
+        if (run) state.results[run.route] = renderResult({ ...data, mask_map: {}, labels: {} });
+        if (state.tab !== '__audit' && run && currentRoute().route === run.route) $('result').innerHTML = state.results[run.route];
+      } catch (e) { toast(e.message); }
+      refreshQueue();
+    }
+
+    // ── Audit ───────────────────────────────────────────────────────────────
+    async function renderAudit() {
+      $('view').innerHTML = `
+        <div class="card">
+          <h2>Audit trail</h2>
+          <p class="blurb">Every run above is recorded in a hash-chained evidence ledger. Click a run to see why it ended
+            the way it did, check that nothing in the chain was edited, or download it and verify it yourself with
+            <code>aegis audit verify</code>.</p>
+          <div class="row" style="margin-top:0">
+            <button onclick="verifyChain()">Verify the chain</button>
+            <button class="ghost" onclick="downloadLedger()">Download evidence (JSONL)</button>
+            <span class="muted">config <code>${esc((state.digest || '').slice(0, 19))}</code></span>
+          </div>
+          <div id="verify"></div>
+        </div>
+        <div class="card"><h2>Recent runs</h2><div id="runs"><div class="empty">Loading…</div></div></div>
+        <div id="explain"></div>`;
+      try {
+        const { runs } = await api('/showcase/api/runs');
+        state.runs = runs || [];
+        $('runs').innerHTML = state.runs.length ? `<table><thead><tr><th>Run</th><th>Route</th><th>Status</th><th>Who</th><th>When</th></tr></thead><tbody>${
+          state.runs.slice(0, 25).map((r, i) => `<tr class="clickable" onclick="explain(${i})"><td><code>${esc(r.run_id.slice(0, 8))}</code></td><td>${esc(r.route)}</td>
+            <td><span class="v ${esc(r.status)}">${esc(r.status)}</span></td><td class="muted">${esc(r.principal_id)}</td>
+            <td class="muted" style="white-space:nowrap">${esc((r.created_at || '').replace('T', ' ').slice(0, 19))}</td></tr>`).join('')}</tbody></table>`
+          : '<div class="empty">No runs yet — try a scenario first.</div>';
+      } catch { $('runs').innerHTML = '<div class="empty">Could not load runs.</div>'; }
+    }
+    function explain(i) {
+      const r = state.runs[i];
+      const verdicts = (r.events || []).filter(e => e.event_type === 'verdict');
+      $('explain').innerHTML = `<div class="card"><h2>Why run <code>${esc(r.run_id.slice(0, 8))}</code> ended <span class="v ${esc(r.status)}">${esc(r.status)}</span></h2>
+        <p class="muted" style="margin-top:0">The same trail <code>aegis explain ${esc(r.run_id)}</code> prints.</p>
+        ${verdicts.length ? `<table><thead><tr><th>Stage</th><th>Node</th><th>Verdict</th><th>Reason</th></tr></thead><tbody>${verdicts.map(e =>
+          `<tr><td>${esc(e.stage)}</td><td>${esc(e.node)}</td><td><span class="v ${esc(e.data.verdict)}">${esc(e.data.verdict)}</span></td><td>${esc(e.data.reason || '')}</td></tr>`).join('')}</tbody></table>`
+          : '<div class="empty">No verdicts recorded — every guard allowed it.</div>'}
+        ${renderTrace(r.events || [])}${renderEvents(r.events || [])}</div>`;
+      $('explain').scrollIntoView({ behavior: 'smooth' });
+    }
+    async function verifyChain() {
+      try {
+        const v = await api('/v1/audit/verify');
+        $('verify').innerHTML = `<div class="banner ${v.intact ? 'completed' : 'blocked'}" style="margin-top:12px"><b>${v.intact ? 'intact' : 'broken'}</b>
+          ${v.records} records; every hash matches its content and links to the one before it.
+          <div class="muted" style="margin-top:4px">head <code>${esc(v.head || '—')}</code></div>
+          ${(v.errors || []).map(e => `<div>${esc(e)}</div>`).join('')}</div>`;
+      } catch (e) { toast(e.message); }
+    }
+    async function downloadLedger() {
+      try {
+        const { records } = await api('/v1/audit/ledger');
+        const blob = new Blob([(records || []).map(r => JSON.stringify(r)).join('\n') + '\n'], { type: 'application/x-ndjson' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aegis-evidence.jsonl'; a.click();
+        toast('Saved — check it offline with: aegis audit verify aegis-evidence.jsonl');
+      } catch (e) { toast(e.message); }
+    }
+
+    // ── Start ───────────────────────────────────────────────────────────────
+    (async () => {
+      pollHealth();
+      try { state.tabs = (await api('/showcase/api/tabs')).tabs || []; } catch { state.tabs = []; }
+      const wanted = location.hash.slice(1);
+      const first = state.tabs.find(t => t.id === wanted) ? wanted : wanted === '__audit' ? '__audit' : state.tabs[0]?.id || '__audit';
+      selectTab(first);
+      refreshQueue();
+      setInterval(refreshQueue, 10000);
+    })();
+  </script>
+</body>
+</html>
