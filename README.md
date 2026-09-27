@@ -29,10 +29,11 @@ those decisions. No enterprise tier required.
 
 ## See it work
 
-A loan-underwriting request carrying a Canadian SIN is routed to a US-region
-model. The residency guardrail doesn't block it outright — it **pauses for a
-named reviewer**, who denies it. `aegis explain` shows why, and the exported
-ledger verifies offline.
+One config, one CLI. A prompt with an API key never reaches a model. A clean
+question to the loan-underwriting route — whose model runs in a US region —
+goes straight through; the same route with a Canadian SIN **pauses for a named
+reviewer**, who denies it. `aegis explain` shows why, and the exported ledger
+verifies offline.
 
 > **Try it in your browser — nothing to install.**
 > [![Open in Hugging Face Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg)](https://huggingface.co/spaces/echoness/aegis-server)
@@ -44,12 +45,12 @@ ledger verifies offline.
 > - `api_key: 8f14e45fceea167a5a36dedd4bea2543` — blocked: credentials never reach a model.
 
 <p align="center">
-  <img src="images/terminal-demo.svg" alt="Terminal replay: aegis runs create pauses for approval, aegis runs deny, aegis explain shows the verdict trail, aegis audit verify confirms the chain is intact" width="100%">
+  <img src="images/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact" width="100%">
 </p>
 
-Reproduce it with one command —
-`docker compose run --rm dev bash scripts/approval-scenario.sh` — which creates
-the keys, starts the server, and runs [`examples/02_approval_flow.py`](examples/02_approval_flow.py).
+Reproduce it with `docker compose run --rm dev bash scripts/cli-tour.sh`
+(config: [`examples/cli-tour.yaml`](examples/cli-tour.yaml)). The same approval
+flow from Python, via the SDK, is [`examples/02_approval_flow.py`](examples/02_approval_flow.py).
 
 ## Install
 

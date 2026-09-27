@@ -215,3 +215,58 @@ def test_principal_unchanged_outside_demo_mode(executor: PipelineExecutor) -> No
         ).json()["run_id"]
         runs = plain.get("/showcase/api/runs").json()["runs"]
     assert next(r["principal_id"] for r in runs if r["run_id"] == run_id) == "anonymous"
+
+
+def _budget_client(demo: bool) -> TestClient:
+    from aegis_pack_budgets.factory import from_config
+
+    from aegis_core.config.models import GuardrailConfig
+
+    stages = from_config(
+        "budget", GuardrailConfig.model_validate({"pack": "aegis.budgets", "default_cap": 0.02})
+    )
+    ex = PipelineExecutor()
+    ex.register(
+        "metered",
+        provider=FakeProvider(cost_per_request=0.01),
+        ingress=stages["ingress"],
+        egress=stages["egress"],
+    )
+    return TestClient(create_app(ex, no_auth=True, run_store=InMemoryRunStore(), demo_mode=demo))
+
+
+def test_demo_visitor_can_reset_their_own_budget() -> None:
+    client = _budget_client(demo=True)
+    run = lambda ip: client.post(  # noqa: E731
+        "/showcase/api/invoke",
+        json={"prompt": "hi", "route": "metered"},
+        headers={"X-Forwarded-For": ip},
+    ).json()["status"]
+    assert [run("1.1.1.1") for _ in range(3)] == ["completed", "completed", "blocked"]
+    assert run("2.2.2.2") == "completed"  # bob has spent 0.01
+
+    reset = client.post(
+        "/showcase/api/budget/reset",
+        json={"route": "metered"},
+        headers={"X-Forwarded-For": "1.1.1.1"},
+    )
+    assert reset.status_code == 200
+    assert reset.json()["reset"] >= 1
+    assert run("1.1.1.1") == "completed"  # alice starts over
+    # bob's spend wasn't touched: $0.01 of $0.02 left one more run, then the cap
+    assert [run("2.2.2.2"), run("2.2.2.2")] == ["completed", "blocked"]
+
+
+def test_budget_reset_is_demo_only_and_checks_the_route() -> None:
+    assert (
+        _budget_client(demo=False)
+        .post("/showcase/api/budget/reset", json={"route": "metered"})
+        .status_code
+        == 403
+    )
+    assert (
+        _budget_client(demo=True)
+        .post("/showcase/api/budget/reset", json={"route": "nope"})
+        .status_code
+        == 404
+    )

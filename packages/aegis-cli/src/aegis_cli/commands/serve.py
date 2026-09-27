@@ -7,6 +7,7 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 _console = Console()
 _DEFAULT_KEYS_PATH = Path.home() / ".aegis" / "keys.json"
@@ -77,11 +78,11 @@ def serve(
     try:
         cfg = load_config(config)
     except AegisConfigNotFoundError as exc:
-        _console.print(f"[red]{exc}[/red]")
+        _console.print(f"[red]{escape(str(exc))}[/red]")
         _console.print(f"  Run [cyan]aegis init --output {config}[/cyan] to create one.")
         raise typer.Exit(code=1) from exc
     except AegisConfigValidationError as exc:
-        _console.print(f"[red]{exc}[/red]")
+        _console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(code=1) from exc
 
     digest = config_digest(cfg)
@@ -108,7 +109,7 @@ def serve(
     try:
         exporters = build_exporters(cfg)
     except AegisConfigValidationError as exc:
-        _console.print(f"[red]{exc}[/red]")
+        _console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(code=1) from exc
     ledger_store: LedgerStore = SqliteLedgerStore(path=str(ledger_db))
     if exporters:
@@ -130,7 +131,7 @@ def serve(
             try:
                 executor = build_executor(cfg, checkpointer=checkpointer)
             except (AegisConfigValidationError, Exception) as exc:
-                _console.print(f"[red]Failed to build pipeline: {exc}[/red]")
+                _console.print(f"[red]Failed to build pipeline: {escape(str(exc))}[/red]")
                 raise typer.Exit(code=1) from exc
 
             try:
@@ -147,7 +148,7 @@ def serve(
                     showcase_tabs=build_showcase(cfg),
                 )
             except AEGServError as exc:
-                _console.print(f"[red]{exc}[/red]")
+                _console.print(f"[red]{escape(str(exc))}[/red]")
                 raise typer.Exit(code=1) from exc
 
             _console.print(

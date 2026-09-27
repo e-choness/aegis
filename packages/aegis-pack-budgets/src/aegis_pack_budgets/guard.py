@@ -43,6 +43,10 @@ class BudgetGuard:
             f"(spent ${cost:.4f} of ${cap:.4f})"
         )
 
+    def reset_usage(self, principal: str) -> None:
+        """Clear *principal*'s spend this month (``PipelineExecutor.reset_usage``)."""
+        self._ledger.reset(principal)
+
     def standing(self, principal: str) -> tuple[float, float | None]:
         """Return ``(spent this month, cap)`` for *principal*; cap ``None`` = unlimited."""
         return self._ledger.current_cost(principal), self._ledger.cap_for(principal)

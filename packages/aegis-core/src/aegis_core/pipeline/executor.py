@@ -7,7 +7,7 @@ from typing import Any
 from aegis_core.pipeline.assembler import CompiledPipeline, PipelineAssembler
 from aegis_core.pipeline.protocol import PipelineNode
 from aegis_core.pipeline.state import RunState
-from aegis_core.pipeline.warmup import warm_up
+from aegis_core.pipeline.warmup import nodes_and_guards, warm_up
 from aegis_core.providers.protocol import ModelProvider
 
 
@@ -54,6 +54,20 @@ class PipelineExecutor:
     async def warmup(self) -> list[str]:
         """Warm every registered route's nodes (see :mod:`aegis_core.pipeline.warmup`)."""
         return await warm_up(node for nodes in self._nodes.values() for node in nodes)
+
+    def reset_usage(self, route: str, principal: str) -> int:
+        """Clear *principal*'s accumulated usage (e.g. a spend cap) on *route*.
+
+        Calls the optional, duck-typed ``reset_usage(principal)`` on each of the
+        route's nodes and the guards inside them. Returns how many were reset.
+        """
+        seen: set[int] = set()
+        for target in nodes_and_guards(self._nodes.get(route, [])):
+            reset = getattr(target, "reset_usage", None)
+            if callable(reset) and id(target) not in seen:
+                seen.add(id(target))
+                reset(principal)
+        return len(seen)
 
     def get(self, route: str) -> CompiledPipeline:
         """Return the compiled pipeline for *route*.

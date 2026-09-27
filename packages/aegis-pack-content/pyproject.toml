@@ -59,3 +59,5 @@ packages = ["src/aegis_pack_content"]
 # another one here: a callable (model_id, options) -> ContentModel.
 [project.entry-points."aegis.content_models"]
 gliner2 = "aegis_pack_content.gliner:Gliner2Model"
+# No model: no entities, first value for every label (tests, CI, offline).
+stub = "aegis_pack_content.stub:StubModel"

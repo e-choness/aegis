@@ -85,6 +85,9 @@ trap cleanup EXIT
 
 STATE_DIR=$(mktemp -d)
 info "Starting aegis serve --demo (Space config) on port ${DEMO_PORT}…"
+# CI installs no model: swap the content guardrails' backend for the stub
+# (no entities, benign labels) — everything else is the Space's real config.
+AEGIS__GUARDRAILS__HOSTNAMES__BACKEND=stub AEGIS__GUARDRAILS__INTENT__BACKEND=stub \
 uv run aegis serve --config deploy/huggingface/aegis.yaml --no-auth --demo \
   --host 127.0.0.1 --port "${DEMO_PORT}" \
   --ledger-db "${STATE_DIR}/ledger.db" --runs-db "${STATE_DIR}/runs.db" \

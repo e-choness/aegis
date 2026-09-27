@@ -344,3 +344,27 @@ async def test_record_event_reports_spend_and_cap() -> None:
     (event,) = delta.events or []
     assert event.data["spent"] == 0.5
     assert event.data["cap"] == 1.0
+
+
+def test_reset_usage_clears_one_principal_only() -> None:
+    from aegis_pack_budgets.factory import from_config
+
+    from aegis_core.config.models import GuardrailConfig
+    from aegis_core.pipeline.executor import PipelineExecutor
+    from aegis_core.testing.providers import FakeProvider
+
+    stages = from_config(
+        "budget", GuardrailConfig.model_validate({"pack": "aegis.budgets", "default_cap": 1.0})
+    )
+    executor = PipelineExecutor()
+    executor.register(
+        "r", provider=FakeProvider(), ingress=stages["ingress"], egress=stages["egress"]
+    )
+    guard = stages["ingress"][0].guards[0]  # type: ignore[attr-defined]
+    guard._ledger.record("alice", 10, 2.0)
+    guard._ledger.record("bob", 10, 2.0)
+
+    assert executor.reset_usage("r", "alice") == 1
+    assert guard.standing("alice") == (0.0, 1.0)
+    assert guard.standing("bob") == (2.0, 1.0)
+    assert executor.reset_usage("unknown-route", "alice") == 0

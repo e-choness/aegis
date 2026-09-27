@@ -69,6 +69,9 @@ jobs:
       - name: Approval scenario (README demo, end to end)
         run: docker compose run --rm dev bash scripts/approval-scenario.sh
 
+      - name: CLI tour (the README's terminal replay, end to end)
+        run: docker compose run --rm dev bash scripts/cli-tour.sh
+
       - name: Teardown
         if: always()
         run: docker compose down -v

@@ -1,26 +1,7 @@
 ---
 layout: home
 
-hero:
-  name: AEGIS
-  text: The self-hosted AI gateway that shows its work
-  tagline: Put guardrails, human approvals and a tamper-evident audit trail between your apps and any LLM — behind an OpenAI-compatible endpoint, configured in one YAML file.
-  image:
-    src: /logo.svg
-    alt: Aegis shield
-  actions:
-    - theme: brand
-      text: Quickstart →
-      link: /guide/quickstart
-    - theme: alt
-      text: Live demo ↗
-      link: https://huggingface.co/spaces/echoness/aegis-server
-    - theme: alt
-      text: How it works
-      link: /guide/concepts
-    - theme: alt
-      text: Write a plugin
-      link: /develop/plugins
+# The hero is docs/.vitepress/theme/components/AegisHero.vue.
 
 features:
   - icon: 🔌
@@ -59,13 +40,13 @@ features:
 
 ## See it work
 
-A loan-underwriting request carrying a Canadian SIN is routed to a US-region model. The residency guardrail pauses it for a named reviewer, who denies it. `aegis explain` shows why, and the exported ledger verifies offline.
+One config, one CLI. A prompt with an API key never reaches a model. A clean question to the loan-underwriting route — whose model runs in a US region — goes straight through; the same route with a Canadian SIN pauses for a named reviewer, who denies it. `aegis explain` shows why, and the exported ledger verifies offline.
 
-<img class="terminal-demo" src="../images/terminal-demo.svg" alt="Terminal replay: aegis runs create pauses for approval, aegis runs deny, aegis explain shows the verdict trail, aegis audit verify confirms the chain is intact">
+<img class="terminal-demo" src="../images/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact">
 
 **Try it in your browser:** the [live demo](https://huggingface.co/spaces/echoness/aegis-server) runs the real guardrails against a mock model — paste a prompt with an email address or a SIN, switch to the *underwriting* route, and approve or deny the paused run. Nothing to install.
 
-Or run it yourself from a clone with `docker compose run --rm dev bash scripts/approval-scenario.sh` — see [`examples/02_approval_flow.py`](https://github.com/e-choness/aegis/blob/main/examples/02_approval_flow.py).
+Or run it yourself from a clone with `docker compose run --rm dev bash scripts/cli-tour.sh` — the config is [`examples/cli-tour.yaml`](https://github.com/e-choness/aegis/blob/main/examples/cli-tour.yaml).
 
 ## Sixty seconds to a governed endpoint
 

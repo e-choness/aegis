@@ -66,6 +66,10 @@ class BudgetLedger:
         entry.tokens += tokens
         entry.cost += cost
 
+    def reset(self, principal: str) -> None:
+        """Forget *principal*'s spend this month (e.g. a demo visitor starting over)."""
+        self._usage.pop(self._key(principal), None)
+
     def is_exceeded(self, principal: str) -> bool:
         """Return ``True`` if *principal* has exceeded their monthly cap."""
         cap = self.cap_for(principal)

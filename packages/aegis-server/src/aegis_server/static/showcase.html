@@ -211,7 +211,7 @@
       $('send').disabled = true; $('busy').style.display = 'inline';
       try {
         const data = await post('/showcase/api/invoke', { prompt: $('prompt').value, route });
-        state.results[route] = renderResult(data);
+        state.results[route] = renderResult({ ...data, route });
         if (currentRoute().route === route) $('result').innerHTML = state.results[route];
       } catch (e) {
         $('result').innerHTML = `<div class="card"><div class="banner blocked"><b>error</b>${esc(e.message)}</div></div>`;
@@ -265,12 +265,28 @@
         return `<tr><td style="white-space:nowrap">${esc(e.stage.replace('mcp_', '').replace(/_/g, ' '))}</td><td>${what}${d.arguments ? `<div class="muted">arguments: <code>${esc(JSON.stringify(d.arguments))}</code></div>` : ''}</td></tr>`;
       }).join('')}</tbody></table>`;
     }
-    function renderBudget(events) {
+    const resetButton = (route) =>
+      `<div class="row"><button class="ghost" onclick="resetBudget('${esc(route)}')">Reset my budget</button>
+        <span class="muted">Start over and watch the cap trip again.</span></div>`;
+    function renderBudget(events, route) {
       const ev = [...events].reverse().find(e => e.event_type === 'budget_recorded');
+      const blockedBy = events.find(e => e.event_type === 'verdict' && (e.data || {}).verdict === 'block' && String(e.data.reason || '').startsWith('budget:'));
+      if (blockedBy) {
+        return `<h3>Your budget (per visitor)</h3><div class="meter"><div class="full" style="width:100%"></div></div>
+          <div class="muted">Used up — the run was stopped before any model was called.</div>${resetButton(route)}`;
+      }
       if (!ev || ev.data.cap == null) return '';
       const pct = Math.min(100, (ev.data.spent / ev.data.cap) * 100);
       return `<h3>Your budget (per visitor)</h3><div class="meter"><div class="${pct >= 100 ? 'full' : ''}" style="width:${pct}%"></div></div>
-        <div class="muted">$${ev.data.spent.toFixed(2)} of $${ev.data.cap.toFixed(2)} spent this month — this run cost $${(ev.data.cost || 0).toFixed(2)}</div>`;
+        <div class="muted">$${ev.data.spent.toFixed(2)} of $${ev.data.cap.toFixed(2)} spent this month — this run cost $${(ev.data.cost || 0).toFixed(2)}</div>${resetButton(route)}`;
+    }
+    async function resetBudget(route) {
+      try {
+        await post('/showcase/api/budget/reset', { route });
+        state.results[route] = '';
+        if (state.tab !== '__audit' && currentRoute().route === route) $('result').innerHTML = '';
+        toast('Budget reset — $0.00 spent. Run it again.');
+      } catch (e) { toast(e.message); }
     }
     function renderEvents(events) {
       const rows = events.filter(e => e.event_type !== 'node_start');
@@ -286,7 +302,7 @@
       return `<div class="card">
         <div class="banner ${esc(data.status)}"><b>${esc(data.status)}</b>${esc(STATUS_TEXT[data.status] || '')}${reason ? `<div style="margin-top:4px">${esc(reason)}</div>` : ''}</div>
         ${data.response != null && data.status === 'completed' ? `<h3>Reply (after unmasking)</h3><pre>${esc(data.response)}</pre>` : ''}
-        ${renderTrace(events)}${renderLabels(data.labels)}${renderMasks(data.mask_map)}${renderTools(events)}${renderBudget(events)}
+        ${renderTrace(events)}${renderLabels(data.labels)}${renderMasks(data.mask_map)}${renderTools(events)}${renderBudget(events, data.route)}
         ${renderEvents(events)}
         <p class="muted" style="margin:10px 0 0">Run <code>${esc(data.run_id.slice(0, 8))}</code> — recorded in the evidence ledger; see the Audit tab.</p>
       </div>`;
@@ -312,7 +328,7 @@
         toast(`Run ${runId.slice(0, 8)} ${decision} → ${data.status}`);
         const { runs } = await api('/showcase/api/runs');
         const run = (runs || []).find(r => r.run_id === runId);
-        if (run) state.results[run.route] = renderResult({ ...data, mask_map: {}, labels: {} });
+        if (run) state.results[run.route] = renderResult({ ...data, mask_map: {}, labels: {}, route: run.route });
         if (state.tab !== '__audit' && run && currentRoute().route === run.route) $('result').innerHTML = state.results[run.route];
       } catch (e) { toast(e.message); }
       refreshQueue();

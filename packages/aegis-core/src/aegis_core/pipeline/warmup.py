@@ -23,10 +23,14 @@ class Warmable(Protocol):
         ...
 
 
-def _targets(nodes: Iterable[object]) -> Iterator[object]:
+def nodes_and_guards(nodes: Iterable[object]) -> Iterator[object]:
+    """Each node, followed by the guards inside it if it is a GuardNode.
+
+    Optional hooks (``warmup()``, ``reset_usage()``) usually live on guards —
+    they hold the models and ledgers — not on the GuardNode that runs them.
+    """
     for node in nodes:
         yield node
-        # A GuardNode runs guards; they are what loads models.
         yield from getattr(node, "guards", None) or ()
 
 
@@ -40,7 +44,7 @@ async def warm_up(nodes: Iterable[object]) -> list[str]:
     """
     seen: set[int] = set()
     warmed: list[str] = []
-    for target in _targets(nodes):
+    for target in nodes_and_guards(nodes):
         method = getattr(target, "warmup", None)
         if not callable(method) or id(target) in seen:
             continue

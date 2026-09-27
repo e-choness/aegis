@@ -231,6 +231,6 @@ routes:
       order: 6
       blurb: >-
         Every visitor has a monthly budget of $0.05 and each run costs $0.01. Run it a few times:
-        the meter fills, and the sixth run is blocked before any model is called.
+        the meter fills, and the sixth run is blocked before any model is called — then reset your budget and try again.
       presets:
         - {label: Spend a cent, prompt: "Give me one fun fact about octopuses."}

@@ -253,6 +253,31 @@ async def showcase_list_runs(request: Request) -> dict[str, list[dict[str, objec
     return {"runs": [r.to_dict() for r in records]}
 
 
+class BudgetResetRequest(BaseModel):
+    route: str
+
+
+@router.post("/showcase/api/budget/reset", include_in_schema=False)
+async def showcase_reset_budget(body: BudgetResetRequest, request: Request) -> dict[str, object]:
+    """Let a demo visitor start their budget over, to watch the cap trip again.
+
+    Only in ``--demo``, and only for the caller's own per-visitor principal —
+    without demo mode every no-auth caller is "anonymous", so one reset would
+    clear everyone's spend.
+    """
+    if not getattr(request.app.state, "demo_mode", False):
+        raise HTTPException(
+            status_code=403, detail="Budget reset is only available in --demo mode."
+        )
+    executor: PipelineExecutor = request.app.state.executor  # type: ignore[attr-defined]
+    if body.route not in executor.routes():
+        raise HTTPException(status_code=404, detail=f"No pipeline for route '{body.route}'")
+    principal: Principal = request.state.principal  # type: ignore[attr-defined]
+    principal_id = _visitor_principal(principal.id, request)
+    reset = executor.reset_usage(body.route, principal_id)
+    return {"route": body.route, "principal": principal_id, "reset": reset}
+
+
 @router.post("/showcase/api/runs/{run_id}/resume", include_in_schema=False)
 async def showcase_resume_run(
     run_id: str, body: dict[str, str], request: Request

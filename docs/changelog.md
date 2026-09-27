@@ -9,6 +9,32 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/cli-tour.sh` (config `examples/cli-tour.yaml`): the session the
+  README's terminal replay shows — plugin list, a blocked credential, a clean
+  run, an approval denied by a reviewer, `explain`, ledger verify. CI runs it.
+- A new docs home page.
+- Demo: a "Reset my budget" button on the Budgets tab (and a per-visitor
+  `POST /showcase/api/budget/reset`, `--demo` only), so visitors can watch
+  the cap trip again. Nodes and guards may define `reset_usage(principal)`;
+  `PipelineExecutor.reset_usage(route, principal)` calls it.
+- `backend: stub` for the content pack: no model, no entities, the first value
+  for every label — for tests, CI and offline runs. CI's demo smoke test uses
+  it via `AEGIS__GUARDRAILS__<NAME>__BACKEND=stub`.
+
+### Fixed
+
+- Docs diagrams could show "Syntax error in text" instead of rendering: the
+  mermaid plugin re-rendered every diagram on any change to the page's root
+  element, and overlapping renders clobbered each other. Diagrams now render
+  one at a time and only when the colour theme changes.
+- `aegis serve` printed install hints without their extras
+  (`pip install "aegis-gateway-pack-content"` instead of `…[model]`): error
+  text is no longer read as console markup.
+- `aegis explain` no longer prints `reason=None` for allow verdicts or repeats
+  the guard name next to the node that already shows it.
+
 ## [2.0.0a5] - 2026-09-27
 
 ### Fixed

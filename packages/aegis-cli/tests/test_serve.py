@@ -197,3 +197,43 @@ def test_serve_resume_works_over_a_real_checkpointer(
     assert captured["run_status"] == "paused"
     assert captured["resume_status_code"] == 200, captured["resume_json"]
     assert captured["resume_json"]["status"] == "denied"  # type: ignore[index]
+
+
+def test_serve_errors_keep_square_brackets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rich must not eat '[model]' from an install hint (it reads it as markup)."""
+    import importlib.util
+
+    real_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name, *a: None if name == "gliner2" else real_find_spec(name, *a),
+    )
+    cfg = _write_yaml(
+        tmp_path,
+        """
+        providers:
+          fake: {type: fake}
+        guardrails:
+          content: {pack: aegis.content, entities: [credential]}
+        routes:
+          default: {provider: fake, pipeline: {ingress: [content]}}
+        """,
+    )
+    result = runner.invoke(
+        app,
+        [
+            "serve",
+            "--config",
+            str(cfg),
+            "--no-auth",
+            "--checkpoint-db",
+            str(tmp_path / "c.db"),
+            "--ledger-db",
+            str(tmp_path / "l.db"),
+            "--runs-db",
+            str(tmp_path / "r.db"),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "aegis-gateway-pack-content[model]" in result.output.replace("\n", "")

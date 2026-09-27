@@ -1,0 +1,34 @@
+# The config behind the README's terminal replay (scripts/cli-tour.sh):
+# credentials are blocked everywhere; the underwriting route's model is in
+# us-east-1, so requests carrying personal data wait for a Canadian reviewer.
+
+providers:
+  assistant: {type: fake, complete_response: "Here's the summary."}
+  us_llm:
+    type: fake
+    complete_response: "Risk: low."
+    residency: {region: us-east-1, jurisdiction: US}
+guardrails:
+  pii: {pack: aegis.pii}
+  classify: {pack: aegis.classification}
+  no_secrets:
+    pack: aegis.policy
+    rules:
+      - when: {label: classification, in: [secret]}
+        verdict: block
+        reason: credentials must not reach a model
+  residency_ca:
+    pack: aegis.residency
+    region: us-east-1
+    jurisdiction: US
+    allowed_regions: [ca-central-1]
+    require_approval: true
+    apply_when: sensitive
+pipeline:
+  ingress: [classify, no_secrets, pii]
+  egress: [pii]
+routes:
+  default: {provider: assistant}
+  underwriting:
+    provider: us_llm
+    pipeline: {ingress: [classify, no_secrets, pii, residency_ca], egress: [pii]}

@@ -152,3 +152,27 @@ def test_explain_renders_real_verdict_key_not_fallback() -> None:
     assert "REQUIRE_APPROVAL" in result.output
     assert "?" not in result.output.split("\n")[2]  # the rendered verdict row
     assert "not in the allowed set" in result.output
+
+
+def test_explain_omits_empty_reasons_and_repeated_guard_names() -> None:
+    allow = {
+        "stage": "guard",
+        "node": "no_secrets",
+        "event_type": "verdict",
+        "data": {"verdict": "allow", "guard": "no_secrets", "reason": None},
+    }
+    status = RunStatusResponse(
+        run_id="ccccdddd-eeee-ffff-0000-111111111111",
+        route="underwriting",
+        principal_id="svc",
+        status="paused",
+        approvers=[],
+        events=[allow, _REQUIRE_APPROVAL_EVENT],
+        config_digest=None,
+    )
+    with patch("aegis_cli.commands.explain.AegisClient", return_value=_mock_client(status)):
+        result = runner.invoke(app, ["explain", "ccccdddd-eeee-ffff-0000-111111111111"])
+    assert result.exit_code == 0
+    assert "reason=None" not in result.output
+    assert "guard=no_secrets" not in result.output
+    assert "reason=residency: region 'us-east-1'" in result.output

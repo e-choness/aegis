@@ -102,8 +102,14 @@ def explain(
             # RAG retrieval guards, the HITL resume path) keys the verdict
             # kind as "verdict" — "kind"/"status" are kept as fallbacks only.
             kind = str(ev_data.get("verdict", ev_data.get("kind", ev_data.get("status", "?"))))
+            # Skip empty fields (an allow verdict has no reason) and a guard name
+            # that only repeats the node column.
             summary_parts = [
-                f"{k}={v}" for k, v in ev_data.items() if k not in ("verdict", "kind", "status")
+                f"{k}={v}"
+                for k, v in ev_data.items()
+                if k not in ("verdict", "kind", "status")
+                and v is not None
+                and not (k == "guard" and v == node)
             ]
             summary = "  " + "  ".join(summary_parts) if summary_parts else ""
             typer.echo(f"  {stage:12s}  {node:24s}  {_colour_kind(kind)}{summary}")
