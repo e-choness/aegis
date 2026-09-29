@@ -8,7 +8,8 @@ on:
       - main
     paths:
       - "docs/**"
-      - "images/**"
+      - "scripts/sync-media.mjs"
+      - "media/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/docs.yml"

@@ -1,5 +1,14 @@
 /* Aegis brand layer over the VitePress default theme.
- * Orange = the wordmark / "ledger" accent; blue = the shield / pipeline. */
+ * Orange = the wordmark / "ledger" accent; blue = the shield / pipeline.
+ * Titles (page h1, hero, wordmark) use Montserrat Alternates; subtitles and body keep Inter. */
+
+@font-face {
+  font-family: 'Montserrat Alternates';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/MontserratAlternates-Bold-latin.woff2') format('woff2');
+}
 
 :root {
   --vp-c-brand-1: #e2561b;
@@ -16,6 +25,8 @@
   --aegis-block-soft: rgba(239, 68, 68, 0.12);
   --aegis-approval: #b45309;
   --aegis-approval-soft: rgba(245, 158, 11, 0.14);
+
+  --aegis-font-title: 'Montserrat Alternates', var(--vp-font-family-base);
 
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(120deg, #ffb070 0%, #ff7a2e 45%, #e2561b 100%);
@@ -47,9 +58,15 @@
 }
 
 /* Hero */
+.VPHero .name,
+.VPHero .text,
+.vp-doc h1,
+.VPNavBarTitle .title {
+  font-family: var(--aegis-font-title);
+  font-weight: 700;
+}
 .VPHero .name {
   letter-spacing: 0.04em;
-  font-weight: 800;
 }
 .VPHero .image-src {
   max-width: 300px;

@@ -83,6 +83,7 @@ const words = [
 
 .eyebrow {
   margin: 0 0 14px;
+  font-family: var(--aegis-font-title);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.32em;
@@ -94,8 +95,9 @@ const words = [
 h1 {
   margin: 0;
   font-size: clamp(2.1rem, 4.2vw, 3.4rem);
-  line-height: 1.08;
-  font-weight: 250;
+  line-height: 1.12;
+  font-family: var(--aegis-font-title);
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
@@ -142,8 +144,9 @@ h1 {
 .word { position: absolute; display: flex; flex-direction: column; text-decoration: none; color: var(--ink); }
 .word .big {
   position: relative;
-  font-size: clamp(2.6rem, 5.4vw, 4.4rem);
-  font-weight: 200;
+  font-family: var(--aegis-font-title);
+  font-size: clamp(2.3rem, 4.8vw, 3.8rem);
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.01em;
   transition: color 0.2s;

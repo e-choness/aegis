@@ -42,7 +42,7 @@ features:
 
 One config, one CLI. A prompt with an API key never reaches a model. A clean question to the loan-underwriting route — whose model runs in a US region — goes straight through; the same route with a Canadian SIN pauses for a named reviewer, who denies it. `aegis explain` shows why, and the exported ledger verifies offline.
 
-<img class="terminal-demo" src="../images/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact">
+<img class="terminal-demo" src="../media/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact">
 
 **Try it in your browser:** the [live demo](https://huggingface.co/spaces/echoness/aegis-server) runs the real guardrails against a mock model — paste a prompt with an email address or a SIN, switch to the *underwriting* route, and approve or deny the paused run. Nothing to install.
 

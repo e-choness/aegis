@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://e-choness.github.io/aegis/"><img src="https://raw.githubusercontent.com/e-choness/aegis/main/images/banner-wide.svg" alt="Aegis — the self-hosted AI gateway that shows its work" width="100%"></a>
+  <a href="https://e-choness.github.io/aegis/"><img src="https://raw.githubusercontent.com/e-choness/aegis/main/media/banner-wide.svg" alt="Aegis — the self-hosted AI gateway that shows its work" width="100%"></a>
 </p>
 
 # aegis-gateway

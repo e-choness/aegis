@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://e-choness.github.io/aegis/"><img src="images/banner-wide.svg" alt="Aegis — the self-hosted AI gateway that shows its work" width="100%"></a>
+<a href="https://e-choness.github.io/aegis/"><img src="media/banner-wide.svg" alt="Aegis — the self-hosted AI gateway that shows its work" width="100%"></a>
 
 [![CI](https://github.com/e-choness/aegis/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/e-choness/aegis/actions/workflows/ci.yml)
 [![Docs](https://github.com/e-choness/aegis/actions/workflows/docs.yml/badge.svg?style=flat-square)](https://e-choness.github.io/aegis/)
@@ -45,7 +45,7 @@ verifies offline.
 > - `api_key: 8f14e45fceea167a5a36dedd4bea2543` — blocked: credentials never reach a model.
 
 <p align="center">
-  <img src="images/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact" width="100%">
+  <img src="media/terminal-demo.svg" alt="Terminal replay: aegis plugin list shows the policy packs; a prompt with an API key is blocked; a clean underwriting question is answered; one carrying a SIN pauses for approval and reviewer jane denies it; aegis explain shows the verdict trail; aegis audit verify confirms the chain is intact" width="100%">
 </p>
 
 Reproduce it with `docker compose run --rm dev bash scripts/cli-tour.sh`

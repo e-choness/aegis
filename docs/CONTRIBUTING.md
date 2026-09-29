@@ -109,7 +109,7 @@ The README's animated terminal is generated from
 `scripts/gen-terminal-demo.cjs`:
 
 ```bash
-dc node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
+dc node scripts/gen-terminal-demo.cjs media/terminal-demo.svg
 ```
 
 ## Releasing

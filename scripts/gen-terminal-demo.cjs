@@ -1,5 +1,5 @@
-// Usage: node scripts/gen-terminal-demo.cjs images/terminal-demo.svg
-// Generates images/terminal-demo.svg — an animated, looping terminal replay of
+// Usage: node scripts/gen-terminal-demo.cjs media/terminal-demo.svg
+// Generates media/terminal-demo.svg — an animated, looping terminal replay of
 // scripts/cli-tour.sh (config: examples/cli-tour.yaml). Pure SVG + CSS (no
 // script) so it animates inside a GitHub README <img>. The lines below are that
 // script's real output; long lines wrap the way a 100-column terminal would.

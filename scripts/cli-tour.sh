@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/cli-tour.sh — the session replayed in images/terminal-demo.svg.
+# scripts/cli-tour.sh — the session replayed in media/terminal-demo.svg.
 #
 #   docker compose run --rm dev bash scripts/cli-tour.sh
 #

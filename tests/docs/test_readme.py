@@ -17,7 +17,7 @@ README = ROOT / "README.md"
 
 # Required sections in README, in this order
 REQUIRED_SECTIONS = [
-    "images/banner-wide.svg",           # animated banner
+    "media/banner-wide.svg",           # animated banner
     "[![CI]",                            # badge row — CI first
     "[![Docs]",
     "[![PyPI version]",
@@ -47,8 +47,8 @@ FORBIDDEN_BADGES = ["codecov", "stars", "downloads"]
 
 # Relative links that must exist on disk (resolve from root)
 REQUIRED_LINKS = [
-    "images/banner-wide.svg",
-    "images/terminal-demo.svg",
+    "media/banner-wide.svg",
+    "media/terminal-demo.svg",
     "examples/fintech.yaml",
     "examples/02_approval_flow.py",
     "docs/CONTRIBUTING.md",
@@ -93,8 +93,8 @@ def test_badge_row_exact() -> None:
 
 def test_banner_path_exists() -> None:
     """The banner image path referenced in README must exist on disk."""
-    assert (ROOT / "images" / "banner-wide.svg").exists(), (
-        "images/banner-wide.svg does not exist"
+    assert (ROOT / "media" / "banner-wide.svg").exists(), (
+        "media/banner-wide.svg does not exist"
     )
 
 
@@ -135,7 +135,7 @@ def test_diagrams_live_in_docs() -> None:
 def test_readme_svgs_are_self_contained() -> None:
     """GitHub renders README SVGs as <img>: scripts and external fetches are dropped."""
     for name in ("banner-wide.svg", "banner-media.svg", "terminal-demo.svg"):
-        text = (ROOT / "images" / name).read_text(encoding="utf-8")
+        text = (ROOT / "media" / name).read_text(encoding="utf-8")
         assert "<script" not in text, f"{name} must not rely on <script>"
         assert "@import" not in text, f"{name} must not load external stylesheets"
         assert 'href="http' not in text, f"{name} must not load external resources"

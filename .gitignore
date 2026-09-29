@@ -111,3 +111,8 @@ docs/.vitepress/dist/
 
 # Runtime databases created by `aegis serve`
 aegis_**.db
+
+# Synced from media/ by scripts/sync-media.mjs
+docs/public/logo.svg
+docs/public/social-preview.png
+docs/public/fonts/
