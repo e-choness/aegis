@@ -17,12 +17,8 @@ updates:
     groups:
       docs-toolchain:
         patterns: ["*"]
-    ignore:
-      # vitepress-plugin-mermaid@2 only supports mermaid 10/11 (npm ci fails on 12),
-      # and mermaid 12.0 pulls in a vulnerable lodash-es. Revisit when the plugin
-      # declares mermaid 12 support.
-      - dependency-name: mermaid
-        update-types: ["version-update:semver-major"]
+    # vitepress-plugin-mermaid@2 declares a mermaid 10/11 peer; package.json
+    # overrides it to our mermaid. Drop the override once the plugin supports 12.
 
   - package-ecosystem: github-actions
     directory: /

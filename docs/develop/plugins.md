@@ -8,18 +8,20 @@ to patch. The first-party packs are built exactly this way.
 ## The lifecycle
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph AUTHOR[You]
+        direction LR
         NEW[aegis plugin new] --> IMPL[Implement] --> TEST[aegis plugin test] --> PUB[Publish to PyPI]
     end
     subgraph USER[Operator]
+        direction LR
         INST[pip install] --> YAML["aegis.yaml<br/>pack: aegis.my_guard"]
     end
     subgraph RUNTIME[aegis serve]
+        direction LR
         DISC[Entry-point discovery] --> FACT["from_config(name, cfg)"] --> NODES[Nodes placed in stages]
     end
-    PUB --> INST
-    YAML --> DISC
+    AUTHOR --> USER --> RUNTIME
 ```
 
 ## Entry-point groups

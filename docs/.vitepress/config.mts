@@ -140,27 +140,15 @@ export default withMermaid(
       },
     },
 
+    // Mermaid 12 look: ELK layout (the default), neo shapes, and the redux
+    // colour palettes, which tint each subgraph/composite. SafeMermaid swaps
+    // in darkTheme when the site is in dark mode.
     mermaid: {
-      theme: 'base',
+      look: 'neo',
+      theme: 'redux-color',
+      darkTheme: 'redux-dark-color',
       themeVariables: {
         fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        primaryColor: '#1d4ed8',
-        primaryTextColor: '#ffffff',
-        primaryBorderColor: '#1e3a8a',
-        lineColor: '#7c8db5',
-        secondaryColor: '#ff7a2e',
-        tertiaryColor: '#e8eefc',
-        clusterBkg: 'rgba(59,130,246,0.08)',
-        clusterBorder: '#7c8db5',
-        edgeLabelBackground: 'transparent',
-        actorBkg: '#1d4ed8',
-        actorTextColor: '#ffffff',
-        actorBorder: '#1e3a8a',
-        signalColor: '#7c8db5',
-        signalTextColor: '#7c8db5',
-        noteBkgColor: '#fff1e6',
-        noteTextColor: '#7a3410',
-        noteBorderColor: '#ff7a2e',
       },
     },
   }),

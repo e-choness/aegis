@@ -9,6 +9,13 @@ becomes the version's entry and its GitHub Release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- Docs diagrams use Mermaid 12: ELK layout, the `neo` look and the
+  `redux-color` / `redux-dark-color` themes, which give each subgraph its own
+  colour. The plugin lifecycle diagram now stacks its three stages, so it is
+  readable at page width.
+
 ## [2.0.0a6] - 2026-09-27
 
 ### Added

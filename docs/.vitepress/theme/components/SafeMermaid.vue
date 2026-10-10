@@ -27,19 +27,25 @@ let queue: Promise<unknown> = Promise.resolve()
 let counter = 0
 
 function loadMermaid(): Promise<MermaidApi> {
-  mermaidPromise ??= import('mermaid').then((m) => m.default)
+  // Turn off startOnLoad at once: otherwise mermaid's own window-load hook
+  // renders the still-empty .mermaid divs as "Syntax error" boxes.
+  mermaidPromise ??= import('mermaid').then((m) => {
+    m.default.initialize({ startOnLoad: false })
+    return m.default
+  })
   return mermaidPromise
 }
 
 async function renderNow(dark: boolean): Promise<void> {
   const mermaid = await loadMermaid()
-  // The `mermaid:` block of config.mts; dark mode switches to mermaid's dark theme.
-  const settings = ((await import('virtual:mermaid-config')) as { default?: { theme?: string } })
-    .default ?? {}
+  // The `mermaid:` block of config.mts; dark mode switches to its `darkTheme`.
+  type Settings = { theme?: string; darkTheme?: string }
+  const { darkTheme = 'dark', ...settings } =
+    ((await import('virtual:mermaid-config')) as { default?: Settings }).default ?? {}
   mermaid.initialize({
     ...settings,
     startOnLoad: false,
-    theme: (dark ? 'dark' : settings.theme ?? 'default') as 'dark' | 'default',
+    theme: (dark ? darkTheme : settings.theme ?? 'default') as 'dark' | 'default',
   })
   const code = decodeURIComponent(props.graph)
   try {
