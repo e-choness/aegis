@@ -32,7 +32,7 @@ jobs:
           ref: ${{ env.TAG }}
           fetch-depth: 0 # tags and history, for hatch-vcs
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
 
       - name: Version from the tag
         id: version
@@ -128,7 +128,7 @@ jobs:
         with:
           ref: ${{ env.TAG }}
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
 
       - name: Release notes from docs/changelog.md
         run: |
@@ -178,7 +178,7 @@ jobs:
       - name: Pin the Space to this release
         run: sed -i "s/__AEGIS_VERSION__/${{ needs.build.outputs.version }}/" deploy/huggingface/Dockerfile
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
 
       # huggingface_hub reports any auth failure as "repo not found", so check
       # the token explicitly and fail with an actionable message.
