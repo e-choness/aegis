@@ -25,7 +25,7 @@ dependencies = ["aegis-gateway-core"]
 # The default backend: GLiNER2 (zero-shot entities + classification). PyTorch
 # comes with it; on CPU-only machines install it from the CPU index first —
 # see the README.
-model = ["gliner2>=2.0,<3", "peft>=0.13", "torch>=2.4"]
+model = ["gliner2>=2.1.0,<3", "peft>=0.13", "torch>=2.4"]
 all = ["aegis-gateway-pack-content[model]"]
 
 [project.urls]
