@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "aegis-gateway-core",
     "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
+    "uvicorn[standard]>=0.54.0",
     "sse-starlette>=2.1",
     "httpx>=0.27",
     "opentelemetry-api>=1.27",
