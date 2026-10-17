@@ -7,7 +7,7 @@
 #   docker build --build-arg AEGIS_VERSION=2.0.0a4 -t aegis-space deploy/huggingface
 #   docker run --rm -p 7860:7860 aegis-space      # http://localhost:7860
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ARG AEGIS_VERSION=__AEGIS_VERSION__
 ARG CONTENT_MODEL=fastino/gliner2-base-v1
